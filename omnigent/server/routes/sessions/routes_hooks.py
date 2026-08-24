@@ -22,6 +22,7 @@ from omnigent.native.native_coding_agents import (
     native_coding_agent_for_harness,
     native_coding_agent_for_wrapper_label,
 )
+from omnigent.pi_extension_ui import to_elicitation_params
 from omnigent.runner.routing import RunnerRouter
 from omnigent.runtime import (
     get_agent_cache,
@@ -1542,6 +1543,85 @@ def register_hooks_routes(
             result_payload["native_delivery_attempt"] = native_delivery["attempt"]
         return Response(
             content=json.dumps(result_payload),
+            media_type="application/json",
+        )
+
+    # ── POST /sessions/{session_id}/hooks/pi-extension-ui ─
+
+    @router.post(
+        "/sessions/{session_id}/hooks/pi-extension-ui",
+        include_in_schema=False,
+        response_model=None,
+        dependencies=[Depends(require_json_content_type)],
+    )
+    async def pi_extension_ui_hook(
+        request: Request,
+        session_id: str,
+    ) -> Response:
+        """
+        Pi-native extension UI hook (TUI wrap → web elicitation).
+
+        The Omnigent pi-native extension wraps ``ctx.ui.confirm|select|input|editor``
+        in TUI mode and POSTs the dialog here. The route publishes
+        ``response.elicitation_request`` and parks on the harness elicitation
+        registry — the same path as the cursor/codex native hooks.
+
+        Decline / cancel returns a Pi-shaped cancelled verdict and does **not**
+        interrupt the session. A permission-gate ``select`` that returns No is
+        one blocked tool, not a killed agent. Empty ``200`` (timeout /
+        disconnect) lets the client re-POST the same ``elicitation_id`` to
+        re-attach instead of publishing a second card.
+        """
+        user_id = _get_user_id(request, auth_provider)
+        await _require_access(
+            user_id, session_id, LEVEL_READ, permission_store, conversation_store
+        )
+        try:
+            payload = await request.json()
+        except json.JSONDecodeError as exc:
+            raise OmnigentError(
+                f"Invalid JSON in Pi extension UI hook body: {exc}",
+                code=ErrorCode.INVALID_INPUT,
+            ) from exc
+        if not isinstance(payload, dict):
+            raise OmnigentError(
+                "Pi extension UI hook body must be a JSON object.",
+                code=ErrorCode.INVALID_INPUT,
+            )
+        elicitation_id = payload.get("elicitation_id")
+        if not isinstance(elicitation_id, str) or not elicitation_id:
+            raise OmnigentError(
+                "Pi extension UI hook body must include 'elicitation_id'.",
+                code=ErrorCode.INVALID_INPUT,
+            )
+        raw_request = payload.get("request")
+        if not isinstance(raw_request, dict):
+            raise OmnigentError(
+                "Pi extension UI hook body must include a 'request' object.",
+                code=ErrorCode.INVALID_INPUT,
+            )
+        try:
+            params = to_elicitation_params(raw_request)
+        except ValueError as exc:
+            raise OmnigentError(
+                str(exc),
+                code=ErrorCode.INVALID_INPUT,
+            ) from exc
+        from omnigent.server.routes import sessions as _sf
+
+        result = await _publish_and_wait_for_harness_elicitation(
+            request,
+            session_id=session_id,
+            params=params,
+            timeout_s=_sf._PI_EXTENSION_UI_HOOK_TIMEOUT_S,
+            conversation_store=conversation_store,
+            elicitation_id=elicitation_id,
+            tool_name="Pi(extension_ui)",
+        )
+        if result is None:
+            return Response(status_code=status.HTTP_200_OK)
+        return Response(
+            content=json.dumps(result.model_dump(exclude_none=True)),
             media_type="application/json",
         )
 
