@@ -17,6 +17,7 @@ Anthropic endpoint, so the compaction summary text is scripted.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -34,6 +35,7 @@ from omnigent.harnesses.claude_native.bridge import (
     BRIDGE_ID_LABEL_KEY,
     bridge_dir_for_bridge_id,
 )
+from omnigent.onboarding.ambient import CLAUDE_CODE_MANAGED_SETTINGS_PATHS
 from omnigent.testing.process_reaper import reap_leaked_omnigent_processes
 from tests._helpers.live_server import terminate_process
 from tests._helpers.native_session import create_native_session
@@ -176,6 +178,16 @@ def _pane_text(bridge_dir: Path) -> str:
     return proc.stdout if proc.returncode == 0 else ""
 
 
+def _wait_pane_contains(bridge_dir: Path, needle: str, timeout_s: float = 30.0) -> str:
+    """Return the pane text once it shows ``needle``, or the last capture on timeout."""
+    deadline = time.monotonic() + timeout_s
+    text = _pane_text(bridge_dir)
+    while needle not in text and time.monotonic() < deadline:
+        time.sleep(0.5)
+        text = _pane_text(bridge_dir)
+    return text
+
+
 def _open_session(page: Page, base_url: str, session_id: str) -> None:
     page.goto(f"{base_url}/c/{session_id}")
     _open_terminal_view(page)
@@ -268,6 +280,13 @@ def test_compacted_history_stays_compacted_after_restart(
     tmp_path: Path,
 ) -> None:
     """Cold resume after a restart must not bring the compacted history back."""
+    for binary in ("claude", "tmux"):
+        if shutil.which(binary) is None:
+            pytest.skip(f"requires the real {binary} executable")
+    if any(path.is_file() for path in CLAUDE_CODE_MANAGED_SETTINGS_PATHS):
+        pytest.skip(
+            "machine-managed Claude settings override mock auth; use an isolated container"
+        )
     nonce = uuid.uuid4().hex[:8]
     pre_markers = [f"PRE-{index}-{nonce}" for index in range(1, _PRE_TURNS + 1)]
     post_marker, resume_marker = f"POST-1-{nonce}", f"RESUME-1-{nonce}"
@@ -339,8 +358,11 @@ def test_compacted_history_stays_compacted_after_restart(
             _open_terminal_view(page)
             _wait_terminal_connected(page)
             mark("terminal view connected")
-            page.wait_for_timeout(6_000)
-            (stack.root / "pane-after-resume.txt").write_text(_pane_text(bridge_dir))
+            pane = _wait_pane_contains(bridge_dir, f"ack-{resume_marker}")
+            if os.environ.get("OMNIGENT_E2E_RECORD_DIR"):
+                # Hold the resumed pane on screen so the recording shows it.
+                page.wait_for_timeout(6_000)
+            (stack.root / "pane-after-resume.txt").write_text(pane)
             mark("end")
         finally:
             context.close()
@@ -372,4 +394,7 @@ def test_compacted_history_stays_compacted_after_restart(
         )
         assert summary.split()[0] in resumed_texts, (
             "the compaction summary was not in the resumed context"
+        )
+        assert post_marker in resumed_texts, (
+            "the post-compaction turn was dropped from the resumed context"
         )

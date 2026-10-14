@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from itertools import pairwise
@@ -15,6 +16,7 @@ import pytest
 from omnigent.entities.conversation import CompactionData
 from omnigent.harnesses.claude_native import forwarder
 from omnigent.harnesses.claude_native.bridge import (
+    _HOOKS_FILE,
     ClaudeTranscriptItem,
     read_transcript_items_since,
     record_hook_event,
@@ -390,10 +392,41 @@ def test_hook_completion_ignores_a_boundary_written_before_its_precompact(
     ]
 
 
+async def _poll_completion_hooks(
+    bridge: Path,
+    posted: list[dict[str, Any]],
+    hook_state: forwarder.HookForwardState,
+    tracker: _PostRetryTracker,
+) -> forwarder.HookForwardState:
+    """Run one hook-forwarder poll against a recording Omnigent stub."""
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            return httpx.Response(200, json={"data": [{"id": "last-item"}]})
+        posted.append(json.loads(request.content))
+        return httpx.Response(202, json={})
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handle), base_url="https://fixture.invalid"
+    ) as client:
+        return await _forward_available_status_events(
+            client=client,
+            session_id="conversation-test",
+            bridge_dir=bridge,
+            state=hook_state,
+            retry_tracker=tracker,
+            compaction_retry_tracker=tracker,
+            dedupe=forwarder._ForwardDedupeState(),
+            task_subjects={},
+            task_statuses={},
+            task_order=[],
+        )
+
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize("precompact_observed", [True, False])
+@pytest.mark.parametrize("token", ["precompact", "none", "legacy_standalone"])
 async def test_completion_hook_binds_to_the_boundary_of_its_own_compaction(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, precompact_observed: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, token: str
 ) -> None:
     monkeypatch.setattr("omnigent.harnesses.claude_native.bridge._TRUSTED_PARENT", tmp_path)
     monkeypatch.setattr("omnigent.harnesses.claude_native.bridge._BRIDGE_ROOT", tmp_path)
@@ -404,9 +437,100 @@ async def test_completion_hook_binds_to_the_boundary_of_its_own_compaction(
     recent, boundary, summary = _second_compaction()
     entries.append(recent)
     bridge, transcript = _write_transcript(tmp_path, monkeypatch, entries)
-    if precompact_observed:
+    if token == "precompact":
         await forwarder._note_precompact(
             bridge, claude_session_id=_EXTERNAL_SESSION_ID, transcript_path=str(transcript)
+        )
+    elif token == "legacy_standalone":
+        # Older forwarders stamped standalone tokens with the poll time, which
+        # postdates the boundary they complete.
+        forwarder._write_compaction_state(
+            bridge,
+            forwarder.CompactionForwardState(
+                pending=forwarder._PendingCompaction(seq=1, seen_at=time.time()),
+                last_seq=1,
+            ),
+        )
+    record_hook_event(
+        bridge,
+        {
+            "hook_event_name": "SessionStart",
+            "source": "compact",
+            "session_id": _EXTERNAL_SESSION_ID,
+            "transcript_path": str(transcript),
+        },
+    )
+    posted: list[dict[str, Any]] = []
+    tracker = _PostRetryTracker(base_delay_s=0, max_delay_s=0)
+
+    hook_state = await _poll_completion_hooks(
+        bridge, posted, forwarder.HookForwardState(event_cursor=0, byte_offset=0), tracker
+    )
+    boundaries = [event for event in posted if event["type"] == "compaction"]
+    if token == "precompact":
+        # The only boundary on disk predates the PreCompact: hold the hook
+        # until Claude writes this compaction's boundary and summary.
+        assert hook_state.event_cursor == 0
+        assert boundaries == []
+        boundary["timestamp"] = _claude_timestamp(
+            datetime.now(timezone.utc) + timedelta(seconds=5)
+        )
+        entries.extend([boundary, summary])
+        transcript.write_text(
+            "".join(json.dumps(entry) + "\n" for entry in entries), encoding="utf-8"
+        )
+        hook_state = await _poll_completion_hooks(bridge, posted, hook_state, tracker)
+        boundaries = [event for event in posted if event["type"] == "compaction"]
+        expected = ["second summary", recent["message"]["content"]]
+    else:
+        # Without a PreCompact there is nothing to date the boundary against:
+        # a standalone completion, even a legacy token stamped with a poll
+        # time, binds to the latest one and keeps its retained messages.
+        expected = [
+            "summary of older context",
+            "continue the retained request",
+            entries[2]["message"]["content"],
+            entries[3]["message"]["content"],
+            recent["message"]["content"],
+        ]
+
+    assert hook_state.event_cursor > 0
+    assert len(boundaries) == 1
+    assert [message["content"] for message in boundaries[0]["data"]["compacted_messages"]] == (
+        expected
+    )
+    state = forwarder._read_compaction_state(bridge)
+    assert state.persisted_seqs == (1,)
+    assert state.pending is None
+
+
+@pytest.mark.asyncio
+async def test_completion_hook_dates_the_boundary_from_when_precompact_fired(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("omnigent.harnesses.claude_native.bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.harnesses.claude_native.bridge._BRIDGE_ROOT", tmp_path)
+    fired_at = datetime.now(timezone.utc) - timedelta(minutes=5)
+    entries = _transcript()
+    next(entry for entry in entries if entry["uuid"] == "boundary")["timestamp"] = (
+        _claude_timestamp(fired_at + timedelta(seconds=30))
+    )
+    bridge, transcript = _write_transcript(tmp_path, monkeypatch, entries)
+    # The forwarder polls this PreCompact only now, in the same batch as the
+    # completion hook, after Claude already wrote the boundary.
+    with (bridge / _HOOKS_FILE).open("a", encoding="utf-8") as hooks:
+        hooks.write(
+            json.dumps(
+                {
+                    "recorded_at": fired_at.timestamp(),
+                    "payload": {
+                        "hook_event_name": "PreCompact",
+                        "session_id": _EXTERNAL_SESSION_ID,
+                        "transcript_path": str(transcript),
+                    },
+                }
+            )
+            + "\n"
         )
     record_hook_event(
         bridge,
@@ -419,68 +543,19 @@ async def test_completion_hook_binds_to_the_boundary_of_its_own_compaction(
     )
     posted: list[dict[str, Any]] = []
 
-    def handle(request: httpx.Request) -> httpx.Response:
-        if request.method == "GET":
-            return httpx.Response(200, json={"data": [{"id": "last-item"}]})
-        posted.append(json.loads(request.content))
-        return httpx.Response(202, json={})
-
-    tracker = _PostRetryTracker(base_delay_s=0, max_delay_s=0)
-    hook_state = forwarder.HookForwardState(event_cursor=0, byte_offset=0)
-    async with httpx.AsyncClient(
-        transport=httpx.MockTransport(handle), base_url="https://fixture.invalid"
-    ) as client:
-
-        async def poll_hooks() -> forwarder.HookForwardState:
-            return await _forward_available_status_events(
-                client=client,
-                session_id="conversation-test",
-                bridge_dir=bridge,
-                state=hook_state,
-                retry_tracker=tracker,
-                compaction_retry_tracker=tracker,
-                dedupe=forwarder._ForwardDedupeState(),
-                task_subjects={},
-                task_statuses={},
-                task_order=[],
-            )
-
-        hook_state = await poll_hooks()
-        boundaries = [event for event in posted if event["type"] == "compaction"]
-        if precompact_observed:
-            # The only boundary on disk predates the PreCompact: hold the hook
-            # until Claude writes this compaction's boundary and summary.
-            assert hook_state.event_cursor == 0
-            assert boundaries == []
-            boundary["timestamp"] = _claude_timestamp(
-                datetime.now(timezone.utc) + timedelta(seconds=5)
-            )
-            entries.extend([boundary, summary])
-            transcript.write_text(
-                "".join(json.dumps(entry) + "\n" for entry in entries), encoding="utf-8"
-            )
-            hook_state = await poll_hooks()
-            boundaries = [event for event in posted if event["type"] == "compaction"]
-            expected = ["second summary", recent["message"]["content"]]
-        else:
-            # Without a PreCompact there is nothing to date the boundary
-            # against: the standalone completion binds to the latest one.
-            expected = [
-                "summary of older context",
-                "continue the retained request",
-                entries[2]["message"]["content"],
-                entries[3]["message"]["content"],
-                recent["message"]["content"],
-            ]
+    hook_state = await _poll_completion_hooks(
+        bridge,
+        posted,
+        forwarder.HookForwardState(event_cursor=0, byte_offset=0),
+        _PostRetryTracker(base_delay_s=0, max_delay_s=0),
+    )
 
     assert hook_state.event_cursor > 0
-    assert len(boundaries) == 1
-    assert [message["content"] for message in boundaries[0]["data"]["compacted_messages"]] == (
-        expected
-    )
-    state = forwarder._read_compaction_state(bridge)
-    assert state.persisted_seqs == (1,)
-    assert state.pending is None
+    boundaries = [event for event in posted if event["type"] == "compaction"]
+    assert [message["content"] for message in boundaries[0]["data"]["compacted_messages"]] == [
+        entries[i]["message"]["content"] for i in (5, 1, 2, 3)
+    ]
+    assert forwarder._read_compaction_state(bridge).persisted_seqs == (1,)
 
 
 @pytest.mark.parametrize("empty_content", [[], ""])

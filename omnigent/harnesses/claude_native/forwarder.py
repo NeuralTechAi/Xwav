@@ -542,7 +542,8 @@ class _PendingCompaction:
     :param transcript_path: Claude transcript path from the ``PreCompact``
         hook as a string, or ``None`` when absent. Also used for
         correlation with wildcard semantics.
-    :param seen_at: Unix timestamp the ``PreCompact`` was observed, e.g.
+    :param seen_at: Unix timestamp the ``PreCompact`` fired (its hook
+        record's ``recorded_at``, else when the forwarder observed it), e.g.
         ``1779922393.2``, or ``None`` for a token minted by a standalone
         completion hook. The hook-driven snapshot only binds to a
         ``compact_boundary`` written after it.
@@ -4154,6 +4155,7 @@ async def _forward_available_status_events(
                             else None
                         ),
                         event_cursor=record.event_cursor,
+                        recorded_at=record.recorded_at,
                     )
                 elif compaction_status == "completed":
                     # Secondary, best-effort persist. The transcript's
@@ -4182,8 +4184,8 @@ async def _forward_available_status_events(
                         # reloads the full pre-compaction history.
                         seq = await _claim_standalone_completion(bridge_dir)
                     else:
-                        # Only a boundary written after this ``PreCompact`` was
-                        # observed belongs to the compaction being completed.
+                        # Only a boundary written after this ``PreCompact`` fired
+                        # belongs to the compaction being completed.
                         summary_not_before = await _pending_compaction_seen_at(bridge_dir, seq)
                     if seq is not None:
                         # Persist the boundary with the SAME hold-cursor +
@@ -5254,6 +5256,7 @@ async def _prescan_precompact_edges(
                 str(record.transcript_path) if record.transcript_path is not None else None
             ),
             event_cursor=record.event_cursor,
+            recorded_at=record.recorded_at,
         )
 
 
@@ -6524,7 +6527,7 @@ async def _persist_native_compaction_item(
         resolve the same Claude summary UUID; hook-driven calls omit it and
         bind to the transcript's latest ``compact_boundary`` instead.
     :param summary_not_before: Unix timestamp the completed compaction's
-        ``PreCompact`` was observed, for hook-driven calls. A latest boundary
+        ``PreCompact`` fired, for hook-driven calls. A latest boundary
         written before it belongs to an earlier compaction and is retried.
     :param allow_snapshot_fallback: Persist the unchanged SDK snapshot, or
         no snapshot if the SDK read failed, when the local retry budget is spent.
@@ -7088,6 +7091,7 @@ async def _note_precompact(
     claude_session_id: str | None,
     transcript_path: str | None,
     event_cursor: int | None = None,
+    recorded_at: float | None = None,
 ) -> None:
     """
     Record that a ``PreCompact`` fired, minting a fresh pending token.
@@ -7112,6 +7116,10 @@ async def _note_precompact(
     :param transcript_path: Claude transcript path from the hook, or ``None``.
     :param event_cursor: Hook ``event_cursor`` of this ``PreCompact`` record,
         or ``None`` to always mint (no idempotency key).
+    :param recorded_at: Unix timestamp the hook process recorded the
+        ``PreCompact``, or ``None`` to stamp the token with the observation
+        time. The hook-driven snapshot only binds to a boundary written after
+        it, so a late poll must not date the token later than the hook fired.
     :returns: None.
     """
 
@@ -7129,7 +7137,7 @@ async def _note_precompact(
                     seq=next_seq,
                     claude_session_id=claude_session_id,
                     transcript_path=transcript_path,
-                    seen_at=time.time(),
+                    seen_at=recorded_at if recorded_at is not None else time.time(),
                 ),
                 last_seq=next_seq,
                 persisted_seqs=state.persisted_seqs,
@@ -7223,17 +7231,22 @@ async def _consume_pending_compaction(
 
 async def _pending_compaction_seen_at(bridge_dir: Path, seq: int) -> float | None:
     """
-    Return when the pending ``PreCompact`` for ``seq`` was observed, if known.
+    Return when the pending ``PreCompact`` for ``seq`` fired, if known.
 
     :param bridge_dir: Native Claude bridge directory.
     :param seq: The pending compaction sequence number being completed.
     :returns: The token's ``seen_at``, or ``None`` when ``seq`` is not the
-        pending token or the token was minted without a ``PreCompact``.
+        pending token or the token was minted by a standalone completion.
+        Standalone tokens carry neither a session id nor a transcript path;
+        older forwarders stamped them with the hook's poll time, which must
+        not date the boundary.
     """
 
     def _read() -> float | None:
         pending = _read_compaction_state(bridge_dir).pending
         if pending is None or pending.seq != seq:
+            return None
+        if pending.claude_session_id is None and pending.transcript_path is None:
             return None
         return pending.seen_at
 
