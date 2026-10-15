@@ -82,6 +82,7 @@ def _write_cert_material(directory: Path) -> tuple[Path, Path, Path]:
     key_pem = directory / "leaf-key.pem"
     ca_pem.write_bytes(ca_cert.public_bytes(serialization.Encoding.PEM))
     leaf_pem.write_bytes(leaf_cert.public_bytes(serialization.Encoding.PEM))
+    key_pem.touch(mode=0o600)
     key_pem.write_bytes(
         leaf_key.private_bytes(
             serialization.Encoding.PEM,
@@ -89,7 +90,6 @@ def _write_cert_material(directory: Path) -> tuple[Path, Path, Path]:
             serialization.NoEncryption(),
         )
     )
-    key_pem.chmod(0o600)
     return ca_pem, leaf_pem, key_pem
 
 
@@ -131,6 +131,7 @@ class ClaudeOAuthRefreshRejectingProxy:
         self.url = f"http://127.0.0.1:{self.port}"
         self.log_path = self.directory / "proxy-requests.jsonl"
         self._lock = threading.Lock()
+        self._connections: list[threading.Thread] = []
         self._thread = threading.Thread(target=self._accept_loop, daemon=True)
         self._thread.start()
 
@@ -144,6 +145,8 @@ class ClaudeOAuthRefreshRejectingProxy:
 
     def close(self) -> None:
         self._listener.close()
+        for connection in list(self._connections):
+            connection.join(timeout=5)
 
     def snapshot(self) -> list[dict[str, str]]:
         """Copy of the recorded requests, safe to read while connections are still served."""
@@ -156,7 +159,9 @@ class ClaudeOAuthRefreshRejectingProxy:
                 conn, _ = self._listener.accept()
             except OSError:
                 return
-            threading.Thread(target=self._serve, args=(conn,), daemon=True).start()
+            worker = threading.Thread(target=self._serve, args=(conn,), daemon=True)
+            self._connections.append(worker)
+            worker.start()
 
     def _record(self, entry: dict[str, str]) -> None:
         with self._lock:
@@ -166,6 +171,7 @@ class ClaudeOAuthRefreshRejectingProxy:
 
     def _serve(self, conn: socket.socket) -> None:
         host = ""
+        recorded = False
         try:
             conn.settimeout(30)
             head, _, pipelined = _read_head(conn).partition(b"\r\n\r\n")
@@ -207,11 +213,18 @@ class ClaudeOAuthRefreshRejectingProxy:
                 self._record(
                     {"host": host, "method": req_method, "path": path, "status": status[:3]}
                 )
+                recorded = True
                 tls.sendall(_response(status, body))
         except (OSError, ssl.SSLError, ValueError) as exc:
-            self._record(
-                {"host": host, "method": "", "path": "", "status": f"error:{type(exc).__name__}"}
-            )
+            if not recorded:
+                self._record(
+                    {
+                        "host": host,
+                        "method": "",
+                        "path": "",
+                        "status": f"error:{type(exc).__name__}",
+                    }
+                )
             return
         finally:
             with contextlib.suppress(OSError):

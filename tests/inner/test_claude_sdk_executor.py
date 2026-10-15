@@ -2141,7 +2141,15 @@ class TestSystemMessages(unittest.TestCase):
             SystemMessage = SDKSystemMessage
             StreamEvent = SDKStreamEvent
             ClaudeAgentOptions = SDKClaudeAgentOptions
-            messages = [
+            messages: list[object] = []
+
+            class ClaudeSDKClient(_SDKClient):
+                async def receive_response(self):
+                    for message in _FakeSDK.messages:
+                        yield message
+
+        async def _t(error_status: int):
+            _FakeSDK.messages = [
                 SDKSystemMessage(
                     subtype="api_retry",
                     data={
@@ -2150,18 +2158,11 @@ class TestSystemMessages(unittest.TestCase):
                         "attempt": 1,
                         "max_retries": 10,
                         "retry_delay_ms": 500,
-                        "error_status": 401,
+                        "error_status": error_status,
                         "error": "authentication_failed",
                     },
                 )
             ]
-
-            class ClaudeSDKClient(_SDKClient):
-                async def receive_response(self):
-                    for message in _FakeSDK.messages:
-                        yield message
-
-        async def _t():
             executor = ClaudeSDKExecutor()
             with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 events = [
@@ -2175,7 +2176,7 @@ class TestSystemMessages(unittest.TestCase):
             self.assertEqual(len(events), 1)
             self.assertIsInstance(events[0], ExecutorError)
             self.assertIn("authentication failed", events[0].message)
-            self.assertIn("401", events[0].message)
+            self.assertIn(str(error_status), events[0].message)
             self.assertEqual(events[0].code, CLAUDE_AUTH_FAILED_CODE)
             # Non-gateway executor should point at the Claude Code login, not databrickscfg
             remediation = events[0].remediation or ""
@@ -2183,7 +2184,9 @@ class TestSystemMessages(unittest.TestCase):
             self.assertNotIn("databrickscfg", remediation)
             self.assertIn(remediation, events[0].message)
 
-        _run(_t())
+        for error_status in (401, 403):
+            with self.subTest(error_status=error_status):
+                _run(_t(error_status))
 
     def test_auth_retry_databricks_gateway_mentions_databrickscfg(self):
         """Databricks-profile gateway auth errors should mention ~/.databrickscfg."""
@@ -3942,6 +3945,8 @@ async def test_result_message_is_error_yields_executor_error() -> None:
         "Invalid API key · Please run /login",
         "Authentication failed: invalid or missing API key",
         "Not signed in. Run /login, then retry.",
+        "Please run /login to sign in again.",
+        "Please run /login to authenticate, or check your authentication settings.",
         "Your organization has disabled API key authentication · Run /login to sign in "
         "with your claude.ai account",
         "The claude.ai credential is expired or revoked, and /login requires an interactive "
@@ -3963,6 +3968,7 @@ def test_claude_auth_failure_text_matches_claude_code_wording(result_text: str) 
         # A bare /login suggestion is not an authentication failure.
         "Credit balance too low · Run /login to switch accounts",
         "Run /login to enroll it as a trusted device",
+        "Please run `/login` to enroll this device",
     ],
 )
 def test_claude_auth_failure_text_ignores_other_failures(result_text: str) -> None:

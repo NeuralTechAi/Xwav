@@ -111,11 +111,9 @@ _DATABRICKS_CODING_AGENT_HEADER = "x-databricks-use-coding-agent-mode: true"
 
 CLAUDE_AUTH_FAILED_CODE = "claude_sdk_auth_failed"
 CLAUDE_AUTH_FAILED_TITLE = "Claude Code could not authenticate"
-# How Claude Code (2.1.x) words a turn it could not authenticate: an expired or
-# revoked claude.ai login, no login at all, or a rejected API key. A failed
-# ResultMessage carries no structured auth signal (unlike api_retry's status),
-# so its text is the only input. A bare "Run /login" is not enough on its own:
-# billing and device-enrollment errors suggest it too.
+# Failed ResultMessages carry no structured auth signal (unlike api_retry's
+# status), so Claude Code's (2.1.x) failure wording is the only input. A bare
+# "Run /login" is insufficient: billing/device-enrollment errors suggest it too.
 _CLAUDE_AUTH_FAILURE_MARKERS = (
     "failed to authenticate",
     "authentication failed",
@@ -124,7 +122,9 @@ _CLAUDE_AUTH_FAILURE_MARKERS = (
     "not logged in",
     "not signed in",
     "login expired",
-    "please run /login",
+    "run /login to sign in",
+    "run /login to authenticate",
+    "run /login and sign in",
     "oauth session expired",
     "oauth token revoked",
     "credential is expired or revoked",

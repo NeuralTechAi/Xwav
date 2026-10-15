@@ -23,10 +23,10 @@ a hand-written wire body — is what the picker renders.
   entry distinct from ``claude-sdk``.
 * ``test_claude_sdk_expired_login_first_turn_fails_without_warning_or_fix``
   drives the expired-login variant: the host's only Claude credential is a
-  claude.ai login whose refresh Claude Code can no longer complete, so
-  readiness still credits it and the launch proceeds. The first turn must then
-  fail with an error that names the login and how to fix it, not Claude Code's
-  raw text under a generic error pill.
+  claude.ai login whose refresh Claude Code can no longer complete. Readiness
+  and the picker warning are recorded as observations; the protected behavior
+  is the first turn failing with an error that names the login and how to fix
+  it, not Claude Code's raw text under a generic error pill.
 
 SDK-harness ``needs-auth`` is advisory: the daemon cannot see agent-level
 credentials (``executor.auth``) and never blocks an SDK launch, so the picker
