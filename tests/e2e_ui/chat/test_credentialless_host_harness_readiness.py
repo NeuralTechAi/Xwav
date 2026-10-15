@@ -71,7 +71,10 @@ from tests._helpers.browser import async_user_page
 from tests._helpers.compat import apply_runner_env, compat_runner_cwd, runner_executable
 from tests._helpers.host import isolated_host
 from tests._helpers.live_server import isolated_process_env, terminate_process
-from tests.e2e_ui.chat._claude_oauth_refresh_proxy import ClaudeOAuthRefreshRejectingProxy
+from tests.e2e_ui.chat._claude_oauth_refresh_proxy import (
+    REFRESH_PATH,
+    ClaudeOAuthRefreshRejectingProxy,
+)
 from tests.e2e_ui.conftest import _register_agent_yaml
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -628,9 +631,9 @@ def test_claude_sdk_expired_login_first_turn_fails_without_warning_or_fix(
             with contextlib.suppress(Exception):
                 httpx.delete(f"{live_server}/v1/sessions/{session_id}", timeout=10.0)
     requests = expired_claude_login_host.proxy.snapshot()
-    assert any(
-        r["path"].startswith("/v1/oauth/token") and r["status"] == "400" for r in requests
-    ), f"the proxy never rejected a Claude Code token refresh: {requests!r}"
+    assert any(r["path"].startswith(REFRESH_PATH) and r["status"] == "400" for r in requests), (
+        f"the proxy never rejected a Claude Code token refresh: {requests!r}"
+    )
     assert outcomes["codex"]["reply"], (
         f"Codex control on the same host did not answer: {outcomes['codex']!r}"
     )

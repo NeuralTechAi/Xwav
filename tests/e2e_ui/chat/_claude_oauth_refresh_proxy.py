@@ -29,7 +29,7 @@ _SERVED_HOSTS = (
     "downloads.claude.ai",
     "statsig.anthropic.com",
 )
-_REFRESH_PATH = "/v1/oauth/token"
+REFRESH_PATH = "/v1/oauth/token"
 
 
 def _write_cert_material(directory: Path) -> tuple[Path, Path, Path]:
@@ -90,6 +90,7 @@ def _write_cert_material(directory: Path) -> tuple[Path, Path, Path]:
             serialization.NoEncryption(),
         )
     )
+    key_pem.chmod(0o600)
     return ca_pem, leaf_pem, key_pem
 
 
@@ -132,6 +133,7 @@ class ClaudeOAuthRefreshRejectingProxy:
         self.log_path = self.directory / "proxy-requests.jsonl"
         self._lock = threading.Lock()
         self._connections: list[threading.Thread] = []
+        self._live: set[socket.socket] = set()
         self._thread = threading.Thread(target=self._accept_loop, daemon=True)
         self._thread.start()
 
@@ -145,8 +147,13 @@ class ClaudeOAuthRefreshRejectingProxy:
 
     def close(self) -> None:
         self._listener.close()
-        for connection in list(self._connections):
-            connection.join(timeout=5)
+        with self._lock:
+            live, workers = list(self._live), list(self._connections)
+        for conn in live:
+            with contextlib.suppress(OSError):
+                conn.shutdown(socket.SHUT_RDWR)
+        for worker in workers:
+            worker.join(timeout=5)
 
     def snapshot(self) -> list[dict[str, str]]:
         """Copy of the recorded requests, safe to read while connections are still served."""
@@ -160,7 +167,9 @@ class ClaudeOAuthRefreshRejectingProxy:
             except OSError:
                 return
             worker = threading.Thread(target=self._serve, args=(conn,), daemon=True)
-            self._connections.append(worker)
+            with self._lock:
+                self._connections.append(worker)
+                self._live.add(conn)
             worker.start()
 
     def _record(self, entry: dict[str, str]) -> None:
@@ -173,7 +182,7 @@ class ClaudeOAuthRefreshRejectingProxy:
         host = ""
         recorded = False
         try:
-            conn.settimeout(30)
+            conn.settimeout(10)
             head, _, pipelined = _read_head(conn).partition(b"\r\n\r\n")
             line = head.split(b"\r\n", 1)[0].decode("latin-1")
             method, target, *_ = [*line.split(" "), "", ""]
@@ -192,7 +201,7 @@ class ClaudeOAuthRefreshRejectingProxy:
                 req = _read_head(tls)
                 first = req.split(b"\r\n", 1)[0].decode("latin-1")
                 req_method, path, *_ = [*first.split(" "), "", ""]
-                if path.startswith(_REFRESH_PATH):
+                if path.startswith(REFRESH_PATH):
                     status, body = (
                         "400 Bad Request",
                         {
@@ -227,5 +236,7 @@ class ClaudeOAuthRefreshRejectingProxy:
                 )
             return
         finally:
+            with self._lock:
+                self._live.discard(conn)
             with contextlib.suppress(OSError):
                 conn.close()

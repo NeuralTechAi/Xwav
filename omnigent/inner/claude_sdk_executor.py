@@ -122,6 +122,7 @@ _CLAUDE_AUTH_FAILURE_MARKERS = (
     "not logged in",
     "not signed in",
     "login expired",
+    "please login again",
     "run /login to sign in",
     "run /login to authenticate",
     "run /login and sign in",
