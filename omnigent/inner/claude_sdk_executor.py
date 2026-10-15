@@ -111,9 +111,11 @@ _DATABRICKS_CODING_AGENT_HEADER = "x-databricks-use-coding-agent-mode: true"
 
 CLAUDE_AUTH_FAILED_CODE = "claude_sdk_auth_failed"
 CLAUDE_AUTH_FAILED_TITLE = "Claude Code could not authenticate"
-# How Claude Code words a turn it could not authenticate: an expired or revoked
-# claude.ai login, no login at all, or a rejected API key. A bare "Run /login"
-# is not enough on its own: billing and device-enrollment errors suggest it too.
+# How Claude Code (2.1.x) words a turn it could not authenticate: an expired or
+# revoked claude.ai login, no login at all, or a rejected API key. A failed
+# ResultMessage carries no structured auth signal (unlike api_retry's status),
+# so its text is the only input. A bare "Run /login" is not enough on its own:
+# billing and device-enrollment errors suggest it too.
 _CLAUDE_AUTH_FAILURE_MARKERS = (
     "failed to authenticate",
     "authentication failed",
@@ -125,10 +127,13 @@ _CLAUDE_AUTH_FAILURE_MARKERS = (
     "please run /login",
     "oauth session expired",
     "oauth token revoked",
-    "expired or revoked",
+    "credential is expired or revoked",
     "invalid api key",
     "disabled api key authentication",
 )
+
+# Claude Code ends its failure lines with "." or a " \u00b7 Run /login" clause.
+_TRAILING_PUNCTUATION = ".!: \u00b7"
 
 
 def is_claude_auth_failure_text(text: str) -> bool:
@@ -3233,7 +3238,7 @@ class ClaudeSDKExecutor(Executor):
                             # Keep the next step in the message too: the REPL and
                             # SDK stream render only code/message.
                             terminal_error = (
-                                f"{failure_text.rstrip('.')}. {auth_remediation}"
+                                f"{failure_text.rstrip(_TRAILING_PUNCTUATION)}. {auth_remediation}"
                                 if terminal_auth_failure
                                 else failure_text
                             )

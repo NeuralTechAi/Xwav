@@ -60,6 +60,7 @@ from typing import Any
 import httpx
 import pytest
 import yaml
+from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import async_playwright, expect
 
@@ -461,6 +462,8 @@ class _ExpiredLoginHost:
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline and _fetch_host_row(self.base_url, self.name):
             time.sleep(0.5)
+        if _fetch_host_row(self.base_url, self.name):
+            raise AssertionError(f"host {self.name} still reported online after stop()")
         return self.start()
 
 
@@ -570,8 +573,13 @@ async def _await_first_turn(page: Any, base_url: str, session_id: str) -> dict[s
     deadline = time.monotonic() + _FIRST_TURN_ERROR_TIMEOUT_MS / 1000
     settle_by: float | None = None
     while time.monotonic() < deadline:
-        if await error_pill.count() and await error_pill.is_visible():
-            await error_pill.click()
+        if await error_pill.count():
+            try:
+                await error_pill.click(timeout=5_000)
+            except PlaywrightError:
+                # The pill can re-render while the turn is still streaming; poll again.
+                await page.wait_for_timeout(500)
+                continue
             headline = page.get_by_test_id("error-headline").first
             body = page.get_by_test_id("error-message-content").first
             await expect(headline).to_be_visible(timeout=10_000)
@@ -609,9 +617,16 @@ def test_claude_sdk_expired_login_first_turn_fails_without_warning_or_fix(
     the expired login varies between runs.
     """
     outcomes: dict[str, Any] = {}
-    _run_in_fresh_loop(
-        _drive_expired_login(live_server, mock_llm_server_url, expired_claude_login_host, outcomes)
-    )
+    try:
+        _run_in_fresh_loop(
+            _drive_expired_login(
+                live_server, mock_llm_server_url, expired_claude_login_host, outcomes
+            )
+        )
+    finally:
+        for session_id in outcomes.get("session_ids", []):
+            with contextlib.suppress(Exception):
+                httpx.delete(f"{live_server}/v1/sessions/{session_id}", timeout=10.0)
     requests = expired_claude_login_host.proxy.snapshot()
     assert any(
         r["path"].startswith("/v1/oauth/token") and r["status"] == "400" for r in requests
@@ -651,7 +666,7 @@ async def _drive_expired_login(
             "record_video_size": {"width": 1280, "height": 800},
             "viewport": {"width": 1280, "height": 800},
         }
-    session_ids: list[str] = []
+    session_ids: list[str] = outcomes.setdefault("session_ids", [])
     marks: list[tuple[str, float]] = []
     async with async_playwright() as pw:
         async with (
@@ -711,7 +726,6 @@ async def _drive_expired_login(
             if record_dir:
                 await page.wait_for_timeout(4_000)
                 outcomes["video"] = str(await page.video.path()) if page.video else None
-    outcomes["session_ids"] = session_ids
     outcomes["marks"] = marks
     outcomes["host_readiness_at_each_landing"] = [
         {k: v for k, v in seen.items() if k in ("claude-sdk", "claude-native", "codex")}
