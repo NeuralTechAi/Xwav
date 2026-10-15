@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import shutil
 import subprocess
 import textwrap
@@ -35,6 +34,7 @@ from omnigent.harnesses.claude_native.bridge import (
     BRIDGE_ID_LABEL_KEY,
     bridge_dir_for_bridge_id,
 )
+from omnigent.harnesses.claude_native.main import _sanitize_claude_project_name
 from omnigent.onboarding.ambient import CLAUDE_CODE_MANAGED_SETTINGS_PATHS
 from omnigent.testing.process_reaper import reap_leaked_omnigent_processes
 from tests._helpers.live_server import terminate_process
@@ -129,7 +129,7 @@ def _items(client: httpx.Client, base_url: str, session_id: str) -> list[dict[st
 
 
 def _claude_transcript_path(stack: ServerRunner, external_session_id: str) -> Path:
-    project = re.sub(r"[^A-Za-z0-9]", "-", str(stack.workspace.resolve()))
+    project = _sanitize_claude_project_name(str(stack.workspace.resolve()))
     return stack.runner_home / ".claude" / "projects" / project / f"{external_session_id}.jsonl"
 
 
