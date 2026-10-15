@@ -305,6 +305,8 @@ def test_compacted_history_stays_compacted_after_restart(
         filler = " ".join(f"detail-{index}" for index in range(40))
 
         timeline: list[tuple[str, float]] = []
+        compaction: dict[str, Any] | None = None
+        external_session_id = before_restart = ""
         context = browser.new_context()
         started = time.monotonic()
 
@@ -371,12 +373,23 @@ def test_compacted_history_stays_compacted_after_restart(
             (stack.root / "mock-requests.json").write_text(
                 json.dumps(httpx.get(f"{mock_llm_server_url}/mock/requests", timeout=10.0).json())
             )
+            # Keep the compaction diagnostics even when a later step fails.
+            if before_restart:
+                (stack.root / "claude-transcript-before-restart.jsonl").write_text(before_restart)
+            if compaction is not None:
+                (stack.root / "compaction-item.json").write_text(json.dumps(compaction, indent=2))
+            if (
+                external_session_id
+                and _claude_transcript_path(stack, external_session_id).exists()
+            ):
+                (stack.root / "claude-transcript-after-resume.jsonl").write_text(
+                    _claude_transcript_path(stack, external_session_id).read_text(encoding="utf-8")
+                )
 
-        transcript = _claude_transcript_path(stack, external_session_id).read_text(
+        assert compaction is not None
+        transcript = (stack.root / "claude-transcript-after-resume.jsonl").read_text(
             encoding="utf-8"
         )
-        (stack.root / "claude-transcript-before-restart.jsonl").write_text(before_restart)
-        (stack.root / "compaction-item.json").write_text(json.dumps(compaction, indent=2))
         resumed_request = _request_for_marker(mock_llm_server_url, resume_marker)
         (stack.root / "resumed-model-request.json").write_text(
             json.dumps(resumed_request, indent=2)
