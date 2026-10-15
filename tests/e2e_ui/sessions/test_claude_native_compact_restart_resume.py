@@ -276,6 +276,7 @@ def _request_for_marker(mock_url: str, marker: str) -> dict[str, Any]:
 @pytest.mark.timeout(900)
 def test_compacted_history_stays_compacted_after_restart(
     browser: Browser,
+    built_spa: None,
     mock_llm_server_url: str,
     tmp_path: Path,
 ) -> None:
