@@ -488,10 +488,8 @@ async def test_completion_hook_binds_to_the_boundary_of_its_own_compaction(
         boundaries = [event for event in posted if event["type"] == "compaction"]
         expected = ["second summary", recent["message"]["content"]]
     else:
-        # Without a dated PreCompact there is nothing to date the boundary
-        # against: an undated or standalone completion, even a legacy token
-        # stamped with a poll time, binds to the latest one and keeps its
-        # retained messages.
+        # Undated/standalone tokens (even legacy poll-time stamps) have no lower
+        # bound: bind to the latest boundary and keep its retained messages.
         expected = [
             "summary of older context",
             "continue the retained request",
