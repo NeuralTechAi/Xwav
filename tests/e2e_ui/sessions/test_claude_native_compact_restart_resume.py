@@ -421,3 +421,9 @@ def test_compacted_history_stays_compacted_after_restart(
         assert post_marker in resumed_texts, (
             "the post-compaction turn was dropped from the resumed context"
         )
+        order = [
+            resumed_texts.index(text) for text in (summary.split()[0], post_marker, resume_marker)
+        ]
+        assert order == sorted(order), (
+            f"resumed context is out of order (summary, post, resume offsets: {order})"
+        )
