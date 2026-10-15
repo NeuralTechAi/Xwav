@@ -16,6 +16,7 @@ Anthropic endpoint, so the compaction summary text is scripted.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -260,7 +261,9 @@ def _user_texts(request: dict[str, Any]) -> list[str]:
 def _request_for_marker(mock_url: str, marker: str) -> dict[str, Any]:
     deadline = time.monotonic() + 30.0
     while time.monotonic() < deadline:
-        requests = httpx.get(f"{mock_url}/mock/requests", timeout=10.0).json()["requests"]
+        requests = httpx.get(f"{mock_url}/mock/requests", timeout=10.0, trust_env=False).json()[
+            "requests"
+        ]
         hits = [
             request
             for request in requests
@@ -371,9 +374,15 @@ def test_compacted_history_stays_compacted_after_restart(
             context.close()
             (stack.root / "timeline.json").write_text(json.dumps(timeline, indent=2))
             _copy_bridge_state(bridge_dir, stack.root / "bridge-after-resume")
-            (stack.root / "mock-requests.json").write_text(
-                json.dumps(httpx.get(f"{mock_llm_server_url}/mock/requests", timeout=10.0).json())
-            )
+            # Best-effort diagnostics must not mask the real failure.
+            with contextlib.suppress(httpx.HTTPError):
+                (stack.root / "mock-requests.json").write_text(
+                    json.dumps(
+                        httpx.get(
+                            f"{mock_llm_server_url}/mock/requests", timeout=10.0, trust_env=False
+                        ).json()
+                    )
+                )
             # Keep the compaction diagnostics even when a later step fails.
             if before_restart:
                 (stack.root / "claude-transcript-before-restart.jsonl").write_text(before_restart)

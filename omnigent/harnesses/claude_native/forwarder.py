@@ -543,10 +543,10 @@ class _PendingCompaction:
         hook as a string, or ``None`` when absent. Also used for
         correlation with wildcard semantics.
     :param seen_at: Unix timestamp the ``PreCompact`` fired (its hook
-        record's ``recorded_at``, else when the forwarder observed it), e.g.
-        ``1779922393.2``, or ``None`` for a token minted by a standalone
-        completion hook. The hook-driven snapshot only binds to a
-        ``compact_boundary`` written after it.
+        record's ``recorded_at``), e.g. ``1779922393.2``, or ``None`` when the
+        record carried none or the token was minted by a standalone completion
+        hook. The hook-driven snapshot only binds to a ``compact_boundary``
+        written after it; an undated token has no lower bound.
     """
 
     seq: int
@@ -7117,9 +7117,9 @@ async def _note_precompact(
     :param event_cursor: Hook ``event_cursor`` of this ``PreCompact`` record,
         or ``None`` to always mint (no idempotency key).
     :param recorded_at: Unix timestamp the hook process recorded the
-        ``PreCompact``, or ``None`` to stamp the token with the observation
-        time. The hook-driven snapshot only binds to a boundary written after
-        it, so a late poll must not date the token later than the hook fired.
+        ``PreCompact``, or ``None`` to leave the token undated. The hook-driven
+        snapshot only binds to a boundary written after this stamp, so a late
+        poll must not date the token later than the hook fired.
     :returns: None.
     """
 
@@ -7137,7 +7137,7 @@ async def _note_precompact(
                     seq=next_seq,
                     claude_session_id=claude_session_id,
                     transcript_path=transcript_path,
-                    seen_at=recorded_at if recorded_at is not None else time.time(),
+                    seen_at=recorded_at,
                 ),
                 last_seq=next_seq,
                 persisted_seqs=state.persisted_seqs,

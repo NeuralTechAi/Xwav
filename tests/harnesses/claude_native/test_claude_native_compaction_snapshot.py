@@ -424,7 +424,9 @@ async def _poll_completion_hooks(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("token", ["precompact", "none", "legacy_standalone"])
+@pytest.mark.parametrize(
+    "token", ["precompact", "undated_precompact", "none", "legacy_standalone"]
+)
 async def test_completion_hook_binds_to_the_boundary_of_its_own_compaction(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, token: str
 ) -> None:
@@ -437,9 +439,12 @@ async def test_completion_hook_binds_to_the_boundary_of_its_own_compaction(
     recent, boundary, summary = _second_compaction()
     entries.append(recent)
     bridge, transcript = _write_transcript(tmp_path, monkeypatch, entries)
-    if token == "precompact":
+    if token in ("precompact", "undated_precompact"):
         await forwarder._note_precompact(
-            bridge, claude_session_id=_EXTERNAL_SESSION_ID, transcript_path=str(transcript)
+            bridge,
+            claude_session_id=_EXTERNAL_SESSION_ID,
+            transcript_path=str(transcript),
+            recorded_at=time.time() if token == "precompact" else None,
         )
     elif token == "legacy_standalone":
         # Older forwarders stamped standalone tokens with the poll time, which
@@ -483,9 +488,10 @@ async def test_completion_hook_binds_to_the_boundary_of_its_own_compaction(
         boundaries = [event for event in posted if event["type"] == "compaction"]
         expected = ["second summary", recent["message"]["content"]]
     else:
-        # Without a PreCompact there is nothing to date the boundary against:
-        # a standalone completion, even a legacy token stamped with a poll
-        # time, binds to the latest one and keeps its retained messages.
+        # Without a dated PreCompact there is nothing to date the boundary
+        # against: an undated or standalone completion, even a legacy token
+        # stamped with a poll time, binds to the latest one and keeps its
+        # retained messages.
         expected = [
             "summary of older context",
             "continue the retained request",
