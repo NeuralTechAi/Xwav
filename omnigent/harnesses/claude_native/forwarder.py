@@ -7241,7 +7241,7 @@ async def _pending_compaction_seen_at(bridge_dir: Path, seq: int) -> float | Non
         older forwarders stamped them with the hook's poll time, which must
         not date the boundary. They therefore have no lower bound: a standalone
         completion processed before Claude writes the new records binds to the
-        newest boundary already on disk, as it did before this gate existed.
+        newest boundary already on disk.
     """
 
     def _read() -> float | None:
