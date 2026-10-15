@@ -2807,6 +2807,10 @@ class ClaudeSDKExecutor(Executor):
         system_diagnostics: list[str] = []
         terminal_error: str | None = None
         terminal_auth_failure = False
+        auth_remediation = _claude_auth_remediation(
+            databricks_profile=self._gateway_uses_databricks_profile,
+            gateway=bool(self._gateway),
+        )
         compaction_occurred: bool = False
         claude_session_id: str | None = None
         compaction_transcript_path: pathlib.Path | None = None
@@ -3218,8 +3222,14 @@ class ClaudeSDKExecutor(Executor):
                                 self._agent_name,
                                 failure_text,
                             )
-                            terminal_error = failure_text
                             terminal_auth_failure = is_claude_auth_failure_text(failure_text)
+                            # Keep the next step in the message too: the REPL and
+                            # SDK stream render only code/message.
+                            terminal_error = (
+                                f"{failure_text.rstrip('.')}. {auth_remediation}"
+                                if terminal_auth_failure
+                                else failure_text
+                            )
                         elif not response_text and result_msg.result:
                             response_text = result_msg.result
                         raw_usage = getattr(result_msg, "usage", None)
@@ -3291,7 +3301,8 @@ class ClaudeSDKExecutor(Executor):
                             ):
                                 terminal_error = (
                                     "Claude SDK provider authentication failed"
-                                    f" ({retry_error}, status={error_status})."
+                                    f" ({retry_error}, status={error_status}). "
+                                    f"{auth_remediation}"
                                 )
                                 terminal_auth_failure = True
                                 break
@@ -3309,6 +3320,7 @@ class ClaudeSDKExecutor(Executor):
                                     f"({retry_error}, status={error_status}). "
                                     f"{endpoint_hint}"
                                 )
+                                terminal_auth_failure = False
                                 break
                         elif getattr(system_msg, "hook_event_name", None) == "PreCompact":
                             compaction_occurred = True
@@ -3410,10 +3422,7 @@ class ClaudeSDKExecutor(Executor):
                     usage=turn_usage,
                     code=CLAUDE_AUTH_FAILED_CODE,
                     title=CLAUDE_AUTH_FAILED_TITLE,
-                    remediation=_claude_auth_remediation(
-                        databricks_profile=self._gateway_uses_databricks_profile,
-                        gateway=bool(self._gateway),
-                    ),
+                    remediation=auth_remediation,
                 )
             else:
                 yield ExecutorError(message=terminal_error, usage=turn_usage)

@@ -160,9 +160,10 @@ class ClaudeOAuthRefreshRejectingProxy:
                 log.write(json.dumps(entry) + "\n")
 
     def _serve(self, conn: socket.socket) -> None:
+        host = ""
         try:
             conn.settimeout(30)
-            head = _read_head(conn)
+            head, _, pipelined = _read_head(conn).partition(b"\r\n\r\n")
             line = head.split(b"\r\n", 1)[0].decode("latin-1")
             method, target, *_ = [*line.split(" "), "", ""]
             if method != "CONNECT":
@@ -170,6 +171,11 @@ class ClaudeOAuthRefreshRejectingProxy:
                 conn.sendall(_response("403 Forbidden", {"error": "connect only"}))
                 return
             host = target.rsplit(":", 1)[0]
+            if pipelined:
+                # Bytes sent before our 200 are lost to the TLS handshake below.
+                self._record(
+                    {"host": host, "method": method, "path": target, "status": "error:pipelined"}
+                )
             conn.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
             with self._tls.wrap_socket(conn, server_side=True) as tls:
                 req = _read_head(tls)
@@ -197,7 +203,10 @@ class ClaudeOAuthRefreshRejectingProxy:
                     {"host": host, "method": req_method, "path": path, "status": status[:3]}
                 )
                 tls.sendall(_response(status, body))
-        except (OSError, ssl.SSLError, ValueError):
+        except (OSError, ssl.SSLError, ValueError) as exc:
+            self._record(
+                {"host": host, "method": "", "path": "", "status": f"error:{type(exc).__name__}"}
+            )
             return
         finally:
             with contextlib.suppress(OSError):

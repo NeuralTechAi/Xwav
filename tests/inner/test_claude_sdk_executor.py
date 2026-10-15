@@ -2181,6 +2181,7 @@ class TestSystemMessages(unittest.TestCase):
             remediation = events[0].remediation or ""
             self.assertIn("claude auth login", remediation)
             self.assertNotIn("databrickscfg", remediation)
+            self.assertIn(remediation, events[0].message)
 
         _run(_t())
 
@@ -4064,18 +4065,41 @@ async def test_result_message_auth_failure_names_the_fix() -> None:
     failure = "Failed to authenticate: OAuth session expired and could not be refreshed"
     error = await _only_executor_error(ClaudeSDKExecutor(), _failed_result_sdk(failure))
 
-    assert error.message == failure
     assert error.code == CLAUDE_AUTH_FAILED_CODE
     assert error.title == CLAUDE_AUTH_FAILED_TITLE
     assert error.remediation is not None
     assert "claude auth login" in error.remediation
     assert "setup" in error.remediation
     assert "databrickscfg" not in error.remediation
+    # Message-only clients (REPL, SDK stream) still get Claude's text and the next step.
+    assert error.message.startswith(failure)
+    assert error.remediation in error.message
 
 
 @pytest.mark.asyncio
-async def test_result_message_auth_failure_on_databricks_gateway_points_at_profile() -> None:
-    """On a Databricks-profile gateway the next step is the profile, not a claude.ai login."""
+@pytest.mark.parametrize(
+    ("executor_kwargs", "expected", "unexpected"),
+    [
+        pytest.param(
+            {"gateway": True}, "databrickscfg", "claude auth login", id="databricks-profile"
+        ),
+        pytest.param(
+            {
+                "gateway": True,
+                "gateway_host": "https://gateway.example.com",
+                "base_url_override": "https://gateway.example.com/anthropic",
+                "gateway_auth_command": "printf token",
+            },
+            "ANTHROPIC_BASE_URL",
+            "databrickscfg",
+            id="generic-gateway",
+        ),
+    ],
+)
+async def test_result_message_auth_failure_remediation_follows_the_transport(
+    executor_kwargs: dict[str, object], expected: str, unexpected: str
+) -> None:
+    """On a gateway the next step names that gateway's credential, not a claude.ai login."""
     from unittest.mock import patch
 
     from omnigent.inner.claude_sdk_executor import CLAUDE_AUTH_FAILED_CODE, ClaudeSDKExecutor
@@ -4089,15 +4113,16 @@ async def test_result_message_auth_failure_on_databricks_gateway_points_at_profi
             "OMNIGENT_CLAUDE_API_KEY_HELPER": "databricks auth token ...",
         },
     ):
-        executor = ClaudeSDKExecutor(gateway=True)
+        executor = ClaudeSDKExecutor(**executor_kwargs)
     error = await _only_executor_error(
         executor, _failed_result_sdk("Failed to authenticate: invalid or missing API key")
     )
 
     assert error.code == CLAUDE_AUTH_FAILED_CODE
     assert error.remediation is not None
-    assert "databrickscfg" in error.remediation
-    assert "claude auth login" not in error.remediation
+    assert expected in error.remediation
+    assert unexpected not in error.remediation
+    assert error.remediation in error.message
 
 
 @pytest.mark.asyncio

@@ -43,6 +43,7 @@ run in the session, pytest-asyncio can't start a loop on the main thread.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import os
@@ -62,7 +63,7 @@ import yaml
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import async_playwright, expect
 
-from omnigent.inner.claude_sdk_executor import CLAUDE_AUTH_FAILED_CODE
+from omnigent.inner.claude_sdk_executor import CLAUDE_AUTH_FAILED_CODE, CLAUDE_AUTH_FAILED_TITLE
 from omnigent.process_logging import PROCESS_LOG_FILE_ENV_VAR
 from tests._helpers.async_thread import run_in_fresh_loop as _run_in_fresh_loop
 from tests._helpers.browser import async_user_page
@@ -365,15 +366,7 @@ async def _drive_pi_readiness(base_url: str, host: dict[str, Any]) -> None:
 _CLAUDE_SDK_FIRST_MESSAGE = "Can you read this message and reply?"
 _CODEX_CONTROL_MESSAGE = "Reply with the single word pong."
 _CODEX_CONTROL_MODEL = "gpt-4o"
-_FIX_HINT_WORDS = (
-    "log in",
-    "login",
-    "sign in",
-    "/status",
-    "setup",
-    "configure",
-    "re-authenticate",
-)
+_CLAUDE_LOGIN_COMMAND = "`claude auth login`"
 
 
 def _write_expired_claude_login(home: Path) -> None:
@@ -404,7 +397,7 @@ class _ExpiredLoginHost:
     host_id: str
     name: str
     workspace: Path
-    proxy_env: dict[str, str]
+    proxy: ClaudeOAuthRefreshRejectingProxy
     proc: subprocess.Popen[bytes] | None = None
     readiness_seen: list[dict[str, Any]] = field(default_factory=list)
 
@@ -429,7 +422,7 @@ class _ExpiredLoginHost:
             OMNIGENT_HOST_ID=self.host_id,
             OMNIGENT_HOST_NAME=self.name,
             OMNIGENT_RUNNER_ENV_PASSTHROUGH="HTTPS_PROXY,NO_PROXY,NODE_EXTRA_CA_CERTS",
-            **self.proxy_env,
+            **self.proxy.env(),
         )
         env[PROCESS_LOG_FILE_ENV_VAR] = str(self.log_path)
         with self.log_path.open("ab") as log:
@@ -486,32 +479,32 @@ def expired_claude_login_host(
         host_id=uuid.uuid4().hex,
         name=f"expired-claude-{uuid.uuid4().hex[:8]}",
         workspace=root / "workspace",
-        proxy_env=proxy.env(),
+        proxy=proxy,
     )
-    host.workspace.mkdir()
-    (host.home / ".omnigent").mkdir(parents=True)
-    (host.home / ".omnigent" / "config.yaml").write_text(
-        yaml.safe_dump(
-            {
-                "host": {"host_id": host.host_id, "name": host.name},
-                "providers": {
-                    "codex-mock": {
-                        "kind": "key",
-                        "default": ["openai"],
-                        "openai": {
-                            "base_url": f"{mock_llm_server_url}/v1",
-                            "api_key": "mock-key",
-                            "wire_api": "responses",
-                            "models": {"default": _CODEX_CONTROL_MODEL},
-                        },
-                    }
-                },
-            }
-        )
-    )
-    _write_expired_claude_login(host.home)
-    host.start()
     try:
+        host.workspace.mkdir()
+        (host.home / ".omnigent").mkdir(parents=True)
+        (host.home / ".omnigent" / "config.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "host": {"host_id": host.host_id, "name": host.name},
+                    "providers": {
+                        "codex-mock": {
+                            "kind": "key",
+                            "default": ["openai"],
+                            "openai": {
+                                "base_url": f"{mock_llm_server_url}/v1",
+                                "api_key": "mock-key",
+                                "wire_api": "responses",
+                                "models": {"default": _CODEX_CONTROL_MODEL},
+                            },
+                        }
+                    },
+                }
+            )
+        )
+        _write_expired_claude_login(host.home)
+        host.start()
         yield host
     finally:
         host.stop()
@@ -522,11 +515,6 @@ def expired_claude_login_host(
                     shutil.copy(src, Path(record_dir) / src.name)
 
 
-def _names_a_fix(text: str) -> bool:
-    lowered = text.lower()
-    return any(word in lowered for word in _FIX_HINT_WORDS)
-
-
 async def _start_session_from_landing(
     page: Any, base_url: str, host: _ExpiredLoginHost, agent_id: str, message: str
 ) -> tuple[str, str | None]:
@@ -534,7 +522,7 @@ async def _start_session_from_landing(
     await _seed_recent_workspace(page, host.host_id, str(host.workspace))
     await page.goto(f"{base_url}/")
     await page.get_by_test_id("new-chat-landing-input").wait_for(state="visible", timeout=30_000)
-    host_row = _fetch_host_row(base_url, host.name) or {}
+    host_row = await asyncio.to_thread(_fetch_host_row, base_url, host.name) or {}
     host.readiness_seen.append(dict(host_row.get("configured_harnesses") or {}))
     row = await _reveal_agent_row(page, agent_id)
     assert await row.is_enabled(), "the agent's picker row must stay selectable"
@@ -596,7 +584,7 @@ async def _await_first_turn(page: Any, base_url: str, session_id: str) -> dict[s
         if settle_by is not None and time.monotonic() > settle_by:
             break
         await page.wait_for_timeout(500)
-    outcome["stored_error"] = _stored_error(base_url, session_id)
+    outcome["stored_error"] = await asyncio.to_thread(_stored_error, base_url, session_id)
     if outcome["stored_error"] is not None or outcome["headline"] is not None:
         outcome["reply"] = None
     return outcome
@@ -609,28 +597,31 @@ def test_claude_sdk_expired_login_first_turn_fails_without_warning_or_fix(
 ) -> None:
     """An expired Claude login must fail the first turn with an error that names the fix.
 
-    Codex on the same host is the control and the host restart mirrors the
-    report; the picker's advisory ``needs-auth`` warning is recorded, not required.
+    The proxy must have rejected a refresh, so a passing turn means the fault
+    never reached Claude Code. Codex on the same host is the control; the
+    session after a host restart must carry the same classified error. The
+    picker's advisory ``needs-auth`` warning is recorded, not required.
     """
     outcomes: dict[str, Any] = {}
     _run_in_fresh_loop(
         _drive_expired_login(live_server, mock_llm_server_url, expired_claude_login_host, outcomes)
     )
-    sdk = outcomes["claude_sdk"]
+    requests = expired_claude_login_host.proxy.requests
+    assert any(
+        r["path"].startswith("/v1/oauth/token") and r["status"] == "400" for r in requests
+    ), f"the proxy never rejected a Claude Code token refresh: {requests!r}"
     assert outcomes["codex"]["reply"], (
         f"Codex control on the same host did not answer: {outcomes['codex']!r}"
     )
-    shown = " ".join(str(sdk.get(k) or "") for k in ("headline", "message"))
-    stored = sdk["stored_error"] or {}
-    assert sdk["reply"] or (
-        stored.get("code") == CLAUDE_AUTH_FAILED_CODE
-        and _names_a_fix(stored.get("remediation") or "")
-        and _names_a_fix(shown)
-    ), (
-        "claude-sdk agent on a host with an expired Claude login launched and its first "
-        f"turn died with no fix named: {sdk!r}; after a host restart: "
-        f"{outcomes['claude_sdk_after_restart']!r}"
-    )
+    for leg in ("claude_sdk", "claude_sdk_after_restart"):
+        outcome = outcomes[leg]
+        assert outcome["reply"] is None, f"{leg}: answered despite the expired login: {outcome!r}"
+        stored = outcome["stored_error"] or {}
+        assert stored.get("code") == CLAUDE_AUTH_FAILED_CODE, f"{leg}: {outcome!r}"
+        assert _CLAUDE_LOGIN_COMMAND in (stored.get("remediation") or ""), f"{leg}: {outcome!r}"
+        assert outcome["headline"] == CLAUDE_AUTH_FAILED_TITLE, f"{leg}: {outcome!r}"
+        shown = outcome["message"] or ""
+        assert "Try this:" in shown and _CLAUDE_LOGIN_COMMAND in shown, f"{leg}: {outcome!r}"
 
 
 async def _drive_expired_login(
@@ -698,7 +689,7 @@ async def _drive_expired_login(
                 await page.wait_for_timeout(3_000)
 
             mark("host restart")
-            host.restart()
+            await asyncio.to_thread(host.restart)
             mark("claude-sdk after restart: landing")
             sid, warned = await _start_session_from_landing(
                 page, base_url, host, sdk_agent, _CLAUDE_SDK_FIRST_MESSAGE
