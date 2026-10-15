@@ -7239,7 +7239,9 @@ async def _pending_compaction_seen_at(bridge_dir: Path, seq: int) -> float | Non
         pending token or the token was minted by a standalone completion.
         Standalone tokens carry neither a session id nor a transcript path;
         older forwarders stamped them with the hook's poll time, which must
-        not date the boundary.
+        not date the boundary. They therefore have no lower bound: a standalone
+        completion processed before Claude writes the new records binds to the
+        newest boundary already on disk, as it did before this gate existed.
     """
 
     def _read() -> float | None:
