@@ -145,6 +145,11 @@ class ClaudeOAuthRefreshRejectingProxy:
     def close(self) -> None:
         self._listener.close()
 
+    def snapshot(self) -> list[dict[str, str]]:
+        """Copy of the recorded requests, safe to read while connections are still served."""
+        with self._lock:
+            return list(self.requests)
+
     def _accept_loop(self) -> None:
         while True:
             try:
@@ -181,7 +186,7 @@ class ClaudeOAuthRefreshRejectingProxy:
                 req = _read_head(tls)
                 first = req.split(b"\r\n", 1)[0].decode("latin-1")
                 req_method, path, *_ = [*first.split(" "), "", ""]
-                if host == "platform.claude.com" and path.startswith(_REFRESH_PATH):
+                if path.startswith(_REFRESH_PATH):
                     status, body = (
                         "400 Bad Request",
                         {

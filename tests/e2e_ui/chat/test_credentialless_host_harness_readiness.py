@@ -457,6 +457,10 @@ class _ExpiredLoginHost:
 
     def restart(self) -> dict[str, Any]:
         self.stop()
+        # The server can keep reporting the old connection online for a moment.
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline and _fetch_host_row(self.base_url, self.name):
+            time.sleep(0.5)
         return self.start()
 
 
@@ -600,13 +604,15 @@ def test_claude_sdk_expired_login_first_turn_fails_without_warning_or_fix(
     The proxy must have rejected a refresh, so a passing turn means the fault
     never reached Claude Code. Codex on the same host is the control; the
     session after a host restart must carry the same classified error. The
-    picker's advisory ``needs-auth`` warning is recorded, not required.
+    picker's advisory ``needs-auth`` warning and the host's readiness map are
+    recorded, not required: readiness is advisory by design and its reading of
+    the expired login varies between runs.
     """
     outcomes: dict[str, Any] = {}
     _run_in_fresh_loop(
         _drive_expired_login(live_server, mock_llm_server_url, expired_claude_login_host, outcomes)
     )
-    requests = expired_claude_login_host.proxy.requests
+    requests = expired_claude_login_host.proxy.snapshot()
     assert any(
         r["path"].startswith("/v1/oauth/token") and r["status"] == "400" for r in requests
     ), f"the proxy never rejected a Claude Code token refresh: {requests!r}"

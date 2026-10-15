@@ -112,22 +112,29 @@ _DATABRICKS_CODING_AGENT_HEADER = "x-databricks-use-coding-agent-mode: true"
 CLAUDE_AUTH_FAILED_CODE = "claude_sdk_auth_failed"
 CLAUDE_AUTH_FAILED_TITLE = "Claude Code could not authenticate"
 # How Claude Code words a turn it could not authenticate: an expired or revoked
-# claude.ai login, no login at all, or a rejected API key.
+# claude.ai login, no login at all, or a rejected API key. A bare "Run /login"
+# is not enough on its own: billing and device-enrollment errors suggest it too.
 _CLAUDE_AUTH_FAILURE_MARKERS = (
     "failed to authenticate",
     "authentication failed",
+    "authentication_error",
+    "not authenticated",
     "not logged in",
+    "not signed in",
+    "login expired",
     "please run /login",
     "oauth session expired",
     "oauth token revoked",
+    "expired or revoked",
     "invalid api key",
+    "disabled api key authentication",
 )
 
 
 def is_claude_auth_failure_text(text: str) -> bool:
     """Whether *text* is Claude Code reporting that it could not authenticate."""
-    lowered = text.lower()
-    return any(marker in lowered for marker in _CLAUDE_AUTH_FAILURE_MARKERS)
+    normalized = " ".join(text.replace("`", "").lower().split())
+    return any(marker in normalized for marker in _CLAUDE_AUTH_FAILURE_MARKERS)
 
 
 def _claude_auth_remediation(*, databricks_profile: bool, gateway: bool) -> str:
