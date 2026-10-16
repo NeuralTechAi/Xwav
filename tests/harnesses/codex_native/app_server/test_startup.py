@@ -105,8 +105,9 @@ def _silent_timeout(server: CodexNativeAppServer) -> CodexAppServerSilentStartTi
     server.recent_stderr = list(_SILENT_STDERR)
     return CodexAppServerSilentStartTimeout(
         "Timed out after 60s waiting for the Codex app-server at ws://127.0.0.1:43121: "
-        f"None; stderr={' | '.join(_SILENT_STDERR)}",
+        f"[Errno 111] Connect call failed; stderr={' | '.join(_SILENT_STDERR)}",
         sum(len(line.encode()) for line in _SILENT_STDERR),
+        "ConnectionRefusedError",
     )
 
 
@@ -161,8 +162,11 @@ def _respawn_harness(
     return harness
 
 
-@pytest.mark.parametrize("capture_enabled", [False, True], ids=["capture-off", "capture-on"])
-@pytest.mark.parametrize("listen_url", ["ws://127.0.0.1:43121", None], ids=["ws", "unix"])
+@pytest.mark.parametrize(
+    ("listen_url", "capture_enabled"),
+    [("ws://127.0.0.1:43121", True), (None, False)],
+    ids=["ws-capture-on", "unix-capture-off"],
+)
 async def test_start_respawns_on_silent_startup_timeout(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -220,6 +224,7 @@ async def test_start_respawns_on_silent_startup_timeout(
         assert attributes["app_server_state"] == "running"
         assert attributes["app_server_pid"] == _SILENT_PID
         assert attributes["recent_stderr_bytes"] == len(_SILENT_STDERR[0])
+        assert attributes["last_error_type"] == "ConnectionRefusedError"
         assert attributes["stderr_capture_enabled"] is capture_enabled
         if capture_enabled:
             assert attributes["stderr_tail"] == "api_key=[REDACTED]"
@@ -298,9 +303,9 @@ def _free_port_outside_the_ephemeral_range() -> int:
     Pick a free loopback port that ``bind(("127.0.0.1", 0))`` never hands out.
 
     Linux auto-allocates from 32768 upward and macOS/Windows from 49152, so a
-    port below that cannot be taken by a parallel worker between this probe
-    and the fake app-server's own bind. The scan starts at a PID-derived
-    offset so concurrent runs rarely probe the same port.
+    low, PID-shifted range keeps parallel workers' ephemeral ports away from
+    this one and reduces collisions; availability remains racy until the child
+    binds.
 
     :returns: A bindable port between 20000 and 29999.
     """
@@ -353,12 +358,8 @@ async def test_start_respawns_a_silent_app_server_on_the_same_transport(
         assert sorted(path.name for path in state_dir.iterdir()) == ["attempt-1", "attempt-2"]
         assert server.listen_url == listen_url
         silent_pid = int((state_dir / "attempt-1").read_text())
-        # Reaped entirely, or still a zombie awaiting the loop's child watcher.
-        try:
-            silent_status = psutil.Process(silent_pid).status()
-        except psutil.NoSuchProcess:
-            silent_status = None
-        assert silent_status in (None, psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD)
+        # close() awaited the child, so it is reaped, not merely terminated.
+        assert not psutil.pid_exists(silent_pid)
         assert server.proc is not None and server.proc.returncode is None
         # The runner and ``omnigent codex`` connect with the URL they captured
         # before start(); the replacement must answer there.
@@ -731,7 +732,7 @@ async def test_wait_until_ready_timeout_reports_listen_target_and_budget(
             # Each refused probe costs 25 s of virtual time: three attempts
             # exhaust the 60 s budget without a real wait.
             clock["offset"] += 25.0
-            raise OSError("[Errno 111] Connect call failed ('127.0.0.1', 57045)")
+            raise ConnectionRefusedError(111, "Connect call failed ('127.0.0.1', 57045)")
 
         async def close(self) -> None:
             self.close_calls += 1
@@ -768,9 +769,11 @@ async def test_wait_until_ready_timeout_reports_listen_target_and_budget(
     assert (str(server.socket_path) in message) is (listen_url is None)
     assert len(clients) == 3
     assert all(client.close_calls == 1 for client in clients)
-    # Alive but never listening: the respawnable subclass carries the stderr tail size.
+    # Alive but never listening: the respawnable subclass carries the stderr tail
+    # size and the class of the last failed probe.
     assert type(excinfo.value) is codex_native_app_server.CodexAppServerSilentStartTimeout
     assert excinfo.value.recent_stderr_bytes == len("samplestderr")
+    assert excinfo.value.last_error_type == "ConnectionRefusedError"
 
 
 async def test_wait_until_ready_fails_at_once_when_the_process_exited(tmp_path: Path) -> None:

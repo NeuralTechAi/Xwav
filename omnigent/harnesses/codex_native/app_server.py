@@ -193,10 +193,14 @@ class CodexAppServerSilentStartTimeout(RuntimeError):
     turns a second occurrence into a plain ``RuntimeError``.
     """
 
-    def __init__(self, message: str, recent_stderr_bytes: int) -> None:
+    def __init__(
+        self, message: str, recent_stderr_bytes: int, last_error_type: str | None = None
+    ) -> None:
         super().__init__(message)
         # Bytes in the bounded ``recent_stderr`` tail, not the total emitted.
         self.recent_stderr_bytes = recent_stderr_bytes
+        # Class name of the last failed probe, e.g. ``"ConnectionRefusedError"``.
+        self.last_error_type = last_error_type
 
 
 @dataclass(frozen=True)
@@ -2276,8 +2280,7 @@ class CodexNativeAppServer:
                 # A loaded host can leave a fresh app-server silent; a second spawn
                 # listens. It must reuse the transport: callers captured the listen
                 # URL before start() and hand it to the TUI, forwarder and bridge.
-                # Diagnostics must never block the recovery itself.
-                with contextlib.suppress(Exception):
+                with contextlib.suppress(Exception):  # diagnostics never block recovery
                     _logger.warning(
                         "Codex app-server never listened and is still running "
                         "(recent_stderr_bytes=%d); respawning it once on the same transport",
@@ -2286,6 +2289,7 @@ class CodexNativeAppServer:
                             "codex_app_server_silent_start_respawn",
                             silent,
                             recent_stderr_bytes=silent.recent_stderr_bytes,
+                            last_error_type=silent.last_error_type,
                         ),
                     )
                 await self.close()
@@ -2628,7 +2632,11 @@ class CodexNativeAppServer:
             recent_stderr_bytes = sum(
                 len(line.encode("utf-8")) for line in (self.recent_stderr or [])
             )
-            raise CodexAppServerSilentStartTimeout(message, recent_stderr_bytes)
+            raise CodexAppServerSilentStartTimeout(
+                message,
+                recent_stderr_bytes,
+                type(last_error).__name__ if last_error is not None else None,
+            )
         raise RuntimeError(message)
 
     async def _stderr_loop(self) -> None:

@@ -277,8 +277,9 @@ that process, and spawns one replacement on the same transport with a fresh
 readiness budget, so recovery can take two full budgets plus teardown rather
 than ending after the first. The row carries the same snapshot attributes for
 the silent process plus `recent_stderr_bytes`, the size of its retained stderr
-tail; the stderr text itself appears only in the opt-in, redacted `stderr_tail`
-attribute, never in the message. If the replacement fails in turn, the
+tail, and `last_error_type`, the class of the last failed readiness probe (for
+example `ConnectionRefusedError`); the stderr text itself appears only in the
+opt-in, redacted `stderr_tail` attribute, never in the message. If the replacement fails in turn, the
 `codex_app_server_start_failed` row describes the replacement, so the respawn
 row is the only record of the original silent process.
 
