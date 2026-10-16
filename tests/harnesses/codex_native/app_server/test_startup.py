@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import logging
+import os
 import socket
 import sys
 from collections.abc import Awaitable, Callable
@@ -241,6 +241,7 @@ if attempt == 1:
     with socket.socket() as held:
         held.bind((host, int(port)))
         time.sleep(30)
+    sys.exit(0)
 
 
 async def handle(connection):
@@ -265,11 +266,12 @@ def _free_port_outside_the_ephemeral_range() -> int:
 
     Linux auto-allocates from 32768 upward and macOS/Windows from 49152, so a
     port below that cannot be taken by a parallel worker between this probe
-    and the fake app-server's own bind.
+    and the fake app-server's own bind. The scan starts at a PID-derived
+    offset so concurrent runs rarely probe the same port.
 
     :returns: A bindable port between 20000 and 29999.
     """
-    for port in range(20000, 30000):
+    for port in range(20000 + os.getpid() % 9000, 30000):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
             try:
                 probe.bind(("127.0.0.1", port))
@@ -319,8 +321,11 @@ async def test_start_respawns_a_silent_app_server_on_the_same_transport(
         assert server.listen_url == listen_url
         silent_pid = int((state_dir / "attempt-1").read_text())
         # Reaped entirely, or still a zombie awaiting the loop's child watcher.
-        with contextlib.suppress(psutil.NoSuchProcess):
-            assert psutil.Process(silent_pid).status() == psutil.STATUS_ZOMBIE
+        try:
+            silent_status = psutil.Process(silent_pid).status()
+        except psutil.NoSuchProcess:
+            silent_status = None
+        assert silent_status in (None, psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD)
         assert server.proc is not None and server.proc.returncode is None
         # The runner and ``omnigent codex`` connect with the URL they captured
         # before start(); the replacement must answer there.

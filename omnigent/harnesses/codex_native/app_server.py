@@ -2276,17 +2276,19 @@ class CodexNativeAppServer:
                 # A loaded host can leave a fresh app-server silent; a second spawn
                 # listens. It must reuse the transport: callers captured the listen
                 # URL before start() and hand it to the TUI, forwarder and bridge.
-                _logger.warning(
-                    "Codex app-server never listened and is still running "
-                    "(recent_stderr_bytes=%d); respawning it once on the same transport: %s",
-                    silent.recent_stderr_bytes,
-                    silent,
-                    extra=self._startup_snapshot_event(
-                        "codex_app_server_silent_start_respawn",
+                # Diagnostics must never block the recovery itself.
+                with contextlib.suppress(Exception):
+                    _logger.warning(
+                        "Codex app-server never listened and is still running "
+                        "(recent_stderr_bytes=%d); respawning it once on the same transport: %s",
+                        silent.recent_stderr_bytes,
                         silent,
-                        recent_stderr_bytes=silent.recent_stderr_bytes,
-                    ),
-                )
+                        extra=self._startup_snapshot_event(
+                            "codex_app_server_silent_start_respawn",
+                            silent,
+                            recent_stderr_bytes=silent.recent_stderr_bytes,
+                        ),
+                    )
                 await self.close()
                 # Diagnostics from a process that never served must not fail
                 # the replacement's turns.
