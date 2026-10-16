@@ -60,6 +60,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   cleanup();
 });
 
@@ -174,6 +175,10 @@ describe("bulk-action bar layout", () => {
       await flush();
       expect(screen.queryByRole("tooltip")).toBeNull();
 
+      // Freeze the clock so the guard window cannot lapse during the waits below;
+      // the re-hover check then depends on the trigger's pointer-entry wiring.
+      vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+
       // Closing the menu hands focus back to the button; that programmatic
       // focus must not pop the tooltip under a pointer that is not hovering it.
       closeMenu(menu);
@@ -182,8 +187,10 @@ describe("bulk-action bar layout", () => {
       await flush();
       expect(screen.queryByRole("tooltip")).toBeNull();
 
-      // Fresh hover intent (the pointer re-entering the trigger) shows it again.
-      fireEvent.pointerEnter(trigger.parentElement!);
+      // Fresh hover intent (the pointer re-entering the tooltip trigger) shows it again.
+      const tooltipTrigger = trigger.closest('[data-slot="tooltip-trigger"]');
+      expect(tooltipTrigger).not.toBeNull();
+      fireEvent.pointerEnter(tooltipTrigger!);
       fireEvent.focus(trigger);
       expect(await screen.findByRole("tooltip")).toHaveTextContent(label);
     },
