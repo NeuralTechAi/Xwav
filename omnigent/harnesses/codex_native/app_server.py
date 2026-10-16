@@ -2280,9 +2280,8 @@ class CodexNativeAppServer:
                 with contextlib.suppress(Exception):
                     _logger.warning(
                         "Codex app-server never listened and is still running "
-                        "(recent_stderr_bytes=%d); respawning it once on the same transport: %s",
+                        "(recent_stderr_bytes=%d); respawning it once on the same transport",
                         silent.recent_stderr_bytes,
-                        silent,
                         extra=self._startup_snapshot_event(
                             "codex_app_server_silent_start_respawn",
                             silent,

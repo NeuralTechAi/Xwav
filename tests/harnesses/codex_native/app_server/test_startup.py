@@ -91,17 +91,22 @@ class _RespawnHarness:
     socket_present_at_spawn: list[bool] = field(default_factory=list)
 
 
+_SILENT_PID = 4242
+_SILENT_STDERR = ["api_key=synthetic-token-marker"]
+
+
 def _silent_timeout(server: CodexNativeAppServer) -> CodexAppServerSilentStartTimeout:
     """Leave ``server`` holding a live, never-listening process and build its timeout."""
     proc_mock = AsyncMock()
     proc_mock.returncode = None
+    proc_mock.pid = _SILENT_PID
     proc_mock.wait = AsyncMock()
     server.proc = proc_mock
-    server.recent_stderr = []
+    server.recent_stderr = list(_SILENT_STDERR)
     return CodexAppServerSilentStartTimeout(
         "Timed out after 60s waiting for the Codex app-server at ws://127.0.0.1:43121: "
-        "None; stderr=",
-        0,
+        f"None; stderr={' | '.join(_SILENT_STDERR)}",
+        sum(len(line.encode()) for line in _SILENT_STDERR),
     )
 
 
@@ -135,6 +140,7 @@ def _respawn_harness(
         harness.socket_present_at_spawn.append(self.socket_path.exists())
         proc_mock = AsyncMock()
         proc_mock.returncode = None
+        proc_mock.pid = _SILENT_PID + len(harness.spawn_calls)
         proc_mock.wait = AsyncMock()
         self.proc = proc_mock
         self.recent_stderr = []
@@ -155,11 +161,17 @@ def _respawn_harness(
     return harness
 
 
+@pytest.mark.parametrize("capture_enabled", [False, True], ids=["capture-off", "capture-on"])
 @pytest.mark.parametrize("listen_url", ["ws://127.0.0.1:43121", None], ids=["ws", "unix"])
 async def test_start_respawns_on_silent_startup_timeout(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, listen_url: str | None
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    listen_url: str | None,
+    capture_enabled: bool,
 ) -> None:
     """One silent timeout respawns on the same transport and drops the first attempt's state."""
+    monkeypatch.setenv(HARNESS_STDERR_ENABLED_ENV_VAR, "1" if capture_enabled else "0")
     startup_client = _FakeStartupClient()
     readiness_calls: list[int] = []
     stale_failure = CertificateFailure(evidence="certificate expired", expired=True)
@@ -181,7 +193,8 @@ async def test_start_respawns_on_silent_startup_timeout(
     server.listen_url = listen_url
     resolved_listen = listen_url or f"unix://{server.socket_path}"
 
-    await server.start()
+    with caplog.at_level(logging.WARNING):
+        await server.start()
     try:
         # Callers hand the pre-start transport to the TUI and forwarder, so the
         # respawn must reuse it.
@@ -194,6 +207,26 @@ async def test_start_respawns_on_silent_startup_timeout(
         # Only a unix transport owns the socket path, so only it unlinks the
         # stale file before the second spawn.
         assert harness.socket_present_at_spawn == [False, listen_url is not None]
+        # Exactly one respawn event, describing the silent process; its stderr
+        # reaches the log only through the opt-in, redacted snapshot.
+        records = [
+            record
+            for record in caplog.records
+            if getattr(record, "event_name", None) == "codex_app_server_silent_start_respawn"
+        ]
+        assert len(records) == 1
+        attributes = records[0].attributes
+        assert attributes["exception_type"] == "CodexAppServerSilentStartTimeout"
+        assert attributes["app_server_state"] == "running"
+        assert attributes["app_server_pid"] == _SILENT_PID
+        assert attributes["recent_stderr_bytes"] == len(_SILENT_STDERR[0])
+        assert attributes["stderr_capture_enabled"] is capture_enabled
+        if capture_enabled:
+            assert attributes["stderr_tail"] == "api_key=[REDACTED]"
+        else:
+            assert "stderr_tail" not in attributes
+        serialized = json.dumps({"message": records[0].getMessage(), "attributes": attributes})
+        assert "synthetic-token-marker" not in serialized
     finally:
         await server.close()
 
