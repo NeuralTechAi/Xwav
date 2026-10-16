@@ -270,6 +270,16 @@ error or the CLI's startup error. Cancellation emits no event. If the collector
 fails, the row carries `diagnostics_error_type` instead of the snapshot; a
 logging failure cannot replace the startup error or skip teardown.
 
+When the readiness budget expires while the spawned process is still alive and
+has never accepted a probe, `start()` instead emits
+`event_name=codex_app_server_silent_start_respawn` at WARNING level, terminates
+that process, and spawns one replacement on the same transport. The row carries
+the same snapshot attributes for the silent process plus `recent_stderr_bytes`,
+the size of its retained stderr tail; its message also names the probe target
+and the last connect error. If the replacement fails in turn, the
+`codex_app_server_start_failed` row describes the replacement, so the respawn
+row is the only record of the original silent process.
+
 ## Native turn failure evidence
 
 Failed `external_session_status` events accept optional `failure_context`

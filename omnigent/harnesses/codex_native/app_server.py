@@ -2278,10 +2278,13 @@ class CodexNativeAppServer:
                 # URL before start() and hand it to the TUI, forwarder and bridge.
                 _logger.warning(
                     "Codex app-server never listened and is still running "
-                    "(recent_stderr_bytes=%d); respawning it once on the same transport",
+                    "(recent_stderr_bytes=%d); respawning it once on the same transport: %s",
                     silent.recent_stderr_bytes,
-                    extra=debug_event(
-                        "codex_app_server_silent_start_respawn", session_id=self.session_id
+                    silent,
+                    extra=self._startup_snapshot_event(
+                        "codex_app_server_silent_start_respawn",
+                        silent,
+                        recent_stderr_bytes=silent.recent_stderr_bytes,
                     ),
                 )
                 await self.close()
@@ -2359,22 +2362,32 @@ class CodexNativeAppServer:
             await self.close()
             raise
 
-    def _log_startup_failure_snapshot(self, exc: Exception) -> None:
-        """Record the owned child's state before ``close()`` discards it."""
+    def _startup_snapshot_event(
+        self, event_name: str, exc: Exception, **attributes: object
+    ) -> dict[str, object]:
+        """Build a debug event carrying the owned child's state before ``close()`` discards it."""
         diagnostics: dict[str, object]
         try:
             diagnostics = collect_codex_startup_diagnostics(self)
         except Exception as diagnostics_error:  # noqa: BLE001 - never replace the startup error
             diagnostics = {"diagnostics_error_type": type(diagnostics_error).__name__}
-        failure_event = debug_event("codex_app_server_start_failed", session_id=self.session_id)
-        failure_event["attributes"] = {
+        event = debug_event(event_name, session_id=self.session_id)
+        event["attributes"] = {
             "harness": "codex-native",
             "phase": "app_server_startup",
             "exception_type": type(exc).__name__,
             **diagnostics,
+            **attributes,
         }
+        return event
+
+    def _log_startup_failure_snapshot(self, exc: Exception) -> None:
+        """Record the owned child's state before ``close()`` discards it."""
         with contextlib.suppress(Exception):
-            _logger.warning("Codex app-server startup failed before cleanup", extra=failure_event)
+            _logger.warning(
+                "Codex app-server startup failed before cleanup",
+                extra=self._startup_snapshot_event("codex_app_server_start_failed", exc),
+            )
 
     async def _trust_policy_hooks(self, *, client: CodexAppServerClient | None = None) -> None:
         """
