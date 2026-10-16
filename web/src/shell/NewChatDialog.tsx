@@ -153,6 +153,7 @@ import { useModelPickerHotkey } from "@/hooks/useModelPickerHotkey";
 import { CliCommandBlock, renderTextWithInlineCode } from "./CliCommandBlock";
 import { isHostAbsolutePath, isNavigablePath } from "./WorkspacePicker";
 import { WorkspacePickerDialog } from "./WorkspacePickerDialog";
+import { StaticSandboxPicker } from "./StaticSandboxPicker";
 import { RecentWorkspaceList } from "./RecentWorkspaceList";
 import {
   WORKTREE_RADIO_SELECTOR_INPUT_CLASS,
@@ -2680,6 +2681,7 @@ export function NewChatLandingScreen() {
   const skipDbcertCheckRef = useRef<(() => void) | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [wakingHostId, setWakingHostId] = useState<string | null>(null);
+  const [discoveryProvider, setDiscoveryProvider] = useState<string | null>(null);
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   const [offlineHostLimit, setOfflineHostLimit] = useState(0);
@@ -7055,6 +7057,19 @@ export function NewChatLandingScreen() {
                               </Tooltip>
                             </DropdownMenuItem>
                           ))}
+                        {managedSandboxesEnabled &&
+                          sandboxProviderRows.map((provider) =>
+                            provider !== null &&
+                            info.sandbox_provider_capabilities?.[provider]?.reusable_hosts ? (
+                              <DropdownMenuItem
+                                key={`discover-${provider}`}
+                                onSelect={() => setDiscoveryProvider(provider)}
+                              >
+                                Choose existing static sandbox…
+                                {sandboxProviderRows.length > 1 && ` (${provider})`}
+                              </DropdownMenuItem>
+                            ) : null,
+                          )}
                         {cloudHosts.map(renderHostMenuItem)}
                         {showArcaOption && (
                           <DropdownMenuItem
@@ -7526,6 +7541,14 @@ export function NewChatLandingScreen() {
           </div>
         </footer>
       ) : null}
+
+      {discoveryProvider !== null && (
+        <StaticSandboxPicker
+          provider={discoveryProvider}
+          onClose={() => setDiscoveryProvider(null)}
+          onSelect={selectHost}
+        />
+      )}
 
       {/* Connect-host instructions, reachable from the host dropdown even when
           no hosts are online — the zero-host escape hatch. */}
