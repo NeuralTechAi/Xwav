@@ -29,7 +29,7 @@ describe("useMenuGuardedTooltip", () => {
     expect(result.current.open).toBe(false);
   });
 
-  it("closes the tooltip and ignores open requests while the menu is open", () => {
+  it("closes the tooltip while the menu is open and keeps it closed afterwards", () => {
     const { result, rerender } = renderGuard();
     act(() => result.current.onOpenChange(true));
     expect(result.current.open).toBe(true);
@@ -42,6 +42,10 @@ describe("useMenuGuardedTooltip", () => {
     // Pointer entry while the menu is open is not fresh hover intent.
     act(() => result.current.triggerProps.onPointerEnter());
     act(() => result.current.onOpenChange(true));
+    expect(result.current.open).toBe(false);
+
+    // The earlier open intent was cleared, not merely masked while the menu was open.
+    rerender({ menuOpen: false });
     expect(result.current.open).toBe(false);
   });
 

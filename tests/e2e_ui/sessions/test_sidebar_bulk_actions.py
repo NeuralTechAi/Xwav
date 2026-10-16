@@ -119,7 +119,7 @@ def test_filter_tooltip_stays_hidden_after_choosing_an_option(
     expect(_row_link(page, title)).to_be_visible()
 
     filter_sessions = page.get_by_role("button", name="Filter sessions")
-    tooltip = page.locator('[data-slot="tooltip-content"]')
+    tooltip = page.get_by_role("tooltip")
     filter_sessions.click()
     all_option = page.get_by_test_id("session-filter-all")
     expect(all_option).to_be_visible()

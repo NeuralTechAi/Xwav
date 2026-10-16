@@ -162,12 +162,17 @@ describe("bulk-action bar layout", () => {
   ];
 
   it.each(menuTooltipCases)(
-    "keeps the %s tooltip hidden after its menu closes",
+    "keeps the %s tooltip hidden while its menu is open and after it closes",
     async (testId, label, closeMenu) => {
       renderSidebar();
       enterSelectionModeAndSelect();
       const trigger = screen.getByTestId(testId);
       const menu = await openMenu(trigger);
+
+      // No tooltip may paint over the open menu.
+      fireEvent.focus(trigger);
+      await flush();
+      expect(screen.queryByRole("tooltip")).toBeNull();
 
       // Closing the menu hands focus back to the button; that programmatic
       // focus must not pop the tooltip under a pointer that is not hovering it.
@@ -181,21 +186,6 @@ describe("bulk-action bar layout", () => {
       fireEvent.pointerEnter(trigger.parentElement!);
       fireEvent.focus(trigger);
       expect(await screen.findByRole("tooltip")).toHaveTextContent(label);
-    },
-  );
-
-  it.each(menuTooltipCases)(
-    "keeps the %s tooltip hidden while its menu is open",
-    async (testId) => {
-      renderSidebar();
-      enterSelectionModeAndSelect();
-      const trigger = screen.getByTestId(testId);
-      await openMenu(trigger);
-
-      // No tooltip may paint over the open menu.
-      fireEvent.focus(trigger);
-      await flush();
-      expect(screen.queryByRole("tooltip")).toBeNull();
     },
   );
 
