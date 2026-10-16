@@ -275,8 +275,7 @@ attempt = len(list(state_dir.glob("attempt-*"))) + 1
 (state_dir / f"attempt-{attempt}").write_text(str(os.getpid()))
 host, port = sys.argv[sys.argv.index("--listen") + 1].removeprefix("ws://").split(":")
 if attempt == 1:
-    # Hold the port without listening: connects are refused while the
-    # transport stays reserved for the respawn.
+    # Bound but never listening: connects are refused for the whole budget.
     with socket.socket() as held:
         held.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         held.bind((host, int(port)))
@@ -321,36 +320,44 @@ async def test_start_respawns_a_silent_app_server_on_the_same_transport(
     codex = tmp_path / "codex"
     codex.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{script}" "$@"\n')
     codex.chmod(0o755)
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.bind(("127.0.0.1", 0))
-        listen_url = f"ws://127.0.0.1:{probe.getsockname()[1]}"
-
-    server = _test_app_server(
-        tmp_path,
-        tmp_path / "codex-home",
-        tmp_path / "bridge",
-        workspace,
-        env={"FAKE_APP_SERVER_STATE_DIR": str(state_dir)},
-    )
-    server.codex_path = str(codex)
-    server.listen_url = listen_url
-
-    await server.start()
+    # Keep the probed port bound (never listening) for the whole scenario so
+    # no other process can take it; both fake attempts bind it with SO_REUSEADDR.
+    reserved = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    reserved.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    reserved.bind(("127.0.0.1", 0))
+    listen_url = f"ws://127.0.0.1:{reserved.getsockname()[1]}"
     try:
-        assert sorted(path.name for path in state_dir.iterdir()) == ["attempt-1", "attempt-2"]
-        assert server.listen_url == listen_url
-        silent_pid = int((state_dir / "attempt-1").read_text())
-        # Reaped entirely, or still a zombie awaiting the loop's child watcher.
-        with contextlib.suppress(psutil.NoSuchProcess):
-            assert psutil.Process(silent_pid).status() == psutil.STATUS_ZOMBIE
-        assert server.proc is not None and server.proc.returncode is None
-        # The runner and ``omnigent codex`` connect with the URL they captured
-        # before start(); the replacement must answer there.
-        client = CodexAppServerClient(ws_url=listen_url, client_name="omnigent-test")
-        await client.connect()
-        await client.close()
+        server = _test_app_server(
+            tmp_path,
+            tmp_path / "codex-home",
+            tmp_path / "bridge",
+            workspace,
+            env={"FAKE_APP_SERVER_STATE_DIR": str(state_dir)},
+        )
+        server.codex_path = str(codex)
+        server.listen_url = listen_url
+
+        await server.start()
+        try:
+            assert sorted(path.name for path in state_dir.iterdir()) == [
+                "attempt-1",
+                "attempt-2",
+            ]
+            assert server.listen_url == listen_url
+            silent_pid = int((state_dir / "attempt-1").read_text())
+            # Reaped entirely, or still a zombie awaiting the loop's child watcher.
+            with contextlib.suppress(psutil.NoSuchProcess):
+                assert psutil.Process(silent_pid).status() == psutil.STATUS_ZOMBIE
+            assert server.proc is not None and server.proc.returncode is None
+            # The runner and ``omnigent codex`` connect with the URL they captured
+            # before start(); the replacement must answer there.
+            client = CodexAppServerClient(ws_url=listen_url, client_name="omnigent-test")
+            await client.connect()
+            await client.close()
+        finally:
+            await server.close()
     finally:
-        await server.close()
+        reserved.close()
 
 
 async def test_start_cancellation_closes_reused_client_and_app_server(
