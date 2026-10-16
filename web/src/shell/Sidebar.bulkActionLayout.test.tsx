@@ -143,14 +143,8 @@ describe("bulk-action bar layout", () => {
     return screen.findByRole("menu");
   }
 
-  /** Let a tooltip's instant-open on focus flush before asserting it is absent. */
-  const settle = () =>
-    act(
-      () =>
-        new Promise<void>((resolve) => {
-          setTimeout(resolve, 25);
-        }),
-    );
+  /** Flush the synchronous open that a focus event would have requested. */
+  const flush = () => act(async () => {});
 
   // Both sidebar triggers wrap a dropdown trigger inside a tooltip trigger, so
   // focus landing on the button bubbles to the tooltip around it.
@@ -179,8 +173,8 @@ describe("bulk-action bar layout", () => {
       // focus must not pop the tooltip under a pointer that is not hovering it.
       closeMenu(menu);
       await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-      fireEvent.focus(trigger);
-      await settle();
+      await waitFor(() => expect(trigger).toHaveFocus());
+      await flush();
       expect(screen.queryByRole("tooltip")).toBeNull();
 
       // Fresh hover intent (the pointer re-entering the trigger) shows it again.
@@ -200,7 +194,7 @@ describe("bulk-action bar layout", () => {
 
       // No tooltip may paint over the open menu.
       fireEvent.focus(trigger);
-      await settle();
+      await flush();
       expect(screen.queryByRole("tooltip")).toBeNull();
     },
   );

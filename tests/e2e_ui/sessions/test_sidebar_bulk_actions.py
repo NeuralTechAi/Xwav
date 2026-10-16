@@ -25,6 +25,11 @@ import uuid
 import httpx
 from playwright.sync_api import Locator, Page, expect
 
+# Longer than the tooltip's 600 ms hover delay (TooltipProvider in
+# web/src/components/ui/tooltip.tsx) and the 600 ms menu-close guard
+# (web/src/hooks/useMenuGuardedTooltip.ts), so a late tooltip cannot slip past.
+TOOLTIP_SETTLE_MS = 1000
+
 
 def _row_link(page: Page, title: str) -> Locator:
     """Locate the sidebar row link by its unique accessible name.
@@ -120,9 +125,9 @@ def test_filter_tooltip_stays_hidden_after_choosing_an_option(
     expect(all_option).to_be_visible()
     all_option.click()
     expect(all_option).to_have_count(0)
-    page.mouse.move(800, 700)
-    # Outlast the hover delay so a late-opening tooltip cannot slip past the check.
-    page.wait_for_timeout(1000)
+    # Park the pointer on the transcript body, which has no tooltip triggers.
+    page.mouse.move(800, 400)
+    page.wait_for_timeout(TOOLTIP_SETTLE_MS)
     expect(tooltip).to_have_count(0)
 
     filter_sessions.hover()
