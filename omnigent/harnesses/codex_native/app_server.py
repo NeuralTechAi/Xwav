@@ -187,15 +187,16 @@ _MODEL_MIGRATION_CATALOG_TIMEOUT_SECONDS = 3.0
 
 
 class CodexAppServerSilentStartTimeout(RuntimeError):
-    """App-server timed out with process alive and never listening.
+    """Readiness timed out while the app-server process was alive but never listened.
 
-    Same message as RuntimeError timeout, but signals to start() that the
-    process is still alive and can be respawned.
+    Carries the timeout message; ``start()`` respawns the process once and
+    turns a second occurrence into a plain ``RuntimeError``.
     """
 
-    def __init__(self, message: str, stderr_bytes: int) -> None:
+    def __init__(self, message: str, recent_stderr_bytes: int) -> None:
         super().__init__(message)
-        self.stderr_bytes = stderr_bytes
+        # Bytes in the bounded ``recent_stderr`` tail, not the total emitted.
+        self.recent_stderr_bytes = recent_stderr_bytes
 
 
 @dataclass(frozen=True)
@@ -2033,16 +2034,10 @@ class CodexNativeAppServer:
 
     async def _spawn_app_server_process(self, resolved_listen: str) -> None:
         """
-        Spawn the Codex app-server subprocess and start the stderr drain.
-
-        Allocates a process registry tag, builds the argv, acquires the
-        owner lock, spawns the subprocess, registers it, and starts the
-        stderr background task. This is a self-contained unit for both
-        the initial spawn and respawn.
+        Spawn one app-server attempt, for the initial launch or a silent-start respawn.
 
         :param resolved_listen: Resolved listen URL (unix:// or ws://).
         :returns: None.
-        :raises: On subprocess creation or owner lock failure.
         """
         self.process_registry_tag = f"codex-native-{uuid.uuid4().hex}"
         tagged_argv0 = (
@@ -2282,20 +2277,28 @@ class CodexNativeAppServer:
                 # listens. It must reuse the transport: callers captured the listen
                 # URL before start() and hand it to the TUI, forwarder and bridge.
                 _logger.warning(
-                    "Codex app-server never listened and is still running (stderr_bytes=%d); "
-                    "respawning it once on the same transport",
-                    silent.stderr_bytes,
+                    "Codex app-server never listened and is still running "
+                    "(recent_stderr_bytes=%d); respawning it once on the same transport",
+                    silent.recent_stderr_bytes,
                     extra=debug_event(
                         "codex_app_server_silent_start_respawn", session_id=self.session_id
                     ),
                 )
                 await self.close()
+                # Diagnostics from a process that never served must not fail
+                # the replacement's turns.
+                self.certificate_failure = None
+                clear_certificate_failure(self.bridge_dir)
                 if resolved_listen.startswith("unix://"):
                     with contextlib.suppress(FileNotFoundError):
                         self.socket_path.unlink()
                 await self._spawn_app_server_process(resolved_listen)
-                # The second spawn gets its own full readiness budget.
-                startup_client = await self._wait_until_ready()
+                # The second spawn gets its own full readiness budget; a second
+                # silent timeout is final.
+                try:
+                    startup_client = await self._wait_until_ready()
+                except CodexAppServerSilentStartTimeout as second:
+                    raise RuntimeError(str(second)) from second
             try:
                 # Standalone CLI launches may have no shared catalog snapshot.
                 # Correct their copied defaults before a TUI creates its thread.
@@ -2563,11 +2566,10 @@ class CodexNativeAppServer:
         flight when it expires is not interrupted.
 
         :returns: Connected app-server client. The caller owns it.
-        :raises CodexAppServerSilentStartTimeout: If the app-server times out
-            while its process is still alive (never listened). The caller can
-            respawn once and retry.
-        :raises RuntimeError: If the app-server exits early (real failure) or
-            times out after respawn.
+        :raises CodexAppServerSilentStartTimeout: If the budget expires while
+            the process is still alive and never listened; ``start()``
+            respawns it once.
+        :raises RuntimeError: If the app-server exits early.
         """
         deadline = asyncio.get_running_loop().time() + _APP_SERVER_READY_TIMEOUT_SECONDS
         last_error: Exception | None = None
@@ -2609,8 +2611,10 @@ class CodexNativeAppServer:
         )
         # Still running but never listened: start() can respawn it once.
         if self.proc is not None and self.proc.returncode is None:
-            stderr_bytes = sum(len(line.encode("utf-8")) for line in (self.recent_stderr or []))
-            raise CodexAppServerSilentStartTimeout(message, stderr_bytes)
+            recent_stderr_bytes = sum(
+                len(line.encode("utf-8")) for line in (self.recent_stderr or [])
+            )
+            raise CodexAppServerSilentStartTimeout(message, recent_stderr_bytes)
         raise RuntimeError(message)
 
     async def _stderr_loop(self) -> None:
