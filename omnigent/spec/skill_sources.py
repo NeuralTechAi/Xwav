@@ -535,7 +535,7 @@ def _declared_command_paths(key: str, install_path: Path, declared: object) -> l
         path = install_path / entry
         try:
             inside = path.resolve().is_relative_to(root)
-        except (OSError, ValueError) as exc:
+        except (OSError, RuntimeError, ValueError) as exc:  # 3.12: RuntimeError on a link loop
             _log.warning("Plugin %r: command path %r is unusable: %s", key, entry, exc)
             continue
         if not inside:
@@ -611,6 +611,8 @@ def _discover_plugin_commands(
     declared = manifest.get("commands") if manifest else None
     if declared is None:
         commands_dir = install_path / "commands"
+        if not commands_dir.is_dir():
+            return out
         if commands_dir.is_symlink() and not commands_dir.resolve().is_relative_to(
             install_path.resolve()
         ):

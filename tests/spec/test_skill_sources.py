@@ -1434,6 +1434,26 @@ def test_plugin_commands_root_linked_outside_plugin_is_skipped(
     assert "knowledge-base:leak" not in names
 
 
+@pytest.mark.parametrize("layout", ["missing", "self-link"])
+def test_plugin_without_usable_commands_root_still_lists_skills(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, layout: str
+) -> None:
+    """A missing or self-linked ``commands/`` yields no commands, quietly, and keeps the skills."""
+    home, install = _claude_home_with_plugin_command(tmp_path / "home")
+    (install / "commands" / "kb-review.md").unlink()
+    (install / "commands").rmdir()
+    if layout == "self-link":
+        (install / "commands").symlink_to("commands")
+    monkeypatch.setattr("pathlib.Path.home", lambda: home)
+
+    with caplog.at_level(logging.WARNING, logger="omnigent.spec.skill_sources"):
+        names = [
+            s.name for s in resolve_harness_skills(_ctx(tmp_path / "ws", home), "claude-native")
+        ]
+    assert names == ["knowledge-base:kb-search"]
+    assert "commands" not in caplog.text
+
+
 def test_plugin_command_over_size_limit_is_skipped(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1508,6 +1528,7 @@ def test_plugin_manifest_command_path_outside_plugin_is_skipped(
     home, install = _claude_home_with_plugin_command(tmp_path / "home")
     _write_plugin_command(install.parent, "escaped", "---\ndescription: outside\n---\nbody\n")
     _write_plugin_command(tmp_path, "absolute", "---\ndescription: outside\n---\nbody\n")
+    (install / "loop.md").symlink_to("loop.md")
     _write_plugin_manifest(
         install,
         commands=[
@@ -1516,6 +1537,7 @@ def test_plugin_manifest_command_path_outside_plugin_is_skipped(
             str(tmp_path / "absolute.md"),
             "./typo/missing.md",
             "./bad\x00.md",
+            "./loop.md",
         ],
     )
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
@@ -1530,6 +1552,7 @@ def test_plugin_manifest_command_path_outside_plugin_is_skipped(
     assert "'../escaped.md' is outside the plugin" in caplog.text
     assert "typo/missing.md is missing or not .md" in caplog.text
     assert "'./bad\\x00.md' is unusable" in caplog.text
+    assert "'./loop.md' is unusable" in caplog.text
 
 
 def test_plugin_manifest_links_keep_their_declared_names(
