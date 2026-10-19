@@ -7418,7 +7418,17 @@ def _tool_relay_handler_factory(
             url = f"/v1/sessions/{session_component}/hooks/pi-extension-ui"
             future = asyncio.run_coroutine_threadsafe(policy_client.post(url, json=payload), loop)
             try:
-                resp = future.result(timeout=86400.0)
+                deadline = time.monotonic() + 86400.0
+                while not future.done():
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError("Pi dialog wait expired")
+                    try:
+                        readable, _, _ = select.select([self.connection], [], [], 0.1)
+                        if readable and not self.connection.recv(1, socket.MSG_PEEK):
+                            return
+                    except OSError:
+                        return
+                resp = future.result()
             except Exception as exc:  # noqa: BLE001
                 self._send_policy_proxy_error(exc)
                 return
