@@ -9,12 +9,46 @@
 
 const crypto = require("node:crypto");
 const { buildBrowserActionScript } = require("./browserActionScript.mjs");
+const chromeCookieStoreModule = require("./chromeCookieStore");
 const { decodeLegacyBrowserAction } = require("./browserLegacyAction");
 const { buildDesignModeScript } = require("./designModeScript");
 
 // Max age of a real native input event for a design-mode submit marker to be
 // honored (see the gesture gate below). Covers click/Enter → console.log.
 const DESIGN_MODE_GESTURE_WINDOW_MS = 1500;
+
+// Chrome's cookie jar is OS-encrypted through the macOS Keychain; the other
+// platforms' schemes aren't wired up yet (the shell's feature flag mirrors this).
+const CHROME_COOKIE_IMPORT_PLATFORM_ERROR = "Importing Chrome cookies is only supported on macOS.";
+
+/**
+ * Ask the user, from the main process, before Chrome's key is touched. The
+ * pane's own dialog is not proof a human asked: the connected page holds the
+ * bridge and could call it directly, so consent for the secret-copying step
+ * belongs to the trusted side of the trust boundary.
+ *
+ * @param {{ host: string, scope: string, profileName: string, cookieCount: number }} request
+ * @returns {Promise<boolean>}
+ */
+async function askToImportChromeCookies({ scope, profileName, cookieCount }) {
+  const { dialog } = require("electron");
+  if (!dialog || typeof dialog.showMessageBox !== "function") return false;
+  const count = Number.isFinite(cookieCount) && cookieCount > 0 ? cookieCount : 0;
+  const what = count > 0 ? `${count} cookie${count === 1 ? "" : "s"}` : "Chrome's cookies";
+  const { response } = await dialog.showMessageBox({
+    type: "question",
+    buttons: ["Cancel", "Import"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+    message: `Import ${what} into Omnigent?`,
+    detail:
+      `From Chrome profile "${profileName}" for ${scope} and its subdomains.\n\n` +
+      "They stay available to this conversation's embedded browser tabs, including any the " +
+      "agent controls, until you quit Omnigent.",
+  });
+  return response === 1;
+}
 
 /**
  * Detach design-mode listeners (console-message + input-event) off an entry and
@@ -265,6 +299,11 @@ function registerBrowserIpc({
   getAgentContextForEvent = () => null,
   recoverAgentNavigationForEvent = async () => false,
   getAgentNavigationHintForEvent = () => null,
+  chromeCookieStore = chromeCookieStoreModule,
+  // Injected so the macOS-only guard is testable on any CI platform.
+  platform = process.platform,
+  // Injected so the native confirmation is testable without Electron dialogs.
+  confirmCookieImport = askToImportChromeCookies,
 }) {
   /**
    * Resolve the sender's registry after the privileged-origin gate. Returns
@@ -595,6 +634,121 @@ function registerBrowserIpc({
       /* destroyed */
     }
     return { ok: true };
+  });
+
+  // ── Import cookies from Google Chrome (macOS) ────────────────────────────
+  // Copies ONLY the current site's cookies out of one local Chrome profile into
+  // this conversation's own in-memory partition, so an imported sign-in never
+  // outlives the app run and never reaches another pane. Two steps: a
+  // metadata-only preview the dialog renders (no Keychain access), then the
+  // import (which decrypts and so shows a Keychain prompt). The site is derived
+  // from the view's real URL in main — never trusted from the renderer — and the
+  // import re-checks it so a page that navigated behind the dialog can't be
+  // handed another site's cookies.
+
+  const siteForEntry = (entry) => {
+    let parsed;
+    try {
+      parsed = new URL(entry.view.webContents.getURL());
+    } catch {
+      return { error: "No website is loaded in this tab yet." };
+    }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return { error: "Importing cookies works on http(s) pages only." };
+    }
+    if (!parsed.hostname) return { error: "This page has no site to import cookies for." };
+    return { host: parsed.hostname };
+  };
+
+  ipcMain.handle("omnigent:browser-chrome-cookie-preview", async (event, args) => {
+    const g = gateRegistry(event);
+    if (g.error) return { ok: false, error: g.error };
+    if (platform !== "darwin") {
+      return { ok: false, error: CHROME_COOKIE_IMPORT_PLATFORM_ERROR };
+    }
+    const entry = g.registry.get(args?.conversationId);
+    if (!entry) return { ok: false, error: "No browser view" };
+    const site = siteForEntry(entry);
+    if (site.error) return { ok: false, error: site.error };
+    try {
+      return await chromeCookieStore.previewSiteCookies({ host: site.host });
+    } catch (e) {
+      return { ok: false, error: e && e.message ? e.message : String(e) };
+    }
+  });
+
+  ipcMain.handle("omnigent:browser-chrome-cookie-import", async (event, args) => {
+    const g = gateRegistry(event);
+    if (g.error) return { ok: false, error: g.error };
+    if (platform !== "darwin") {
+      return { ok: false, error: CHROME_COOKIE_IMPORT_PLATFORM_ERROR };
+    }
+    const { conversationId, profileId, expectedHost, scope } = args ?? {};
+    const entry = g.registry.get(conversationId);
+    if (!entry) return { ok: false, error: "No browser view" };
+    const site = siteForEntry(entry);
+    if (site.error) return { ok: false, error: site.error };
+    const hostMatches = (value) => {
+      try {
+        return (
+          chromeCookieStoreModule.normalizeHost(value) ===
+          chromeCookieStoreModule.normalizeHost(site.host)
+        );
+      } catch {
+        return false;
+      }
+    };
+    if (typeof expectedHost !== "string" || !hostMatches(expectedHost)) {
+      return {
+        ok: false,
+        error: "This tab is no longer on that site. Reopen the import dialog to retry.",
+      };
+    }
+    if (typeof profileId !== "string" || !profileId) {
+      return { ok: false, error: "Pick a Chrome profile to import from." };
+    }
+    const targetScope = typeof scope === "string" ? scope : site.host;
+    try {
+      // The numbers on the native confirmation come from main's own preview, so
+      // a renderer-supplied count can never understate what is about to be read.
+      let cookieCount = 0;
+      let profileName = profileId;
+      const preview = await chromeCookieStore.previewSiteCookies({ host: site.host });
+      const profile = preview?.ok
+        ? (preview.profiles ?? []).find((candidate) => candidate.id === profileId)
+        : null;
+      if (profile) {
+        profileName = profile.name;
+        cookieCount =
+          (profile.scopes ?? []).find((candidate) => candidate.host === targetScope)?.cookieCount ??
+          profile.cookieCount ??
+          0;
+      }
+      const approved = await confirmCookieImport({
+        host: site.host,
+        scope: targetScope,
+        profileName,
+        cookieCount,
+      });
+      if (!approved) return { ok: false, cancelled: true };
+      return await chromeCookieStore.importSiteCookies({
+        host: site.host,
+        // Validated inside the store against the page host's own ancestors.
+        scope: typeof scope === "string" ? scope : undefined,
+        profileId,
+        cookiesApi: entry.view.webContents.session.cookies,
+        // The tab can navigate while the Keychain prompt is up; bail before any
+        // cookie is written so the import can't land on the new site.
+        beforeWrite: () => {
+          const current = siteForEntry(entry);
+          return !current.error && hostMatches(current.host);
+        },
+      });
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e);
+      if (msg.includes("Object has been destroyed")) return { ok: false, error: "browser closed" };
+      return { ok: false, error: msg };
+    }
   });
 
   // Forward a submit's result envelope into the page for green/red feedback.
