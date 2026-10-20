@@ -70,6 +70,7 @@ from omnigent.runner.transports.ws_tunnel.frames import (
 )
 from omnigent.runtime import (
     inflight_text,
+    pending_elicitations,
     pending_inputs,
     session_stream,
 )
@@ -205,6 +206,8 @@ from omnigent.server.routes._sessions.helpers import (
     _publish_compaction_failed,
     _publish_compaction_in_progress,
     _publish_elicitation_request_to_ancestors,
+    _publish_elicitation_resolved,
+    _publish_elicitation_resolved_to_ancestors,
     _publish_external_output_reasoning_delta,
     _publish_external_output_text_delta,
     _publish_external_tool_output_delta,
@@ -757,7 +760,7 @@ def register_events_routes(
 
     event_router = APIRouter(route_class=_SessionEventBodyLimitRoute)
 
-    def _has_runner_created_by_authority(
+    def _has_bound_runner_authority(
         request: Request | _RunnerEventContext | StartupInputContext, conv: Any
     ) -> bool:
         if isinstance(request, _RunnerEventContext):
@@ -765,24 +768,50 @@ def register_events_routes(
         token = (request.headers.get(RUNNER_TUNNEL_TOKEN_HEADER) or "").strip()
         if not token:
             return False
-        if runner_tunnel_tokens is not None and token in runner_tunnel_tokens:
-            return True
         runner_id = getattr(conv, "runner_id", None)
         return isinstance(runner_id, str) and token_bound_runner_id(token) == runner_id
 
+    def _has_runner_created_by_authority(
+        request: Request | _RunnerEventContext | StartupInputContext, conv: Any
+    ) -> bool:
+        if isinstance(request, _RunnerEventContext):
+            return _has_bound_runner_authority(request, conv)
+        token = (request.headers.get(RUNNER_TUNNEL_TOKEN_HEADER) or "").strip()
+        if token and runner_tunnel_tokens is not None and token in runner_tunnel_tokens:
+            return True
+        return _has_bound_runner_authority(request, conv)
+
     async def _authorized_conversation(
-        request: Request | _RunnerEventContext | StartupInputContext, session_id: str
+        request: Request | _RunnerEventContext | StartupInputContext,
+        session_id: str,
+        *,
+        external_transcript: bool = False,
     ) -> tuple[str | None, Any]:
-        """Require EDIT on the session and return the caller and its conversation."""
+        """Authorize event writes, reserving transcripts for owners and bound runners."""
         user_id = (
             request.user_id
             if isinstance(request, (_RunnerEventContext, StartupInputContext))
             else _get_user_id(request, auth_provider)
         )
+        conv = None
+        if external_transcript:
+            conv = await asyncio.to_thread(conversation_store.get_conversation, session_id)
+            if conv is None:
+                raise _session_not_found()
+            if isinstance(request, _RunnerEventContext) and conv.runner_id != request.runner_id:
+                raise _RunnerNotBoundError(
+                    "session is not bound to this runner", code=ErrorCode.FORBIDDEN
+                )
+            if _has_bound_runner_authority(request, conv):
+                return user_id, conv
         access = await _require_access_and_level(
-            user_id, session_id, LEVEL_EDIT, permission_store, conversation_store
+            user_id,
+            session_id,
+            LEVEL_OWNER if external_transcript else LEVEL_EDIT,
+            permission_store,
+            conversation_store,
         )
-        conv = access.conversation
+        conv = access.conversation or conv
         if conv is None:
             conv = await asyncio.to_thread(conversation_store.get_conversation, session_id)
             if conv is None:
@@ -848,7 +877,7 @@ def register_events_routes(
                                 )
                             )
                         continue
-                    await _authorized_conversation(request, session_id)
+                    await _authorized_conversation(request, session_id, external_transcript=True)
                     add_audit_attrs(event_type=_EXTERNAL_CONVERSATION_ITEM_TYPE)
                     item_ids = await _persist_external_conversation_items(
                         session_id, list(run), conversation_store
@@ -1032,7 +1061,23 @@ def register_events_routes(
             control and internal transient events.
         :raises OmnigentError: 404 if no session exists.
         """
-        user_id, conv = await _authorized_conversation(request, session_id)
+        user_id, conv = await _authorized_conversation(
+            request,
+            session_id,
+            external_transcript=body.type
+            in (
+                _EXTERNAL_CONVERSATION_ITEM_TYPE,
+                _EXTERNAL_ASSISTANT_MESSAGE_TYPE,
+            ),
+        )
+        if body.type in {
+            _EXTERNAL_CODEX_APPROVAL_MODE_CHANGE_TYPE,
+            _EXTERNAL_PERMISSION_MODE_CHANGE_TYPE,
+        } and not _has_bound_runner_authority(request, conv):
+            # Owner-authenticated local forwarders also report native settings.
+            await _require_access_and_level(
+                user_id, session_id, LEVEL_OWNER, permission_store, conversation_store
+            )
         if in_flight is not None:
             # Marked only after authorization, so an unauthorized caller
             # cannot flip a session to "running" even transiently.
@@ -1962,7 +2007,29 @@ def register_events_routes(
                     "external_elicitation_resolved requires string data.elicitation_id.",
                     code=ErrorCode.INVALID_INPUT,
                 )
+            entry = pending_elicitations.lookup(elicitation_id, conversation_id=session_id)
+            if entry is not None and entry[1].get("params", {}).get("target_session_id") not in (
+                None,
+                session_id,
+            ):
+                raise OmnigentError(
+                    "Elicitation does not belong to this session.",
+                    code=ErrorCode.INVALID_INPUT,
+                )
             _signal_harness_elicitation_resolved_by_id(session_id, elicitation_id)
+            if (
+                entry is not None and entry[1].get("params", {}).get("native_delivery") is not None
+            ) or pending_elicitations.native_resolution_for(
+                session_id, elicitation_id
+            ) == "unanswered":
+                # The attempted web verdict may differ from the terminal's answer.
+                _publish_elicitation_resolved(session_id, elicitation_id)
+                await asyncio.to_thread(
+                    _publish_elicitation_resolved_to_ancestors,
+                    conversation_store,
+                    session_id,
+                    elicitation_id,
+                )
             return {"queued": False}
         if body.type in (_EXTERNAL_SESSION_STATUS_TYPE, _SUBAGENT_STATUS_TYPE):
             status = body.data.get("status")

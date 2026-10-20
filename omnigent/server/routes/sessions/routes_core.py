@@ -67,7 +67,6 @@ from omnigent.server.auth import (
     LEVEL_OWNER,
     LEVEL_READ,
     AuthProvider,
-    local_single_user_enabled,
 )
 from omnigent.server.background_session_titles import (
     BackgroundSessionTitleCoordinator,
@@ -1199,7 +1198,7 @@ def register_core_routes(
         spec = await asyncio.to_thread(
             validate_agent_bundle,
             bundle_bytes,
-            enforce_handler_allowlist=not local_single_user_enabled(),
+            enforce_handler_allowlist=True,
         )
 
         if parsed_metadata.mcp_registry_services:
@@ -2538,7 +2537,8 @@ def register_core_routes(
         #   session may pin it — including a read-only collaborator on a session
         #   shared with them. Only when the pinned label is the request's ONLY
         #   mutation.
-        # * OWNER — archiving/unarchiving or filing into a project. Both are
+        # * OWNER — launch arguments and permission mode control host execution.
+        #   Archiving/unarchiving and filing into a project are also
         #   owner-only: projects are owner-private (an editor must not move a
         #   session between them), and archive pairs with a client-driven,
         #   owner-gated stop (an editor must not hide/stop a session they can't
@@ -2555,13 +2555,19 @@ def register_core_routes(
         # resolved (strictest requested) level gates them all with no redundant
         # second permission-store read.
         set_project = "project_id" in body.model_fields_set
+        set_launch_args = (
+            body.terminal_launch_args is not None
+            or body.permission_mode is not None
+            or body.approval_mode is not None
+            or _CODEX_NATIVE_BYPASS_SANDBOX_LABEL_KEY in (body.labels or {})
+        )
         set_share_workspace = "share_workspace_files" in body.model_fields_set
         pin_only = body.model_fields_set == {"labels"} and set(body.labels or {}) == {
             PINNED_LABEL_KEY
         }
         if pin_only:
             required_level = LEVEL_READ
-        elif body.archived is not None or set_project:
+        elif body.archived is not None or set_project or set_launch_args:
             required_level = LEVEL_OWNER
         elif set_share_workspace:
             required_level = LEVEL_MANAGE
