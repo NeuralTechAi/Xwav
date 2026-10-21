@@ -4355,89 +4355,47 @@ async def test_antigravity_elicitation_hook_rejects_non_dict_body(
     assert resp.status_code == 400, resp.text
 
 
-async def test_pi_extension_ui_hook_confirm_round_trip(
-    client: httpx.AsyncClient,
-) -> None:
-    """pi-native ``ctx.ui.confirm`` → web ApprovalCard → accept → verdict."""
-    agent = await create_test_agent(client, "test-pi-extension-ui-allow")
+@pytest.mark.parametrize("method", ["confirm", "select"])
+async def test_pi_extension_ui_hook_round_trip(client: httpx.AsyncClient, method: str) -> None:
+    agent = await create_test_agent(client, "test-pi-extension-ui")
     session_id = await _create_session(client, agent["id"])
     elicitation_id = f"elicit_pi_{'ab' * 16}"
     payload = {
         "elicitation_id": elicitation_id,
         "request": {
             "id": "uuid-2",
-            "method": "confirm",
+            "method": method,
             "title": "Clear session?",
             "message": "All messages will be lost.",
+            **({"options": ["Allow", "Block"]} if method == "select" else {}),
         },
     }
-
     drain_task = asyncio.create_task(_drain_until_elicitation(session_id))
     await asyncio.sleep(0.05)
     hook_task = asyncio.create_task(
-        client.post(
-            f"/v1/sessions/{session_id}/hooks/pi-extension-ui",
-            json=payload,
-        )
+        client.post(f"/v1/sessions/{session_id}/hooks/pi-extension-ui", json=payload)
     )
-
     event = await drain_task
     assert event["elicitation_id"] == elicitation_id
     params = event["params"]
     assert params["phase"] == "pi_extension_ui"
     assert params["policy_name"] == "pi_native_extension_ui"
     assert "Clear session?" in params["message"]
-    assert "ask_user_question" not in params
-
-    verdict = await _post_approval(client, session_id, elicitation_id, "accept")
+    if method == "confirm":
+        assert "ask_user_question" not in params
+    else:
+        question = params["ask_user_question"]["questions"][0]
+        assert question["id"] == "0"
+        assert question["isOther"] is False
+        assert [option["label"] for option in question["options"]] == ["Allow", "Block"]
+    content = {"0": "Allow"} if method == "select" else None
+    verdict = await _post_approval(client, session_id, elicitation_id, "accept", content=content)
     assert verdict.status_code == 202, verdict.text
-
-    resp = await hook_task
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["action"] == "accept"
-
-
-async def test_pi_extension_ui_hook_select_stamps_ask_user_question(
-    client: httpx.AsyncClient,
-) -> None:
-    """A Pi ``select`` becomes the existing AskUserQuestion form extra."""
-    agent = await create_test_agent(client, "test-pi-extension-ui-select")
-    session_id = await _create_session(client, agent["id"])
-    elicitation_id = f"elicit_pi_{'cd' * 16}"
-    payload = {
-        "elicitation_id": elicitation_id,
-        "request": {
-            "id": "uuid-1",
-            "method": "select",
-            "title": "Allow dangerous command?",
-            "options": ["Allow", "Block"],
-        },
-    }
-
-    drain_task = asyncio.create_task(_drain_until_elicitation(session_id))
-    await asyncio.sleep(0.05)
-    hook_task = asyncio.create_task(
-        client.post(
-            f"/v1/sessions/{session_id}/hooks/pi-extension-ui",
-            json=payload,
-        )
-    )
-
-    event = await drain_task
-    questions = event["params"]["ask_user_question"]["questions"]
-    assert questions[0]["id"] == "0"
-    assert questions[0]["isOther"] is False
-    assert [opt["label"] for opt in questions[0]["options"]] == ["Allow", "Block"]
-
-    verdict = await _post_approval(
-        client, session_id, elicitation_id, "accept", content={"0": "Allow"}
-    )
-    assert verdict.status_code == 202, verdict.text
-    resp = await hook_task
-    assert resp.status_code == 200, resp.text
-    body = resp.json()
-    assert body["action"] == "accept"
-    assert body["content"]["0"] == "Allow"
+    response = await hook_task
+    assert response.status_code == 200, response.text
+    assert response.json()["action"] == "accept"
+    if method == "select":
+        assert response.json()["content"]["0"] == "Allow"
 
 
 async def test_pi_extension_ui_hook_repark_keeps_one_pending_card(

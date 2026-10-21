@@ -1,7 +1,4 @@
-"""Tests for the Pi extension UI elicitation adapter.
-
-Pure-function tests — no HTTP or runtime needed.
-"""
+"""Tests for the Pi extension UI elicitation adapter."""
 
 from __future__ import annotations
 
@@ -152,45 +149,39 @@ class TestToElicitationParamsInputEditor:
 
 
 class TestToUiResponse:
-    def test_confirm_accept(self) -> None:
-        result = ElicitationResult(action="accept")
+    @pytest.mark.parametrize(
+        "action, confirmed", [("accept", True), ("decline", False), (None, False)]
+    )
+    def test_confirm_verdict(self, action: str | None, confirmed: bool) -> None:
+        result = ElicitationResult(action=action) if action else None
         assert to_ui_response(_CONFIRM, result) == {
             "type": "extension_ui_response",
             "id": "uuid-2",
-            "confirmed": True,
+            "confirmed": confirmed,
         }
 
-    def test_confirm_decline_is_false_not_interrupt(self) -> None:
-        result = ElicitationResult(action="decline")
-        assert to_ui_response(_CONFIRM, result) == {
+    @pytest.mark.parametrize(
+        "dialog, content, value",
+        [
+            (_SELECT, {"0": "Allow"}, "Allow"),
+            (_SELECT, {"0": ["", "Allow"]}, "Allow"),
+            (_SELECT, {"Allow dangerous command?": "Block"}, "Block"),
+            (_INPUT, {"0": "hello world"}, "hello world"),
+            (_EDITOR, {"0": "Keep as-is"}, "Line 1\nLine 2"),
+        ],
+    )
+    def test_accepted_text(self, dialog: dict, content: dict, value: str) -> None:
+        result = ElicitationResult(action="accept", content=content)
+        assert to_ui_response(dialog, result) == {
             "type": "extension_ui_response",
-            "id": "uuid-2",
-            "confirmed": False,
-        }
-
-    def test_confirm_timeout_is_false(self) -> None:
-        assert to_ui_response(_CONFIRM, None)["confirmed"] is False
-
-    def test_select_accept_value(self) -> None:
-        result = ElicitationResult(action="accept", content={"0": "Allow"})
-        assert to_ui_response(_SELECT, result) == {
-            "type": "extension_ui_response",
-            "id": "uuid-1",
-            "value": "Allow",
+            "id": dialog["id"],
+            "value": value,
         }
 
     @pytest.mark.parametrize("answer", ["Unlisted", ["", "Unlisted"]])
     def test_select_rejects_unlisted_api_answer(self, answer: object) -> None:
         result = ElicitationResult(action="accept", content={"0": answer})
         assert to_ui_response(_SELECT, result)["cancelled"] is True
-
-    def test_select_ignores_empty_answer_entries(self) -> None:
-        result = ElicitationResult(action="accept", content={"0": ["", "Allow"]})
-        assert to_ui_response(_SELECT, result)["value"] == "Allow"
-
-    def test_select_accept_falls_back_to_question_text_key(self) -> None:
-        result = ElicitationResult(action="accept", content={"Allow dangerous command?": "Block"})
-        assert to_ui_response(_SELECT, result)["value"] == "Block"
 
     def test_select_decline_is_cancelled(self) -> None:
         result = ElicitationResult(action="decline")
@@ -199,14 +190,6 @@ class TestToUiResponse:
             "id": "uuid-1",
             "cancelled": True,
         }
-
-    def test_input_custom_text(self) -> None:
-        result = ElicitationResult(action="accept", content={"0": "hello world"})
-        assert to_ui_response(_INPUT, result)["value"] == "hello world"
-
-    def test_editor_keep_as_is_returns_prefill(self) -> None:
-        result = ElicitationResult(action="accept", content={"0": "Keep as-is"})
-        assert to_ui_response(_EDITOR, result)["value"] == "Line 1\nLine 2"
 
     def test_unknown_method_raises(self) -> None:
         with pytest.raises(ValueError, match="notify"):

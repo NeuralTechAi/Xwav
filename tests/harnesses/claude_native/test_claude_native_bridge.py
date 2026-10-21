@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import io
 import itertools
 import json
@@ -13353,6 +13354,43 @@ async def test_pi_extension_ui_relay_path_proxies_to_session_hook(
         )
         assert json.loads(body) == {"action": "accept"}
         assert client.urls == ["/v1/sessions/conv_hook_eval/hooks/pi-extension-ui"]
+    finally:
+        relay.close()
+
+
+@pytest.mark.asyncio
+async def test_pi_dialog_disconnect_cancels_upstream_wait(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An aborted local fetch must close the server request, not leave a parked card."""
+    started, cancelled = asyncio.Event(), asyncio.Event()
+
+    class WaitingClient:
+        async def post(self, url, json):
+            started.set()
+            try:
+                await asyncio.Future()
+            finally:
+                cancelled.set()
+
+    relay, bridge_dir = _hook_relay(tmp_path, monkeypatch, WaitingClient())
+    info = json.loads((bridge_dir / claude_native_bridge._TOOL_RELAY_FILE).read_text())
+    try:
+        async with httpx.AsyncClient() as client:
+            task = asyncio.create_task(
+                client.post(
+                    info["url"] + "/hook/pi/extension-ui",
+                    headers={"Authorization": f"Bearer {info['token']}"},
+                    json={"elicitation_id": "cancel-check", "request": {"method": "confirm"}},
+                )
+            )
+            try:
+                await asyncio.wait_for(started.wait(), timeout=5)
+            finally:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+            await asyncio.wait_for(cancelled.wait(), timeout=2)
     finally:
         relay.close()
 

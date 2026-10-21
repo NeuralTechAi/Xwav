@@ -43,6 +43,7 @@ import os
 import queue
 import re
 import secrets
+import select
 import shlex
 import socket
 import socketserver
@@ -7403,18 +7404,11 @@ def _tool_relay_handler_factory(
             self.wfile.write(raw)
 
         def _handle_pi_extension_ui(self, payload: _JsonObject) -> None:
-            """Proxy one pi-native extension UI park to the session hook.
-
-            Same long-poll as ``/policies/evaluate`` so a Databricks ASK that
-            outlives the server bearer still resolves through the relay's
-            refresh-capable client.
-            """
+            """Proxy one pi-native extension UI park to the session hook."""
             if policy_client is None or session_id is None:
                 self.send_error(HTTPStatus.SERVICE_UNAVAILABLE)
                 return
-            import urllib.parse as _up
-
-            session_component = _up.quote(session_id, safe="")
+            session_component = urllib.parse.quote(session_id, safe="")
             url = f"/v1/sessions/{session_component}/hooks/pi-extension-ui"
             future = asyncio.run_coroutine_threadsafe(policy_client.post(url, json=payload), loop)
             try:
@@ -7432,6 +7426,9 @@ def _tool_relay_handler_factory(
             except Exception as exc:  # noqa: BLE001
                 self._send_policy_proxy_error(exc)
                 return
+            finally:
+                # Closing the local dialog also releases the server's parked card.
+                future.cancel()
             raw = resp.content
             self.send_response(resp.status_code)
             for header in ("Content-Type", "Content-Length"):

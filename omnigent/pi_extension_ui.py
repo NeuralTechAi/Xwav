@@ -1,14 +1,4 @@
-"""Pi extension UI elicitation adapters.
-
-Pure shape-mapping — no I/O. Converts Pi ``ctx.ui.confirm|select|input|editor``
-requests (RPC ``extension_ui_request`` events, or the same fields synthesized
-by the pi-native TUI wrap) into the web UI's existing ApprovalCard /
-AskUserQuestion form, and maps the user's ``ElicitationResult`` back to a Pi
-``extension_ui_response``.
-
-Pi's ``ExtensionUIContext`` options are always ``string[]``. There is no
-multi-select. ``custom()`` is TUI-only and out of scope.
-"""
+"""Pi extension UI elicitation adapters."""
 
 from __future__ import annotations
 
@@ -46,18 +36,7 @@ def timeout_seconds(req: dict[str, Any]) -> float | None:
 
 
 def to_elicitation_params(req: dict[str, Any]) -> ElicitationRequestParams:
-    """
-    Convert a Pi extension UI request into elicitation params for the web UI.
-
-    :param req: Pi RPC ``extension_ui_request`` fields (``method``, ``title``,
-        optional ``message`` / ``options`` / ``placeholder`` / ``prefill`` /
-        ``timeout``), or the same shape synthesized by the pi-native wrap.
-    :returns: Form-mode params. ``confirm`` is a binary card; ``select`` /
-        ``input`` / ``editor`` stamp ``ask_user_question`` so the existing
-        form renders. Empty ``select`` options are treated as ``input``
-        (custom-row only — no dummy radio).
-    :raises ValueError: When ``method`` is not a dialog method.
-    """
+    """Convert a Pi extension UI request into elicitation params for the web UI."""
     method = req.get("method")
     if not is_dialog_method(method):
         raise ValueError(f"Unsupported Pi extension UI method: {method!r}")
@@ -91,14 +70,7 @@ def to_ui_response(
     req: dict[str, Any],
     result: ElicitationResult | None,
 ) -> dict[str, Any]:
-    """
-    Convert an elicitation verdict into a Pi ``extension_ui_response``.
-
-    :param req: The original request (needs ``id`` and ``method``).
-    :param result: Web verdict, or ``None`` on timeout / missing handler.
-    :returns: JSON object to write on Pi's stdin (RPC) or to interpret as
-        the wrap return value.
-    """
+    """Convert an elicitation verdict into a Pi ``extension_ui_response``."""
     response_id = req.get("id")
     req_id = response_id if isinstance(response_id, str) and response_id else ""
     method = req.get("method")

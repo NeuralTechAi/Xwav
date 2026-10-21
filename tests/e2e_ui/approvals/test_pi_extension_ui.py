@@ -59,11 +59,12 @@ def _join_hook(thread: threading.Thread, holder: dict) -> dict:
 
 
 @pytest.mark.timeout(90)
-def test_pi_extension_select_renders_options_and_returns_the_choice(
+@pytest.mark.parametrize("method", ["confirm", "select", "editor"])
+def test_pi_extension_dialog_renders_and_returns_the_answer(
     page: Page,
     seeded_session: tuple[str, str],
+    method: str,
 ) -> None:
-    """``ctx.ui.select`` → AskUserQuestion form → chosen label flows back to Pi."""
     base_url, session_id = seeded_session
 
     holder: dict = {}
@@ -72,61 +73,11 @@ def test_pi_extension_select_renders_options_and_returns_the_choice(
         session_id,
         {
             "id": "uuid-select",
-            "method": "select",
-            "title": _SELECT_TITLE,
-            "options": [_ALLOW_ONCE, "Allow always", _DENY],
-        },
-        holder,
-    )
-
-    page.goto(f"{base_url}/c/{session_id}")
-
-    card = (
-        page.locator(f'{_APPROVAL_CARD}[data-state="pending"]')
-        .filter(has=page.locator(_FORM))
-        .first
-    )
-    expect(card).to_be_visible(timeout=_MOCK_ELICITATION_TIMEOUT_MS)
-    # The header names Pi, not the default "Claude has questions" — the prompt
-    # came from a Pi extension and a reviewer of the card should see that.
-    expect(card.get_by_text("Pi needs your input")).to_be_visible()
-
-    form = card.locator(_FORM)
-    expect(form.get_by_text(_SELECT_TITLE, exact=True)).to_be_visible()
-    # Only the extension's own options: Pi's select cannot accept free text, so
-    # a custom-input row would let Submit answer with something it never offered.
-    for label in (_ALLOW_ONCE, "Allow always", _DENY):
-        expect(form.get_by_text(label, exact=True)).to_be_visible()
-
-    form.get_by_role("radio", name=_ALLOW_ONCE).check()
-    form.locator(_SUBMIT).click()
-
-    expect(page.locator(f'{_APPROVAL_CARD}[data-state="responded"]').first).to_be_visible(
-        timeout=_MOCK_ELICITATION_TIMEOUT_MS
-    )
-
-    verdict = _join_hook(hook_thread, holder)
-    assert verdict["action"] == "accept", verdict
-    assert expected in (verdict.get("content") or {}).values(), verdict
-
-
-@pytest.mark.timeout(90)
-def test_pi_extension_confirm_renders_a_binary_card_and_approves(
-    page: Page,
-    seeded_session: tuple[str, str],
-) -> None:
-    """``ctx.ui.confirm`` → binary Approve/Reject card → Approve returns accept."""
-    base_url, session_id = seeded_session
-
-    holder: dict = {}
-    hook_thread = _post_extension_ui(
-        base_url,
-        session_id,
-        {
-            "id": "uuid-confirm",
-            "method": "confirm",
-            "title": _CONFIRM_TITLE,
-            "message": _CONFIRM_MESSAGE,
+            "method": method,
+            "title": _CONFIRM_TITLE if method == "confirm" else _SELECT_TITLE,
+            **({"message": _CONFIRM_MESSAGE} if method == "confirm" else {}),
+            **({"options": [_ALLOW_ONCE, "Allow always", _DENY]} if method == "select" else {}),
+            **({"prefill": "original note"} if method == "editor" else {}),
         },
         holder,
     )
@@ -135,17 +86,30 @@ def test_pi_extension_confirm_renders_a_binary_card_and_approves(
 
     card = page.locator(f'{_APPROVAL_CARD}[data-state="pending"]').first
     expect(card).to_be_visible(timeout=_MOCK_ELICITATION_TIMEOUT_MS)
-    # A confirm is binary — no question form, just the two buttons.
-    expect(card.locator(_FORM)).to_have_count(0)
-    # Both halves of the dialog survive: the mapper joins title and message with
-    # a blank line, which the card must not collapse into one run-on sentence.
-    expect(card.get_by_text(_CONFIRM_TITLE, exact=False)).to_be_visible()
-    expect(card.get_by_text(_CONFIRM_MESSAGE, exact=False)).to_be_visible()
+    if method == "confirm":
+        expect(card.locator(_FORM)).to_have_count(0)
+        expect(card.get_by_text(_CONFIRM_TITLE, exact=False)).to_be_visible()
+        expect(card.get_by_text(_CONFIRM_MESSAGE, exact=False)).to_be_visible()
+        card.get_by_role("button", name="Approve").click()
+    else:
+        expect(card.get_by_text("Pi needs your input")).to_be_visible()
+        form = card.locator(_FORM)
+        expect(form.get_by_text(_SELECT_TITLE, exact=True)).to_be_visible()
+        if method == "select":
+            for label in (_ALLOW_ONCE, "Allow always", _DENY):
+                expect(form.get_by_text(label, exact=True)).to_be_visible()
+            form.get_by_role("radio", name=_ALLOW_ONCE).check()
+            expected = _ALLOW_ONCE
+        else:
+            expected = "two\nlines"
+            form.get_by_role("textbox").fill(expected)
+        form.locator(_SUBMIT).click()
 
-    card.get_by_role("button", name="Approve").click()
-
-    responded = page.locator(f'{_APPROVAL_CARD}[data-state="responded"]').first
-    expect(responded).to_be_visible(timeout=_MOCK_ELICITATION_TIMEOUT_MS)
+    expect(page.locator(f'{_APPROVAL_CARD}[data-state="responded"]').first).to_be_visible(
+        timeout=_MOCK_ELICITATION_TIMEOUT_MS
+    )
 
     verdict = _join_hook(hook_thread, holder)
     assert verdict["action"] == "accept", verdict
+    if method != "confirm":
+        assert expected in (verdict.get("content") or {}).values(), verdict

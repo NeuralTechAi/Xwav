@@ -74,8 +74,19 @@ function mintEvaluateElicitationId() {
   return `elicit_evaluate_${crypto.randomBytes(16).toString("hex")}`;
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms, signal) {
+  return new Promise((resolve) => {
+    function finish() {
+      clearTimeout(timer);
+      if (signal) signal.removeEventListener("abort", finish);
+      resolve();
+    }
+    const timer = setTimeout(finish, ms);
+    if (signal) {
+      signal.addEventListener("abort", finish, { once: true });
+      if (signal.aborted) finish();
+    }
+  });
 }
 
 function readConfig() {
@@ -254,8 +265,15 @@ async function parkPiExtensionUiHttp(config, request, opts) {
     const timer = controller
       ? setTimeout(() => controller.abort(), attemptMs)
       : null;
+    const callerSignal = opts && opts.signal;
+    const cancelAttempt = () => controller && controller.abort();
+    if (callerSignal) {
+      callerSignal.addEventListener("abort", cancelAttempt, { once: true });
+      if (callerSignal.aborted) cancelAttempt();
+    }
     const attemptStart = Date.now();
     let resp;
+    let text;
     try {
       resp = await fetch(url, {
         method: "POST",
@@ -263,7 +281,9 @@ async function parkPiExtensionUiHttp(config, request, opts) {
         body,
         ...(controller ? { signal: controller.signal } : {}),
       });
+      text = await resp.text();
     } catch (_err) {
+      if (callerSignal && callerSignal.aborted) return null;
       if (timer) clearTimeout(timer);
       const aborted = !!(controller && controller.signal.aborted);
       const elapsed = Date.now() - attemptStart;
@@ -279,7 +299,7 @@ async function parkPiExtensionUiHttp(config, request, opts) {
         continue;
       }
       if (Date.now() + transientBackoff >= transientDeadline) return null;
-      await sleep(transientBackoff);
+      await sleep(transientBackoff, opts && opts.signal);
       transientBackoff = Math.min(
         transientBackoff * 2,
         _TRANSIENT_RETRY_MAX_BACKOFF_MS,
@@ -287,12 +307,14 @@ async function parkPiExtensionUiHttp(config, request, opts) {
       continue;
     } finally {
       if (timer) clearTimeout(timer);
+      if (callerSignal) callerSignal.removeEventListener("abort", cancelAttempt);
     }
+    if (callerSignal && callerSignal.aborted) return null;
 
     if (!resp.ok) {
       if (resp.status >= 500) {
         if (Date.now() + transientBackoff >= transientDeadline) return null;
-        await sleep(transientBackoff);
+        await sleep(transientBackoff, opts && opts.signal);
         transientBackoff = Math.min(
           transientBackoff * 2,
           _TRANSIENT_RETRY_MAX_BACKOFF_MS,
@@ -302,12 +324,6 @@ async function parkPiExtensionUiHttp(config, request, opts) {
       return null;
     }
 
-    let text;
-    try {
-      text = await resp.text();
-    } catch (_err) {
-      return null;
-    }
     if (!text) {
       // Empty 200: timeout/disconnect. Re-attach with the same id.
       if (Date.now() >= parkDeadline) return null;
@@ -315,7 +331,7 @@ async function parkPiExtensionUiHttp(config, request, opts) {
       transientBackoff = _TRANSIENT_RETRY_INITIAL_BACKOFF_MS;
       // A server that answers immediately (consumed tombstone, a proxy that
       // ends the long poll) would otherwise spin here with no delay.
-      await sleep(_TRANSIENT_RETRY_INITIAL_BACKOFF_MS);
+      await sleep(_TRANSIENT_RETRY_INITIAL_BACKOFF_MS, opts && opts.signal);
       continue;
     }
     let json;

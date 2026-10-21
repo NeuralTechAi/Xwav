@@ -1558,20 +1558,7 @@ def register_hooks_routes(
         request: Request,
         session_id: str,
     ) -> Response:
-        """
-        Pi-native extension UI hook (TUI wrap → web elicitation).
-
-        The Omnigent pi-native extension wraps ``ctx.ui.confirm|select|input|editor``
-        in TUI mode and POSTs the dialog here. The route publishes
-        ``response.elicitation_request`` and parks on the harness elicitation
-        registry — the same path as the cursor/codex native hooks.
-
-        Decline / cancel returns a Pi-shaped cancelled verdict and does **not**
-        interrupt the session. A permission-gate ``select`` that returns No is
-        one blocked tool, not a killed agent. Empty ``200`` (timeout /
-        disconnect) lets the client re-POST the same ``elicitation_id`` to
-        re-attach instead of publishing a second card.
-        """
+        """Pi-native extension UI hook (TUI wrap → web elicitation)."""
         user_id = _get_user_id(request, auth_provider)
         await _require_access(
             user_id, session_id, LEVEL_READ, permission_store, conversation_store

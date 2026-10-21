@@ -256,12 +256,7 @@ async def test_build_terminal_event_handles_pending_task_cancellation() -> None:
 
 @pytest.mark.asyncio
 async def test_elicit_emits_resolved_when_cancelled() -> None:
-    """Cancelling ``ctx.elicit`` must still clear the pending card.
-
-    ``asyncio.wait_for`` (Pi extension UI timeout) and turn interrupt both
-    cancel the parked Future. Without ``response.elicitation_resolved`` the
-    session stream keeps the ApprovalCard after the turn continues.
-    """
+    """Cancelling ``ctx.elicit`` must still clear the pending card."""
     queue: asyncio.Queue[Any] = asyncio.Queue()
     ctx = TurnContext("resp_elicit_cancel", queue, asyncio.Event())
     params = ElicitationRequestParams(mode="form", message="approve?")

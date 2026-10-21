@@ -7084,12 +7084,13 @@ def create_runner_app(
             # more than consent (an MCP ``requestedSchema``). Dropping it here
             # is what used to make the awaiting caller invent one.
             _elicit_content = _data.get("content")
-            pending_approvals.resolve(
+            runner_owned_approval = pending_approvals.resolve(
                 _data.get("elicitation_id", ""),
                 _elicit_action == "accept",
                 _elicit_content if isinstance(_elicit_content, dict) else None,
             )
-            if _elicit_action == "decline":
+            # Harness-owned forms decide whether refusal cancels their turn.
+            if runner_owned_approval and _elicit_action == "decline":
                 try:
                     _int_client = await process_manager.get_client(conversation_id, "any")
                     await _int_client.post(

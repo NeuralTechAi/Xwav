@@ -453,6 +453,27 @@ Cross-harness journeys:
   billing or recovery after the runner deletes the bridge directory.
 - **`resume`, bare picker scoped to this host:**
   `tests/e2e/test_native_resume_picker_cross_host_e2e.py::test_bare_resume_picker_excludes_other_hosts_sessions`
+- **`approvals`, Pi extension dialogs:**
+  `tests/e2e/test_pi_extension_ui_round_trip.py::test_real_pi_dialog_answers_and_continues`
+  runs real SDK and native Pi through an isolated server/runner with a scripted
+  provider. Browser coverage retains select, multiline editor and binary confirmation.
+  Single-line input rendering/submission is covered by ApprovalCard component
+  tests; real-process coverage checks all four methods over SDK/native transport.
+  Confirm rejection, select, input and editor answers reach Pi; a
+  later turn retains history. Native caller cancellation also releases the
+  pending card after the shared reconnect grace period. This is API/process
+  evidence, with sandbox disabled; it does not cover browser rendering.
+  `tests/e2e_ui/approvals/test_pi_extension_ui.py` drives Chat cards through the
+  real server using injected hooks. Inbox/mobile rendering and SDK interruption
+  during an active dialog need separate evidence. Run the scoped standardized
+  checks below; these scenarios own their isolated environments:
+
+  ```sh
+  uv run --no-sync pytest tests/e2e/test_pi_extension_ui_round_trip.py --reruns 0 -q
+  uv run --no-sync pytest tests/e2e_ui/approvals/test_pi_extension_ui.py --ui-skip-build --video=on --screenshot=on --reruns 0 -q
+  pnpm --filter web test src/components/blocks/ApprovalCard.test.tsx
+  ```
+
 - **`resume`, Claude and Pi provider selection after a runner restart:**
   `tests/e2e/test_native_resume_provider_e2e.py::test_connected_native_resume_routes_to_configured_provider`
   (own environment, real server, runner, native CLI and tmux with local model

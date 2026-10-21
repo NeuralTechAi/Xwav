@@ -939,12 +939,7 @@ class ExecutorAdapter(HarnessApp):
         self,
         params: ElicitationRequestParams,
     ) -> ElicitationResult:
-        """Stable bridge for Pi extension UI dialogs (``ctx.ui.*``).
-
-        Unlike :meth:`_stable_elicitation_handler`, decline / cancel does
-        **not** set ``ctx.cancelled``. A Pi permission-gate ``select`` that
-        returns No is one blocked tool call, not a killed session.
-        """
+        """Stable bridge for Pi extension UI dialogs (``ctx.ui.*``)."""
         ctx = self._current_ctx
         if ctx is None:
             _logger.error(

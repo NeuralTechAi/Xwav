@@ -3060,15 +3060,7 @@ class PiExecutor(Executor):
         event: dict[str, Any],
         rpc: _PiRpcSession,
     ) -> None:
-        """Park a Pi extension dialog on the web UI and write the RPC reply.
-
-        Fire-and-forget chrome methods (``notify``, ``setStatus``, …) are
-        ignored with no stdin response, matching Pi's RPC docs. Dialog
-        methods (``confirm`` / ``select`` / ``input`` / ``editor``) map to
-        an Omnigent elicitation; a missing handler or timeout fails closed
-        (``confirmed: false`` / ``cancelled: true``) so Pi does not hang.
-        Decline does not abort the turn.
-        """
+        """Park a Pi extension dialog on the web UI and write the RPC reply."""
         from omnigent.pi_extension_ui import (
             is_dialog_method,
             is_fire_and_forget_method,
