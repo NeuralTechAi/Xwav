@@ -27,6 +27,7 @@ import {
   harnessAuthableOnHost,
   harnessCredentialFamily,
   harnessInstallableOnHost,
+  harnessReadinessUnknownMessage,
   isCodexHarness,
   type HarnessCredentialKind,
 } from "@/lib/harnessSetup";
@@ -38,7 +39,7 @@ import { HarnessCredentialForm } from "@/shell/HarnessCredentialForm";
 export type HarnessFixMode = "reconfigure" | "update" | "install";
 
 export interface HarnessFixResult {
-  configuredHarnesses: Record<string, boolean | string> | null;
+  configuredHarnesses: Record<string, boolean | string>;
   credentialKind?: HarnessCredentialKind;
   version?: string;
   gatewayInference?: Record<string, boolean> | null;
@@ -55,7 +56,15 @@ export interface HarnessFixDialogProps {
 }
 
 type Phase =
-  "install" | "choose" | "progress" | "isaac" | "personal" | "credentials" | "setup" | "error";
+  | "install"
+  | "choose"
+  | "progress"
+  | "isaac"
+  | "personal"
+  | "credentials"
+  | "setup"
+  | "unknown"
+  | "error";
 
 export function HarnessFixDialog(props: HarnessFixDialogProps) {
   const { open, onOpenChange, mode, host, harness, harnessLabel, onFixed } = props;
@@ -104,7 +113,7 @@ export function HarnessFixDialog(props: HarnessFixDialogProps) {
 
   const finish = useCallback(
     (
-      configuredHarnesses: Record<string, boolean | string> | null,
+      configuredHarnesses: Record<string, boolean | string>,
       credentialKind?: HarnessCredentialKind,
       version?: string | null,
       announce = true,
@@ -156,7 +165,11 @@ export function HarnessFixDialog(props: HarnessFixDialogProps) {
     try {
       const result = await installHarness(harness);
       if (runId.current !== id) return;
-      if (result.configured_harnesses?.[harness] === true) {
+      if (result.readiness_unknown) {
+        setPhase("unknown");
+        return;
+      }
+      if (result.configured_harnesses[harness] === true) {
         finish(result.configured_harnesses, undefined, result.version);
         return;
       }
@@ -261,6 +274,7 @@ export function HarnessFixDialog(props: HarnessFixDialogProps) {
           result.gateway_inference,
         );
       } else {
+        if (phase === "unknown") needsSetup();
         setStillNotReady(true);
       }
     } catch (reason) {
@@ -302,6 +316,10 @@ export function HarnessFixDialog(props: HarnessFixDialogProps) {
               canUseCredentialForm={mode !== "install" && canUseCredentialForm}
               onUseCredentialForm={() => setPhase("credentials")}
             />
+          ) : phase === "unknown" ? (
+            <DialogDescription>
+              {harnessReadinessUnknownMessage(harnessLabel, hostName)}
+            </DialogDescription>
           ) : phase === "error" ? (
             <ErrorState error={error} hostName={hostName} />
           ) : phase === "personal" && loginCommand ? (
@@ -360,7 +378,10 @@ export function HarnessFixDialog(props: HarnessFixDialogProps) {
               </Button>
               <Button onClick={retry}>Try again</Button>
             </>
-          ) : phase === "personal" || phase === "isaac" || phase === "setup" ? (
+          ) : phase === "personal" ||
+            phase === "isaac" ||
+            phase === "setup" ||
+            phase === "unknown" ? (
             <>
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Close
@@ -694,6 +715,7 @@ function dialogTitle(
   harnessLabel: string,
   hostName: string,
 ): string {
+  if (phase === "unknown") return `${harnessLabel} ${mode === "update" ? "updated" : "installed"}`;
   if (phase === "personal") return `Sign in to ${harnessLabel} on ${hostName}`;
   if (phase === "isaac") return `Set up Isaac for ${harnessLabel} on ${hostName}`;
   if (phase === "setup") return `Set up ${harnessLabel} on ${hostName}`;

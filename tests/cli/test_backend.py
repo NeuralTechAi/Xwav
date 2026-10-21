@@ -365,9 +365,9 @@ def test_build_host_daemon_env_remote_strips_provider_credentials(
     env = _build_host_daemon_env(server_url="https://example.databricksapps.com")
 
     assert env["PATH"] == "/usr/bin"
-    assert env.get("OPENAI_API_KEY") is None
-    assert env.get("OPENAI_BASE_URL") is None
-    assert env.get("ANTHROPIC_API_KEY") is None
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_BASE_URL" not in env
+    assert "ANTHROPIC_API_KEY" not in env
     # Databricks auth is intentionally preserved for the daemon's server auth.
     assert env["DATABRICKS_TOKEN"] == "test-databricks-token"
 

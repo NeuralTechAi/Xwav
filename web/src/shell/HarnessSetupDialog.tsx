@@ -35,6 +35,7 @@ import { useHosts, useInstallHarness, useInstallingHarnesses, type Host } from "
 import {
   harnessAuthableOnHost,
   harnessInstallableOnHost,
+  harnessReadinessUnknownMessage,
   resolveSetupSteps,
   type ResolvedSetupStep,
 } from "@/lib/harnessSetup";
@@ -117,7 +118,14 @@ export function HarnessSetupDialog({
         // The install succeeded, but the harness may still need a credential
         // (e.g. Codex → "needs-auth"): key the toast on the refreshed readiness
         // so it doesn't claim "ready" while a sign-in row is still showing.
-        const ready = result.configured_harnesses?.[h] === true;
+        if (result.readiness_unknown) {
+          showToast(
+            `Installed. ${harnessReadinessUnknownMessage(name, host?.name ?? "this host")}`,
+            { duration: 0 },
+          );
+          return;
+        }
+        const ready = result.configured_harnesses[h] === true;
         showToast(
           ready
             ? `${name} is ready on ${host?.name}.`

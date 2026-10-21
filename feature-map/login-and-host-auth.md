@@ -36,6 +36,8 @@ be able to write resources without a separate Omnigent account.
   A missing login warns in both host modes. A failed startup probe leaves all
   harness readiness unknown; a failed periodic probe retains the last report.
   Successful installs and credential saves still reply if their probe fails.
+  Settings and New Chat show that readiness could not be checked and retain
+  the last known host status until a successful refresh.
 - `host-lifecycle`: register in the foreground or background, run as a per-user
   system service, and check status, stop, stop a session, or reset the host ID.
   A machine runs one host per host ID and Databricks workspace, even through
@@ -186,7 +188,9 @@ Never run these commands against the real `~/.omnigent` or `~/.databrickscfg`.
   Auth combinations and launch environments are covered by `tests/onboarding/`,
   `tests/harnesses/claude_native/test_claude_native.py` and
   `tests/inner/test_claude_sdk_executor.py`; `tests/host/test_connect.py` covers
-  probe failures at startup, periodic refresh, install and credential save.
+  probe failures at startup, periodic and forced refresh, install and credential
+  save. The install/credential HTTP response keeps a readiness object for older
+  clients; `readiness_unknown` distinguishes a failed probe from a checked map.
 - **`host-inline-login` (own environment, Linux):** run
   `uv run --no-sync pytest tests/e2e/test_host_inline_login.py --reruns 0 -q`.
   It starts an isolated real server and a local HTTPS mock workspace, then

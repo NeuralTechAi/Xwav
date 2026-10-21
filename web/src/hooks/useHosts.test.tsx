@@ -773,7 +773,12 @@ describe("useHostModelOptions", () => {
 
 describe("useStoreCredential", () => {
   const credResult = (harness: string, readiness: Record<string, boolean | string> | null) =>
-    mockResponse({ object: "harness_credential", harness, configured_harnesses: readiness });
+    mockResponse({
+      object: "harness_credential",
+      harness,
+      configured_harnesses: readiness ?? {},
+      readiness_unknown: readiness === null,
+    });
 
   it("POSTs the harness in the path and the rest of the input as the body (no secret in the URL)", async () => {
     fetchMock.mockResolvedValueOnce(credResult("codex-native", { "codex-native": true }));
@@ -820,32 +825,50 @@ describe("useStoreCredential", () => {
     expect(result.current.error?.message).toBe("502 Bad Gateway");
   });
 
-  it.each([{ "codex-native": true }, null])(
-    "patches readiness %j and invalidates the detect query on success",
-    async (readiness) => {
-      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-      function sharedWrapper({ children }: { children: ReactNode }) {
-        return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-      }
-      client.setQueryData(
-        ["hosts", { includeSandbox: false }],
-        [{ host_id: "host_1", name: "Laptop", owner: "alice", status: "online" }],
-      );
-      const invalidate = vi.spyOn(client, "invalidateQueries");
-
-      const { result } = renderHook(() => useStoreCredential("host_1"), { wrapper: sharedWrapper });
-      fetchMock.mockResolvedValueOnce(credResult("codex-native", readiness));
-      result.current.mutate({ harness: "codex-native", kind: "key", secret: "sk" });
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-      const hosts = client.getQueryData<{ configured_harnesses?: Record<string, unknown> }[]>([
-        "hosts",
-        { includeSandbox: false },
-      ]);
-      expect(hosts?.[0].configured_harnesses).toEqual(readiness);
+  it.each([
+    ["install", false],
+    ["install", true],
+    ["credential", false],
+    ["credential", true],
+  ] as const)("%s preserves known readiness when probe fails: %s", async (action, unknown) => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    function sharedWrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    }
+    const previous = { "codex-native": "needs-auth", "claude-native": true };
+    client.setQueryData(
+      ["hosts", { includeSandbox: false }],
+      [{ host_id: "host_1", configured_harnesses: previous }],
+    );
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const { result } = renderHook(
+      () => ({
+        install: useInstallHarness("host_1"),
+        credential: useStoreCredential("host_1"),
+      }),
+      { wrapper: sharedWrapper },
+    );
+    fetchMock.mockResolvedValueOnce(
+      mockResponse({
+        object: action === "install" ? "harness_install" : "harness_credential",
+        harness: "codex-native",
+        configured_harnesses: unknown ? {} : { "codex-native": true },
+        // Omit the flag for old-server compatibility in the known case.
+        ...(unknown ? { readiness_unknown: true } : {}),
+      }),
+    );
+    if (action === "install") result.current.install.mutate("codex-native");
+    else result.current.credential.mutate({ harness: "codex-native", kind: "key", secret: "sk" });
+    await waitFor(() => expect(result.current[action].isSuccess).toBe(true));
+    const hosts = client.getQueryData<{ configured_harnesses: Record<string, unknown> }[]>([
+      "hosts",
+      { includeSandbox: false },
+    ]);
+    expect(hosts?.[0].configured_harnesses).toEqual(unknown ? previous : { "codex-native": true });
+    if (action === "credential") {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ["detected-credentials", "host_1"] });
-    },
-  );
+    }
+  });
 });
 
 describe("useDetectedCredentials", () => {

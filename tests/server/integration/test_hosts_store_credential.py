@@ -244,7 +244,8 @@ async def test_store_key_forwards_frame_and_returns_readiness(
     body = resp.json()
     assert body["object"] == "harness_credential"
     assert body["harness"] == "claude"
-    assert body["configured_harnesses"] == readiness
+    assert body["configured_harnesses"] == (readiness or {})
+    assert body["readiness_unknown"] is probe_fails
     # The server forwarded the credential faithfully (pass-through).
     assert len(received) == 1
     assert received[0].harness == "claude"
@@ -252,33 +253,27 @@ async def test_store_key_forwards_frame_and_returns_readiness(
     assert received[0].secret_value == "sk-ant-SECRET"
 
 
+@pytest.mark.parametrize("field", ["gateway_inference", "configured_harnesses"])
 async def test_store_credential_tolerates_a_garbled_gateway_inference(
     cred_setup: tuple[
         FastAPI, HostRegistry, list[HostStoreSecretFrame], dict[str, dict[str, Any]]
     ],
     monkeypatch: pytest.MonkeyPatch,
+    field: str,
 ) -> None:
-    """
-    A host that answers with a non-mapping ``gateway_inference`` must not 500.
+    """Malformed maps at the RPC boundary decode as unknown.
 
-    Same property the install route pins: the reply is host-supplied, so it goes
-    through the tolerant decode the tunnel path uses and anything that is not a
-    string→bool object reads as "unknown". Recording it straight would have
-    blown up in ``dict(...)``, turning a successful credential write into a 500
-    with the credential already on disk.
-
-    The garbled value is injected at the proxy's return, not through the mock
-    host: the frame decoder normalises it on the way in, so a fixture reply
-    could never reach the route with it still garbled.
+    Inject after frame decoding, which already normalizes malformed maps.
     """
     app, registry, _received, _replies = cred_setup
 
     async def _garbled_reply(**_kwargs: Any) -> dict[str, Any]:
-        """A host reply whose gateway_inference is a list, not a map."""
+        """A host reply with one malformed map."""
         return {
             "status": "ok",
             "configured_harnesses": {"claude": True},
-            "gateway_inference": ["claude-native"],
+            "gateway_inference": {"claude-native": True},
+            field: ["claude-native"],
         }
 
     monkeypatch.setattr(
@@ -293,8 +288,12 @@ async def test_store_credential_tolerates_a_garbled_gateway_inference(
         )
 
     assert resp.status_code == 200, resp.text
-    assert resp.json()["gateway_inference"] is None
-    assert registry.gateway_inference(_HOST_ID) is None
+    if field == "gateway_inference":
+        assert resp.json()["gateway_inference"] is None
+        assert registry.gateway_inference(_HOST_ID) is None
+    else:
+        assert resp.json()["configured_harnesses"] == {}
+        assert resp.json()["readiness_unknown"] is True
 
 
 async def test_store_gateway_forwards_base_url(

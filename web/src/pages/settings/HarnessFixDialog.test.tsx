@@ -456,7 +456,8 @@ describe("HarnessFixDialog", () => {
           return json({
             object: "harness_install",
             harness: "codex-native",
-            configured_harnesses: readiness,
+            configured_harnesses: readiness ?? {},
+            readiness_unknown: readiness === null,
             version: "1.0.0",
           });
         }
@@ -473,9 +474,16 @@ describe("HarnessFixDialog", () => {
       const user = userEvent.setup();
 
       await user.click(screen.getByRole("button", { name: "Install" }));
-      expect(
-        await screen.findByRole("heading", { name: "Set up Isaac for Codex on Local laptop" }),
-      ).toBeVisible();
+      if (readiness === null) {
+        expect(
+          await screen.findByText("Couldn't check Codex readiness on Local laptop."),
+        ).toBeVisible();
+        expect(screen.queryByText(/still needs/)).not.toBeInTheDocument();
+      } else {
+        expect(
+          await screen.findByRole("heading", { name: "Set up Isaac for Codex on Local laptop" }),
+        ).toBeVisible();
+      }
       await user.click(screen.getByRole("button", { name: "Check again" }));
       await waitFor(() => expect(props.onFixed).toHaveBeenCalled());
       expect(props.onFixed).toHaveBeenCalledWith({

@@ -103,7 +103,7 @@ def isolated_config(tmp_path, monkeypatch):
     #   which reads the Keychain (not HOME), so a real Claude subscription
     #   leaks through even with HOME redirected to tmp_path.
     monkeypatch.setattr("omnigent.onboarding.ambient._ollama_reachable", lambda: False)
-    monkeypatch.setattr("omnigent.onboarding.ambient._claude_login_detected", lambda: False)
+    monkeypatch.setattr("omnigent.onboarding.ambient._claude_login_detected", lambda **_: False)
     return tmp_path
 
 

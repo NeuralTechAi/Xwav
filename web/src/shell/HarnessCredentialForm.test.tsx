@@ -207,7 +207,7 @@ describe("HarnessCredentialForm", () => {
 
   it.each([
     [{ pi: "needs-auth" }, "still needs setup"],
-    [null, "couldn't check pi readiness"],
+    [null, "Couldn't check pi readiness"],
   ] as const)("does not claim ready with readiness %j", (readiness, message) => {
     // Regression: the toast used to say "ready" unconditionally, contradicting a
     // still-yellow dot. When readiness stays not-true, say so and keep the form
@@ -216,7 +216,8 @@ describe("HarnessCredentialForm", () => {
       opts?.onSuccess?.({
         object: "harness_credential",
         harness: "pi",
-        configured_harnesses: readiness,
+        configured_harnesses: readiness ?? {},
+        readiness_unknown: readiness === null,
       }),
     );
     const onDone = vi.fn();

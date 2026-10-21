@@ -4962,8 +4962,10 @@ def test_handle_create_dir_expands_tilde(tmp_path: Path, monkeypatch) -> None:
 # ── host.install_harness handler ────────────────────────
 
 
+@pytest.mark.parametrize("probe_fails", [False, True])
 async def test_handle_refresh_harnesses_bypasses_cache_and_returns_fresh_maps(
     monkeypatch: pytest.MonkeyPatch,
+    probe_fails: bool,
 ) -> None:
     """A forced refresh invalidates login cache before the full re-probe."""
     import omnigent.host.connect as connect
@@ -4975,6 +4977,8 @@ async def test_handle_refresh_harnesses_bypasses_cache_and_returns_fresh_maps(
 
     def _configured() -> dict[str, bool]:
         calls.append("configured")
+        if probe_fails:
+            raise RuntimeError("Claude login probe timed out")
         return {"codex-native": True}
 
     def _gateway() -> dict[str, bool]:
@@ -4985,11 +4989,20 @@ async def test_handle_refresh_harnesses_bypasses_cache_and_returns_fresh_maps(
     monkeypatch.setattr(connect, "configured_harness_map", _configured)
     monkeypatch.setattr(connect, "gateway_inference_map", _gateway)
 
-    result = _make_host_process()._handle_refresh_harnesses(
-        HostRefreshHarnessesFrame(request_id="refresh-1")
-    )
+    host = _make_host_process()
+    host._configured_harnesses = {"claude-native": True}
+    tunnel = _FakeTunnel()
+    await host._dispatch_host_frame(tunnel, HostRefreshHarnessesFrame(request_id="refresh-1"))  # type: ignore[arg-type]
+    result = decode_host_frame(tunnel.sent[0])
 
     assert isinstance(result, HostRefreshHarnessesResultFrame)
+    if probe_fails:
+        assert result.status == "failed"
+        assert result.error == "readiness refresh failed: Claude login probe timed out"
+        assert result.configured_harnesses is None
+        assert host._configured_harnesses == {"claude-native": True}
+        assert calls == ["invalidate", "configured"]
+        return
     assert result.status == "ok"
     assert result.configured_harnesses == {"codex-native": True}
     assert result.gateway_inference == {"codex-native": False}

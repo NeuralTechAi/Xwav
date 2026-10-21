@@ -175,7 +175,8 @@ export function useHostModelOptions(
 export interface InstallHarnessResult {
   object: "harness_install";
   harness: string;
-  configured_harnesses: Record<string, boolean | string> | null;
+  configured_harnesses: Record<string, boolean | string>;
+  readiness_unknown?: boolean;
   version: string | null;
   gateway_inference: Record<string, boolean> | null;
 }
@@ -259,7 +260,9 @@ export function useInstallHarness(hostId: string) {
           h.host_id === hostId
             ? {
                 ...h,
-                configured_harnesses: result.configured_harnesses,
+                configured_harnesses: result.readiness_unknown
+                  ? h.configured_harnesses
+                  : result.configured_harnesses,
                 gateway_inference: result.gateway_inference,
               }
             : h,
@@ -310,7 +313,8 @@ export interface StoreCredentialInput {
 export interface StoreCredentialResult {
   object: "harness_credential";
   harness: string;
-  configured_harnesses: Record<string, boolean | string> | null;
+  configured_harnesses: Record<string, boolean | string>;
+  readiness_unknown?: boolean;
 }
 
 /**
@@ -346,7 +350,9 @@ export function useStoreCredential(hostId: string) {
     onSuccess: (result) => {
       queryClient.setQueriesData<Host[]>({ queryKey: ["hosts"] }, (hosts) =>
         hosts?.map((h) =>
-          h.host_id === hostId ? { ...h, configured_harnesses: result.configured_harnesses } : h,
+          h.host_id === hostId && !result.readiness_unknown
+            ? { ...h, configured_harnesses: result.configured_harnesses }
+            : h,
         ),
       );
       // A written/adopted credential changes what's adoptable — refetch it.

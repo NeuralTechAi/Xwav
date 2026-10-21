@@ -119,7 +119,7 @@ def _isolate_ambient_provider_state(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
-    monkeypatch.setattr("omnigent.onboarding.ambient._claude_login_detected", lambda: False)
+    monkeypatch.setattr("omnigent.onboarding.ambient._claude_login_detected", lambda **_: False)
     monkeypatch.setattr(ambient, "CLAUDE_CODE_MANAGED_SETTINGS_PATHS", ())
 
 

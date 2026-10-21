@@ -2317,7 +2317,7 @@ def _decode_host_hello(msg: _JsonObject) -> HostHelloFrame:
         frame_protocol_version=_required_int(msg, "frame_protocol_version"),
         name=_required_str(msg, "name"),
         runners=_optional_str_list(msg, "runners"),
-        configured_harnesses=_optional_str_availability_map(msg, "configured_harnesses"),
+        configured_harnesses=optional_str_availability_map(msg, "configured_harnesses"),
         gateway_inference=optional_str_bool_map(msg, "gateway_inference"),
         interactive_shells=(
             _optional_str_list(msg, "interactive_shells")
@@ -2336,7 +2336,7 @@ def _decode_harness_readiness(msg: _JsonObject) -> HostHarnessReadinessFrame:
     raw = msg.get("configured_harnesses")
     if not isinstance(raw, dict):
         raise ValueError("harness readiness frame requires a configured_harnesses object")
-    configured_harnesses = _optional_str_availability_map(msg, "configured_harnesses")
+    configured_harnesses = optional_str_availability_map(msg, "configured_harnesses")
     if configured_harnesses is None:
         raise ValueError("harness readiness frame requires a configured_harnesses object")
     if len(configured_harnesses) != len(raw):
@@ -2705,7 +2705,7 @@ def _decode_install_harness_result(msg: _JsonObject) -> HostInstallHarnessResult
     return HostInstallHarnessResultFrame(
         request_id=_required_str(msg, "request_id"),
         status=_required_str(msg, "status"),
-        configured_harnesses=_optional_str_availability_map(msg, "configured_harnesses"),
+        configured_harnesses=optional_str_availability_map(msg, "configured_harnesses"),
         version=_optional_nullable_str(msg, "version"),
         gateway_inference=optional_str_bool_map(msg, "gateway_inference"),
         error=_optional_nullable_str(msg, "error"),
@@ -2717,7 +2717,7 @@ def _decode_refresh_harnesses_result(msg: _JsonObject) -> HostRefreshHarnessesRe
     return HostRefreshHarnessesResultFrame(
         request_id=_required_str(msg, "request_id"),
         status=_required_str(msg, "status"),
-        configured_harnesses=_optional_str_availability_map(msg, "configured_harnesses"),
+        configured_harnesses=optional_str_availability_map(msg, "configured_harnesses"),
         gateway_inference=optional_str_bool_map(msg, "gateway_inference"),
         error=_optional_nullable_str(msg, "error"),
     )
@@ -2750,7 +2750,7 @@ def _decode_store_secret_result(msg: _JsonObject) -> HostStoreSecretResultFrame:
     return HostStoreSecretResultFrame(
         request_id=_required_str(msg, "request_id"),
         status=_required_str(msg, "status"),
-        configured_harnesses=_optional_str_availability_map(msg, "configured_harnesses"),
+        configured_harnesses=optional_str_availability_map(msg, "configured_harnesses"),
         gateway_inference=optional_str_bool_map(msg, "gateway_inference"),
         error=_optional_nullable_str(msg, "error"),
     )
@@ -3174,7 +3174,7 @@ def _optional_str_list(msg: _JsonObject, key: str) -> list[str]:
     return list(val)
 
 
-def _optional_str_availability_map(
+def optional_str_availability_map(
     msg: _JsonObject, key: str
 ) -> dict[str, HarnessAvailability] | None:
     """Return an optional string→availability mapping field.
@@ -3198,7 +3198,7 @@ def _optional_str_availability_map(
 def optional_str_bool_map(msg: _JsonObject, key: str) -> dict[str, bool] | None:
     """Return an optional string→bool mapping field.
 
-    Tolerant like :func:`_optional_str_availability_map`: absent, null, or
+    Tolerant like :func:`optional_str_availability_map`: absent, null, or
     non-mapping values decode to ``None`` ("unknown"), and entries whose key
     isn't a string or whose value isn't a bool are dropped, so a garbled or
     newer peer's payload never breaks the tunnel.

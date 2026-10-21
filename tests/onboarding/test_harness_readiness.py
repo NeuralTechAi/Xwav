@@ -1144,7 +1144,7 @@ def test_claude_sdk_ready_via_claude_code_login(
     from omnigent.onboarding import ambient
 
     _no_clis_installed(monkeypatch)
-    monkeypatch.setattr(ambient, "_claude_login_detected", lambda: True)
+    monkeypatch.setattr(ambient, "_claude_login_detected", lambda **_: True)
     result = configured_harness_map()
     assert result["claude-sdk"] is True
     assert result["openai-agents"] == "needs-auth"

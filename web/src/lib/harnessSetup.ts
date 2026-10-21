@@ -36,6 +36,10 @@ export interface ResolvedSetupStep {
   harness: string;
 }
 
+export function harnessReadinessUnknownMessage(label: string, hostName: string): string {
+  return `Couldn't check ${label} readiness on ${hostName}.`;
+}
+
 export type HarnessReadinessState = "available" | "unavailable" | "broken" | "setup-required";
 
 export type HarnessReadinessReason =

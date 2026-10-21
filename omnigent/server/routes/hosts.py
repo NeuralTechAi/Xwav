@@ -50,6 +50,7 @@ from omnigent.host.frames import (
     HostStoreSecretFrame,
     classify_launch_refusal,
     encode_host_frame,
+    optional_str_availability_map,
     optional_str_bool_map,
     workspace_missing_message,
 )
@@ -1569,11 +1570,13 @@ def create_hosts_router(
         :param host_id: Host identifier, e.g. ``"host_a1b2c3d4..."``.
         :param harness: Harness identifier to install, e.g. ``"claude"``.
         :returns: ``{"object": "harness_install", "harness": ...,
-            "configured_harnesses": {...}, "version": str | None,
+            "configured_harnesses": {...}, "readiness_unknown": bool,
+            "version": str | None,
             "gateway_inference": {...} | None}``
             — the host's refreshed readiness map so the UI can flip the badge
             without a reconnect, plus its refreshed gateway-inference map
-            (``None`` when the host didn't report one).
+            (``None`` when the host didn't report one). If probing failed,
+            readiness is ``{}`` with ``readiness_unknown=True`` for older clients.
         :raises HTTPException: 404 when the feature is disabled or the host is
             unknown, 400 when the harness is not UI-installable, 403 when the
             caller is not the host owner, 409 when the host is offline or its
@@ -1652,10 +1655,12 @@ def create_hosts_router(
         if installed_gateway is not None:
             host_registry.record_gateway_inference(host.host_id, installed_gateway)
 
+        readiness = optional_str_availability_map(result, "configured_harnesses")
         return {
             "object": "harness_install",
             "harness": harness,
-            "configured_harnesses": result.get("configured_harnesses"),
+            "configured_harnesses": readiness or {},
+            "readiness_unknown": readiness is None,
             "version": result.get("version"),
             # Passed through as-is: ``None`` is "unknown", not "none backed".
             "gateway_inference": installed_gateway,
@@ -1689,10 +1694,12 @@ def create_hosts_router(
         :param harness: Harness being configured, e.g. ``"claude"``.
         :param body: The credential payload (kind + secret / gateway / adopt).
         :returns: ``{"object": "harness_credential", "harness": ...,
-            "configured_harnesses": {...}, "gateway_inference": {...} | None}``
+            "configured_harnesses": {...}, "readiness_unknown": bool,
+            "gateway_inference": {...} | None}``
             — refreshed readiness so the UI can flip the badge without a
             reconnect, plus the refreshed gateway-inference map (``None`` when
-            the host didn't report one).
+            the host didn't report one). If probing failed, readiness is ``{}``
+            with ``readiness_unknown=True`` for older clients.
         :raises HTTPException: 404 when disabled or host unknown, 400 when the
             harness isn't UI-configurable or the body is invalid, 403 when not
             the owner, 409 when offline or the host daemon is too old to store
@@ -1765,10 +1772,12 @@ def create_hosts_router(
         if written_gateway is not None:
             host_registry.record_gateway_inference(host.host_id, written_gateway)
 
+        readiness = optional_str_availability_map(result, "configured_harnesses")
         return {
             "object": "harness_credential",
             "harness": harness,
-            "configured_harnesses": result.get("configured_harnesses"),
+            "configured_harnesses": readiness or {},
+            "readiness_unknown": readiness is None,
             # Passed through as-is: ``None`` is "unknown", not "none backed".
             "gateway_inference": written_gateway,
         }

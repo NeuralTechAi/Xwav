@@ -28,7 +28,7 @@ import {
   type StoreCredentialResult,
   type StoreCredentialInput,
 } from "@/hooks/useHosts";
-import { harnessCredentialAdoptFamilies } from "@/lib/harnessSetup";
+import { harnessCredentialAdoptFamilies, harnessReadinessUnknownMessage } from "@/lib/harnessSetup";
 
 export function HarnessCredentialForm({
   harness,
@@ -79,7 +79,7 @@ export function HarnessCredentialForm({
         // "ready" then would contradict the still-yellow dot. Only close the
         // form when the harness actually turned ready, so a not-ready result
         // keeps the options visible to try another.
-        const ready = result.configured_harnesses?.[harness] === true;
+        const ready = !result.readiness_unknown && result.configured_harnesses[harness] === true;
         // Clear the secret fields so a saved value doesn't linger in the input
         // (the form stays open on a not-ready result to try another option).
         setApiKey("");
@@ -90,8 +90,8 @@ export function HarnessCredentialForm({
           onDone(result);
         } else {
           showToast(
-            result.configured_harnesses === null
-              ? `Saved, but couldn't check ${display} readiness on ${host.name}.`
+            result.readiness_unknown
+              ? `Saved. ${harnessReadinessUnknownMessage(display, host.name)}`
               : `Saved, but ${display} still needs setup on ${host.name}. Try another option.`,
             { duration: 0 },
           );
