@@ -38,7 +38,7 @@ import {
 /** One CI check the PR ran, bucketed for the checks summary. */
 export interface PullRequestCheckRun {
   name: string;
-  bucket: "passing" | "failing" | "pending";
+  bucket: "passing" | "failing" | "pending" | "cancelled" | "skipped";
   /** Link to the run on the provider or external CI, or null when unknown. */
   url: string | null;
 }
@@ -47,6 +47,9 @@ export interface PullRequestChecks {
   passing: number;
   failing: number;
   pending: number;
+  /** Absent on older hosts. */
+  cancelled?: number;
+  skipped?: number;
   total: number;
   /** Per-check details (job names) for the hover breakdown. */
   runs: PullRequestCheckRun[];
