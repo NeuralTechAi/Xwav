@@ -10,7 +10,7 @@ import {
   HarnessPickerSubContent,
 } from "@/components/composer/HarnessPicker";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "@/lib/routing";
+import { useLocation, useNavigate, useSearchParams } from "@/lib/routing";
 import { MAIN_CANVAS_ID } from "@/canvas/canvasLayout";
 import { CANVAS_QUERY_PARAM, canvasLocation } from "@/canvas/canvasNavigation";
 import {
@@ -2155,7 +2155,9 @@ export function resetLandingDraft(): void {
 
 export function NewChatLandingScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const linkedPrompt = searchParams.get("prompt") ?? searchParams.get("task");
   const queryClient = useQueryClient();
   const isMobileViewport = useIsMobileViewport();
   const isCoarsePointer = useIsCoarsePointer();
@@ -2328,7 +2330,21 @@ export function NewChatLandingScreen() {
           autoSeededBranch: "",
         };
 
-  const [message, setMessage] = useState<string>(() => restoredDraft?.message ?? "");
+  const [message, setMessage] = useState<string>(() =>
+    linkedPrompt?.trim() ? linkedPrompt : (restoredDraft?.message ?? ""),
+  );
+  useEffect(() => {
+    if (!searchParams.has("prompt") && !searchParams.has("task")) return;
+    if (linkedPrompt?.trim()) setMessage(linkedPrompt);
+    // Consume the link once so returning to the composer preserves edits.
+    const remaining = new URLSearchParams(searchParams);
+    remaining.delete("prompt");
+    remaining.delete("task");
+    navigate(
+      { search: remaining.toString(), hash: location.hash },
+      { replace: true, state: location.state },
+    );
+  }, [linkedPrompt, searchParams, location.hash, location.state, navigate]);
   const [checkingDbcert, setCheckingDbcert] = useState(false);
   const [mcpAuthorizing, setMcpAuthorizing] = useState(false);
   // Composer text captured when voice dictation starts, so Esc can revert to it.
