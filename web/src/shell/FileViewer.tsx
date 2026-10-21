@@ -95,6 +95,7 @@ import { useResizablePanel } from "@/hooks/useResizablePanel";
 import { useIOSNativeKeyboardInset } from "@/hooks/useIOSNativeKeyboardInset";
 import { useWorkspaceChangedFiles } from "@/hooks/useWorkspaceChangedFiles";
 import { cn } from "@/lib/utils";
+import { copyText } from "@/lib/clipboard";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 import { readFileViewPreferences, writeFileViewPreferences } from "@/lib/fileViewPreferences";
 import { hasCommandModifier } from "@/lib/hotkeys";
@@ -1500,7 +1501,26 @@ function FileViewerBody({
             </div>
           )}
           {/* Always show the file path/name in the toolbar, in every view. */}
-          <span className="min-w-0 truncate font-mono text-sm text-muted-foreground">{path}</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Copy file path"
+                  className="min-w-0 cursor-pointer truncate rounded text-left font-mono text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => {
+                    void copyText(path).then(
+                      () => toast.success("File path copied"),
+                      () => toast.error("Failed to copy file path"),
+                    );
+                  }}
+                >
+                  {path}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Copy file path</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <div
           className="relative flex min-w-0 items-center justify-end gap-1"

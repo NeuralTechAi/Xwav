@@ -19,10 +19,15 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useSearchParams } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
+import { copyText } from "@/lib/clipboard";
 import type { Comment } from "@/hooks/useComments";
 import { isFilePositionPending } from "./filePositionState";
 
 const codeViewerRenders = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/clipboard", () => ({ copyText: vi.fn(() => Promise.resolve()) }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 // ── Mock heavy child components ───────────────────────────────────────────────
 
@@ -195,7 +200,7 @@ import { useWorkspaceChangedFiles } from "@/hooks/useWorkspaceChangedFiles";
 import { classifyAndRemapComments, FileViewer } from "./FileViewer";
 import { FileViewerContext, type FileNavigationGuard } from "./FileViewerContext";
 import { encodePdfAnchor } from "./pdfCommentHelpers";
-import { writeFileViewPreferences } from "@/lib/fileViewPreferences";
+import { DEFAULT_FILE_VIEW_PREFERENCES, writeFileViewPreferences } from "@/lib/fileViewPreferences";
 import type { ChangedSort } from "./FlatFileList";
 
 const useCommentsMock = vi.mocked(useComments);
@@ -1006,6 +1011,59 @@ describe("FileViewer copy-link button", () => {
     renderViewer({ open: true });
 
     expect(screen.getByRole("button", { name: "Copy link to file" })).toBeInTheDocument();
+  });
+});
+
+describe("FileViewer clickable file path", () => {
+  beforeEach(() => {
+    useCommentsMock.mockReturnValue(makeCommentsQuery([]));
+    vi.mocked(copyText).mockReset().mockResolvedValue(undefined);
+  });
+
+  it.each(["editor", "preview", "source"] as const)(
+    "copies the complete displayed path from Markdown %s mode",
+    async (mode) => {
+      writeFileViewPreferences({ ...DEFAULT_FILE_VIEW_PREFERENCES, previewableViewMode: mode });
+      const path = "/home/user/work notes/design-review/compat-doc-full.md";
+      renderViewer({ open: true, path });
+      const pathButton = screen.getByRole("button", { name: "Copy file path" });
+      expect(pathButton).toHaveTextContent(path);
+
+      fireEvent.click(pathButton);
+
+      expect(copyText).toHaveBeenCalledWith(path);
+      await waitFor(() => expect(toast.success).toHaveBeenCalledWith("File path copied"));
+    },
+  );
+
+  it("copies the current path after navigating to another file", () => {
+    const { rerender } = renderViewer({ open: true, path: "src/first.py" });
+    rerender(viewerTree({ open: true, path: "src/second.py" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy file path" }));
+
+    expect(copyText).toHaveBeenCalledWith("src/second.py");
+  });
+
+  it("keeps the path clickable when the mobile toolbar collapses", () => {
+    vi.mocked(useIsMobileViewport).mockReturnValue(true);
+    installCollapsedToolbar();
+    renderViewer({ open: true, path: "notes.md" });
+    expect(screen.getByRole("button", { name: "More actions" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy file path" }));
+
+    expect(copyText).toHaveBeenCalledWith("notes.md");
+  });
+
+  it("reports a clipboard failure without claiming the path was copied", async () => {
+    vi.mocked(copyText).mockRejectedValue(new Error("Clipboard unavailable"));
+    renderViewer({ open: true });
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy file path" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to copy file path"));
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });
 
