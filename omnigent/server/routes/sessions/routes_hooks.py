@@ -22,7 +22,7 @@ from omnigent.native.native_coding_agents import (
     native_coding_agent_for_harness,
     native_coding_agent_for_wrapper_label,
 )
-from omnigent.pi_extension_ui import to_elicitation_params
+from omnigent.pi_extension_ui import to_elicitation_params, to_ui_response
 from omnigent.runner.routing import RunnerRouter
 from omnigent.runtime import (
     get_agent_cache,
@@ -1608,7 +1608,7 @@ def register_hooks_routes(
         if result is None:
             return Response(status_code=status.HTTP_200_OK)
         return Response(
-            content=json.dumps(result.model_dump(exclude_none=True)),
+            content=json.dumps(to_ui_response(raw_request, result)),
             media_type="application/json",
         )
 

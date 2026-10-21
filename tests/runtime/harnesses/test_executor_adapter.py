@@ -2837,21 +2837,18 @@ async def test_run_turn_installs_the_choice_bridge_only_where_supported() -> Non
 
 @pytest.mark.asyncio
 async def test_form_elicitation_handler_decline_does_not_cancel_the_turn() -> None:
-    """Pi extension dialogs return the declined verdict without killing the session."""
-    from omnigent.pi_extension_ui import to_elicitation_params
+    """Form dialogs return the declined verdict without killing the session."""
     from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
-    from omnigent.server.schemas import ElicitationResult
+    from omnigent.server.schemas import ElicitationRequestParams, ElicitationResult
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     ctx = _ElicitingTurnContext(ElicitationResult(action="decline"))
     adapter._current_ctx = ctx  # type: ignore[assignment]
-    params = to_elicitation_params(
-        {"id": "uuid-2", "method": "confirm", "title": "Clear?", "message": "Lost."}
-    )
-    result = await adapter._stable_form_elicitation_handler(params)
+    params = ElicitationRequestParams(mode="form", message="Continue?")
+    result = await adapter._stable_form_elicitation_handler("form-id", params)
     assert result.action == "decline"
     assert not ctx.cancelled.was_set
-    assert ctx.seen[0][0] == "elicit_pi_uuid-2"
+    assert ctx.seen[0][0] == "form-id"
 
 
 @pytest.mark.asyncio

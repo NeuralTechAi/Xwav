@@ -937,9 +937,10 @@ class ExecutorAdapter(HarnessApp):
 
     async def _stable_form_elicitation_handler(
         self,
+        elicitation_id: str,
         params: ElicitationRequestParams,
     ) -> ElicitationResult:
-        """Stable bridge for Pi extension UI dialogs (``ctx.ui.*``)."""
+        """Forward a form without treating a decline as turn cancellation."""
         ctx = self._current_ctx
         if ctx is None:
             _logger.error(
@@ -947,13 +948,6 @@ class ExecutorAdapter(HarnessApp):
             )
             return ElicitationResult(action="cancel")
 
-        extra = params.model_extra or {}
-        raw = extra.get("pi_extension_ui")
-        req_id = raw.get("id") if isinstance(raw, dict) else None
-        if isinstance(req_id, str) and req_id:
-            elicitation_id = f"elicit_pi_{req_id}"
-        else:
-            elicitation_id = f"elicit_pi_{secrets.token_hex(16)}"
         return await ctx.elicit(elicitation_id, params)
 
     async def _stable_policy_evaluator(

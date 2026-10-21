@@ -110,6 +110,8 @@ def test_pi_extension_dialog_renders_and_returns_the_answer(
     )
 
     verdict = _join_hook(hook_thread, holder)
-    assert verdict["action"] == "accept", verdict
-    if method != "confirm":
-        assert expected in (verdict.get("content") or {}).values(), verdict
+    assert verdict["type"] == "extension_ui_response", verdict
+    if method == "confirm":
+        assert verdict["confirmed"] is True, verdict
+    else:
+        assert verdict["value"] == expected, verdict

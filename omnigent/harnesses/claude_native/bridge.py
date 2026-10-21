@@ -7379,55 +7379,38 @@ def _tool_relay_handler_factory(
             self._respond_hook_output(hook_output)
 
         def _handle_policy_evaluate(self, payload: _JsonObject) -> None:
-            if policy_client is None or session_id is None:
-                self.send_error(HTTPStatus.SERVICE_UNAVAILABLE)
-                return
-            import urllib.parse as _up
-
-            session_component = _up.quote(session_id, safe="")
-            url = f"/v1/sessions/{session_component}/policies/evaluate"
-            future = asyncio.run_coroutine_threadsafe(policy_client.post(url, json=payload), loop)
-            try:
-                resp = future.result(timeout=86400.0)
-            except Exception as exc:  # noqa: BLE001
-                self._send_policy_proxy_error(exc)
-                return
-            raw = resp.content
-            self.send_response(resp.status_code)
-            for header in ("Content-Type", "Content-Length"):
-                val = resp.headers.get(header)
-                if val is not None:
-                    self.send_header(header, val)
-            if "Content-Length" not in resp.headers:
-                self.send_header("Content-Length", str(len(raw)))
-            self.end_headers()
-            self.wfile.write(raw)
+            self._proxy_parked_request(payload, "/policies/evaluate")
 
         def _handle_pi_extension_ui(self, payload: _JsonObject) -> None:
-            """Proxy one pi-native extension UI park to the session hook."""
+            self._proxy_parked_request(payload, "/hooks/pi-extension-ui", watch_disconnect=True)
+
+        def _proxy_parked_request(
+            self, payload: _JsonObject, path: str, *, watch_disconnect: bool = False
+        ) -> None:
             if policy_client is None or session_id is None:
                 self.send_error(HTTPStatus.SERVICE_UNAVAILABLE)
                 return
             session_component = urllib.parse.quote(session_id, safe="")
-            url = f"/v1/sessions/{session_component}/hooks/pi-extension-ui"
+            url = f"/v1/sessions/{session_component}{path}"
             future = asyncio.run_coroutine_threadsafe(policy_client.post(url, json=payload), loop)
             try:
-                deadline = time.monotonic() + 86400.0
-                while not future.done():
-                    if time.monotonic() >= deadline:
-                        raise TimeoutError("Pi dialog wait expired")
-                    try:
-                        readable, _, _ = select.select([self.connection], [], [], 0.1)
-                        if readable and not self.connection.recv(1, socket.MSG_PEEK):
+                if watch_disconnect:
+                    deadline = time.monotonic() + 86400.0
+                    while not future.done():
+                        if time.monotonic() >= deadline:
+                            raise TimeoutError("Dialog wait expired")
+                        try:
+                            readable, _, _ = select.select([self.connection], [], [], 0.1)
+                            if readable and not self.connection.recv(1, socket.MSG_PEEK):
+                                return
+                        except OSError:
                             return
-                    except OSError:
-                        return
-                resp = future.result()
+                resp = future.result(timeout=86400.0)
             except Exception as exc:  # noqa: BLE001
                 self._send_policy_proxy_error(exc)
                 return
             finally:
-                # Closing the local dialog also releases the server's parked card.
+                # Closing a dialog releases the upstream parked card.
                 future.cancel()
             raw = resp.content
             self.send_response(resp.status_code)

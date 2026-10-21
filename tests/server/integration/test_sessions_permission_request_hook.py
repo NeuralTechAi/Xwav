@@ -4355,7 +4355,7 @@ async def test_antigravity_elicitation_hook_rejects_non_dict_body(
     assert resp.status_code == 400, resp.text
 
 
-@pytest.mark.parametrize("method", ["confirm", "select"])
+@pytest.mark.parametrize("method", ["confirm", "select", "editor"])
 async def test_pi_extension_ui_hook_round_trip(client: httpx.AsyncClient, method: str) -> None:
     agent = await create_test_agent(client, "test-pi-extension-ui")
     session_id = await _create_session(client, agent["id"])
@@ -4368,6 +4368,7 @@ async def test_pi_extension_ui_hook_round_trip(client: httpx.AsyncClient, method
             "title": "Clear session?",
             "message": "All messages will be lost.",
             **({"options": ["Allow", "Block"]} if method == "select" else {}),
+            **({"prefill": "original note"} if method == "editor" else {}),
         },
     }
     drain_task = asyncio.create_task(_drain_until_elicitation(session_id))
@@ -4383,19 +4384,22 @@ async def test_pi_extension_ui_hook_round_trip(client: httpx.AsyncClient, method
     assert "Clear session?" in params["message"]
     if method == "confirm":
         assert "ask_user_question" not in params
-    else:
+    elif method == "select":
         question = params["ask_user_question"]["questions"][0]
         assert question["id"] == "0"
         assert question["isOther"] is False
         assert [option["label"] for option in question["options"]] == ["Allow", "Block"]
-    content = {"0": "Allow"} if method == "select" else None
+    content = {"0": "Allow"} if method == "select" else {"0": "Keep as-is"}
     verdict = await _post_approval(client, session_id, elicitation_id, "accept", content=content)
     assert verdict.status_code == 202, verdict.text
     response = await hook_task
     assert response.status_code == 200, response.text
-    assert response.json()["action"] == "accept"
-    if method == "select":
-        assert response.json()["content"]["0"] == "Allow"
+    assert response.json()["type"] == "extension_ui_response"
+    assert response.json()["id"] == "uuid-2"
+    if method == "confirm":
+        assert response.json()["confirmed"] is True
+    else:
+        assert response.json()["value"] == ("Allow" if method == "select" else "original note")
 
 
 async def test_pi_extension_ui_hook_repark_keeps_one_pending_card(
@@ -4466,7 +4470,7 @@ async def test_pi_extension_ui_hook_repark_keeps_one_pending_card(
     assert verdict.status_code == 202, verdict.text
     resp = await hook_task
     assert resp.status_code == 200, resp.text
-    assert resp.json()["action"] == "accept"
+    assert resp.json()["confirmed"] is True
     assert pending_elicitations.count_for(session_id) == 0
     pending_elicitations.reset_for_tests()
 
@@ -4517,7 +4521,7 @@ async def test_pi_extension_ui_hook_decline_does_not_interrupt(
     assert verdict.status_code == 202, verdict.text
     resp = await hook_task
     assert resp.status_code == 200, resp.text
-    assert resp.json()["action"] == "decline"
+    assert resp.json()["confirmed"] is False
     assert forwarded == []
 
 

@@ -1327,7 +1327,7 @@ global.fetch = async (url, _request) => {
   if (typeof url === "string" && url.indexOf("/policies/evaluate") !== -1) {
     policyUrls.push(url);
   }
-  return { ok: true, async json() { return {}; } };
+  return { ok: true, text: async () => "{}" };
 };
 global.setInterval = () => ({ fakeInterval: true });
 
@@ -1440,7 +1440,7 @@ let mcpCallCount = 0;
 global.fetch = async (url, request) => {
   if (typeof url === "string" && url.indexOf("/policies/evaluate") !== -1) {
     // The server-side ASK park collapses to a hard ALLOW after the human approves.
-    return { ok: true, async json() { return { result: "POLICY_ACTION_ALLOW" }; } };
+    return { ok: true, text: async () => JSON.stringify({ result: "POLICY_ACTION_ALLOW" }) };
   }
   // /mcp proxy.
   mcpCallCount += 1;
@@ -1911,7 +1911,10 @@ let lastRetryBody = null;
 global.fetch = async (url, request) => {
   if (typeof url === "string" && url.indexOf("/policies/evaluate") !== -1) {
     // The human declined → the ASK park collapses to DENY.
-    return { ok: true, async json() { return { result: "POLICY_ACTION_DENY", reason: "nope" }; } };
+    return {
+      ok: true,
+      text: async () => JSON.stringify({ result: "POLICY_ACTION_DENY", reason: "nope" }),
+    };
   }
   mcpCallCount += 1;
   if (mcpCallCount === 1) {
@@ -2645,7 +2648,7 @@ function makeJsonResponse(obj, status) {
   return {
     ok: status === undefined || (status >= 200 && status < 300),
     status: status === undefined ? 200 : status,
-    json: async () => obj,
+    text: async () => JSON.stringify(obj),
   };
 }
 
@@ -3027,7 +3030,7 @@ def test_policy_malformed_body_fails_closed(tmp_path: Path) -> None:
     body = r"""
 (async () => {
   responders = [
-    (_b) => ({ ok: true, status: 200, json: async () => { throw new Error("bad json"); } }),
+    (_b) => ({ ok: true, status: 200, text: async () => "not json" }),
   ];
   const verdict = await runToolCall();
   assert.equal(verdict && verdict.block, true, JSON.stringify(verdict));

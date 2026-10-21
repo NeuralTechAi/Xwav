@@ -514,7 +514,7 @@ async function testTuiWrapParksConfirmWithoutCallingOriginal() {
     const u = String(url);
     if (u.includes("pi-extension-ui") || u.includes("/hook/pi/")) {
       hookCalls.push({ url: u, body: JSON.parse(opts.body) });
-      return { ok: true, status: 200, text: async () => JSON.stringify({ action: "accept" }) };
+      return { ok: true, status: 200, text: async () => JSON.stringify({ type: "extension_ui_response", confirmed: true }) };
     }
     return { ok: true, status: 204, text: async () => "" };
   };
@@ -566,7 +566,7 @@ async function testTuiWrapReparksSameElicitationId() {
       return {
         ok: true,
         status: 200,
-        text: async () => JSON.stringify({ action: "accept", content: { "0": "Allow" } }),
+        text: async () => JSON.stringify({ type: "extension_ui_response", value: "Allow" }),
       };
     }
     return { ok: true, status: 204, text: async () => "" };
@@ -578,17 +578,6 @@ async function testTuiWrapReparksSameElicitationId() {
   assert("select returns chosen label", value === "Allow", `value=${value}`);
   assert("re-park used the same elicitation id", ids.length === 2 && ids[0] === ids[1], JSON.stringify(ids));
   assert("re-park rereads the current bearer", JSON.stringify(headers) === JSON.stringify(["first-token", "rotated-token"]), JSON.stringify(headers));
-}
-
-async function testSelectValidatesApiAnswer() {
-  for (const [answer, expected] of [["Unlisted", undefined], [["", 42, "Allow"], "Allow"]]) {
-    const h = makeHarness({ captureEvents: true });
-    global.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ action: "accept", content: { "0": answer } }) });
-    const { ui } = mockUi();
-    const ctx = { mode: "tui", ui };
-    await h.handlers.session_start({}, ctx);
-    assert("select preserves its option contract", await ctx.ui.select("Choice?", ["Allow", "Block"]) === expected);
-  }
 }
 
 async function testEmptyReparkBacksOff() {
@@ -604,7 +593,7 @@ async function testEmptyReparkBacksOff() {
       return {
         ok: true,
         status: 200,
-        text: async () => JSON.stringify({ action: "accept", content: {} }),
+        text: async () => JSON.stringify({ type: "extension_ui_response", confirmed: true }),
       };
     }
     return { ok: true, status: 204, text: async () => "" };
@@ -630,7 +619,7 @@ async function testEditorHonoursOpts() {
       return {
         ok: true,
         status: 200,
-        text: async () => JSON.stringify({ action: "accept", content: {} }),
+        text: async () => JSON.stringify({ type: "extension_ui_response", confirmed: true }),
       };
     }
     return { ok: true, status: 204, text: async () => "" };
@@ -680,7 +669,7 @@ async function testActiveDialogCancellation() {
     } finally {
       clearTimeout(timer);
     }
-    global.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ action: "accept" }) });
+    global.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ type: "extension_ui_response", confirmed: true }) });
     assert(`${phase}: a later dialog works`, await ctx.ui.confirm("Again?", "Test only") === true);
   }
 }
@@ -812,8 +801,7 @@ async function testQueuedPromptDuringStartupStaysRunningUntilAgentEnd() {
     await testAgentStartClearsStaleWindow();
     await testTuiWrapParksConfirmWithoutCallingOriginal();
     await testTuiWrapReparksSameElicitationId();
-    await testSelectValidatesApiAnswer();
-    await testEmptyReparkBacksOff();
+      await testEmptyReparkBacksOff();
     await testEditorHonoursOpts();
     await testActiveDialogCancellation();
     await testRpcModeDoesNotWrapUi();

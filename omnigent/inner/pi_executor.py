@@ -77,6 +77,7 @@ from omnigent.models.pi_model_compatibility import (
 )
 from omnigent.onboarding.provider_config import CHAT_WIRE_API, RESPONSES_WIRE_API
 from omnigent.runner.identity import OMNIGENT_SESSION_ENV_VAR
+from omnigent.server.schemas import ElicitationRequestParams, ElicitationResult
 from omnigent.spec.types import RetryPolicy
 from omnigent.util.json_types import JsonObject as _JsonObject
 from omnigent.util.json_types import JsonValue
@@ -194,9 +195,8 @@ NativePolicyGate: TypeAlias = Callable[  # type: ignore[explicit-any]
 
 # ExecutorAdapter connects Pi dialogs to ctx.elicit. Return the typed result
 # so the extension can handle a decline without aborting the turn.
-FormElicitationHandler: TypeAlias = Callable[  # type: ignore[explicit-any]
-    [Any],
-    Awaitable[Any],
+FormElicitationHandler: TypeAlias = Callable[
+    [str, ElicitationRequestParams], Awaitable[ElicitationResult]
 ]
 
 
@@ -3243,11 +3243,15 @@ class PiExecutor(Executor):
         result = None
         if handler is not None:
             timeout_s = timeout_seconds(event)
+            request_id = event.get("id")
+            elicitation_id = f"elicit_pi_{request_id or secrets.token_hex(16)}"
             try:
                 if timeout_s is not None:
-                    result = await asyncio.wait_for(handler(params), timeout=timeout_s)
+                    result = await asyncio.wait_for(
+                        handler(elicitation_id, params), timeout=timeout_s
+                    )
                 else:
-                    result = await handler(params)
+                    result = await handler(elicitation_id, params)
             except TimeoutError:
                 result = None
             except Exception:

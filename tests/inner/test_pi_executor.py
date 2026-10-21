@@ -5609,8 +5609,8 @@ def test_pi_extension_ui_confirm_round_trip_writes_stdin_response() -> None:
     """A confirm dialog parks the handler and writes extension_ui_response."""
     from omnigent.server.schemas import ElicitationResult
 
-    async def handler(params: object) -> ElicitationResult:
-        del params
+    async def handler(elicitation_id: str, params: object) -> ElicitationResult:
+        del elicitation_id, params
         return ElicitationResult(action="accept")
 
     events, rpc = _run_scripted_turn(
@@ -5644,7 +5644,8 @@ def test_pi_extension_ui_select_round_trip_value() -> None:
 
     seen: list[ElicitationRequestParams] = []
 
-    async def handler(params: ElicitationRequestParams) -> ElicitationResult:
+    async def handler(elicitation_id: str, params: ElicitationRequestParams) -> ElicitationResult:
+        assert elicitation_id == "elicit_pi_uuid-1"
         seen.append(params)
         return ElicitationResult(action="accept", content={"0": "Allow"})
 
@@ -5725,8 +5726,8 @@ def test_pi_extension_ui_timeout_fails_closed() -> None:
     """Pi's optional timeout is honored; a late handler does not hang the turn."""
     from omnigent.server.schemas import ElicitationResult
 
-    async def slow_handler(params: object) -> ElicitationResult:
-        del params
+    async def slow_handler(elicitation_id: str, params: object) -> ElicitationResult:
+        del elicitation_id, params
         await asyncio.sleep(1)
         return ElicitationResult(action="accept")
 

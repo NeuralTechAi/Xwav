@@ -465,7 +465,11 @@ Cross-harness journeys:
   evidence, with sandbox disabled; it does not cover browser rendering.
   `tests/e2e_ui/approvals/test_pi_extension_ui.py` drives Chat cards through the
   real server using injected hooks. Inbox/mobile rendering and SDK interruption
-  during an active dialog need separate evidence. Run the scoped standardized
+  during an active dialog need separate evidence. Native cancellation clears
+  API/card state after the grace period; a historical browser capture still
+  showed sidebar “Needs response” at 45 seconds, so sidebar settlement remains
+  a gap. SDK/native share answer conversion; native dialog and policy HTTP
+  waits share transport and relay forwarding. Run the scoped standardized
   checks below; these scenarios own their isolated environments:
 
   ```sh
