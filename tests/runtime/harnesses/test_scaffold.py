@@ -275,6 +275,8 @@ async def test_elicit_emits_resolved_on_every_exit(cancel: bool) -> None:
     resolved = await queue.get()
     assert resolved.type == "response.elicitation_resolved"
     assert resolved.elicitation_id == "elicit_test"
+    assert resolved.action == (None if cancel else "accept")
+    assert resolved.reason == ("unanswered" if cancel else None)
     assert ctx._pending_elicitations == {}
     assert queue.empty()
 

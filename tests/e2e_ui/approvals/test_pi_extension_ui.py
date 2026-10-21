@@ -33,7 +33,7 @@ def test_pi_extension_dialog_renders_and_returns_the_answer(
             httpx.post,
             f"{base_url}/v1/sessions/{session_id}/hooks/pi-extension-ui",
             json={
-                "elicitation_id": f"elicit_pi_{method}",
+                "elicitation_id": "elicit_pi_" + "f" * 32,
                 "request": {
                     "id": "uuid-select",
                     "method": method,

@@ -461,8 +461,9 @@ Cross-harness journeys:
   `tests/e2e_ui/approvals/test_pi_extension_ui.py` checks confirmation layout
   and multiline editor submission through Chat using injected hooks; select
   and input matrices stay in component tests. Older servers use native TUI
-  dialogs on 404/405; read-only callers cannot publish cards, and cancelled
-  server waits stop re-parking (server/JS regression tests).
+  dialogs on 404/405; supported servers deliver dialogs through the web only.
+  Read-only callers cannot publish cards. Native timeouts are capped at the
+  server limit, and cancelled waits stop re-parking (server/JS regressions).
   Known gaps: stale sidebar “Needs response” after native cancellation,
   Inbox/mobile, active SDK interruption, sandbox and Managed acceptance.
   These scenarios own their isolated environments:

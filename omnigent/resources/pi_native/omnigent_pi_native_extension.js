@@ -232,7 +232,7 @@ async function postParkedJson(config, relayPath, serverPath, payload, {
       });
       text = resp.ok ? await resp.text() : "";
     } catch (_err) {
-      if (callerSignal && callerSignal.aborted) return null;
+      if ((callerSignal && callerSignal.aborted) || Date.now() >= parkDeadline) return null;
       if (timer) clearTimeout(timer);
       const aborted = !!(controller && controller.signal.aborted);
       const elapsed = Date.now() - attemptStart;
@@ -322,16 +322,18 @@ function wrapExtensionUi(ctx, config) {
   const ui = ctx.ui;
   ui.__omnigentUiWrapped = true;
   const original = Object.fromEntries(
-    ["confirm", "select", "input", "editor"].map((method) => [method, ui[method].bind(ui)]),
+    ["confirm", "select", "input", "editor"]
+      .filter((method) => typeof ui[method] === "function")
+      .map((method) => [method, ui[method].bind(ui)]),
   );
 
-  ui.confirm = async (title, message, opts) => {
+  if (original.confirm) ui.confirm = async (title, message, opts) => {
     const request = { method: "confirm", title, message };
     const verdict = await parkPiExtensionUiHttp(config, request, opts);
     if (verdict === _UNSUPPORTED_ENDPOINT) return original.confirm(title, message, opts);
     return !!(verdict && verdict.confirmed === true);
   };
-  ui.select = async (title, options, opts) => {
+  if (original.select) ui.select = async (title, options, opts) => {
     const request = {
       method: "select",
       title,
@@ -341,13 +343,13 @@ function wrapExtensionUi(ctx, config) {
     if (verdict === _UNSUPPORTED_ENDPOINT) return original.select(title, options, opts);
     return extensionUiValue(verdict);
   };
-  ui.input = async (title, placeholder, opts) => {
+  if (original.input) ui.input = async (title, placeholder, opts) => {
     const request = { method: "input", title, placeholder };
     const verdict = await parkPiExtensionUiHttp(config, request, opts);
     if (verdict === _UNSUPPORTED_ENDPOINT) return original.input(title, placeholder, opts);
     return extensionUiValue(verdict);
   };
-  ui.editor = async (title, prefill, opts) => {
+  if (original.editor) ui.editor = async (title, prefill, opts) => {
     const request = { method: "editor", title, prefill };
     const verdict = await parkPiExtensionUiHttp(config, request, opts);
     if (verdict === _UNSUPPORTED_ENDPOINT) return original.editor(title, prefill, opts);

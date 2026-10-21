@@ -33,8 +33,10 @@ const harnesses = [];
 // produces independent closure state (activeResponseId, pendingInterruptUntil,
 // latestContext, ...).
 function makeHarness({ captureEvents = false, existingTools = [] } = {}) {
-  const inboxDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-native-inbox-"));
-  const configPath = path.join(inboxDir, "config");
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pi-native-inbox-"));
+  const inboxDir = path.join(fixtureRoot, "inbox");
+  fs.mkdirSync(inboxDir);
+  const configPath = path.join(fixtureRoot, "config.json");
   // A serverUrl + sessionId make postEvent attempt a real fetch; with a mock
   // global fetch that lets a test capture the posted event bodies. Without
   // them postEvent fails closed (the interrupt tests rely on that).
@@ -76,7 +78,7 @@ function makeHarness({ captureEvents = false, existingTools = [] } = {}) {
   const mod = require(EXT_PATH);
   mod(pi);
 
-  const h = { pi, handlers, inboxDir, postedEvents, registeredTools };
+  const h = { pi, handlers, fixtureRoot, configPath, inboxDir, postedEvents, registeredTools };
   harnesses.push(h);
   return h;
 }
@@ -473,7 +475,7 @@ async function testRunningIdleShareResponseId() {
   );
 }
 
-async function uiSession(mode = "tui") {
+async function uiSession(mode = "tui", missing = []) {
   const h = makeHarness({ captureEvents: true });
   const originalCalls = [];
   const ui = {};
@@ -487,6 +489,7 @@ async function uiSession(mode = "tui") {
       return result;
     };
   }
+  for (const method of missing) delete ui[method];
   const ctx = { mode, ui };
   await h.handlers.session_start({}, ctx);
   originalCalls.length = 0;
@@ -553,9 +556,8 @@ async function testDialogCancellationDoesNotRepark() {
 }
 
 async function testTuiWrapReparksSameElicitationId() {
-  const { ctx, inboxDir } = await uiSession();
+  const { ctx, configPath } = await uiSession();
   const ids = [], headers = [];
-  const configPath = path.join(inboxDir, "config");
   const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
   const setToken = (token) => fs.writeFileSync(configPath, JSON.stringify({ ...config, authHeaders: { authorization: token } }));
   setToken("first-token");
@@ -577,18 +579,16 @@ async function testTuiWrapReparksSameElicitationId() {
   assert("re-park refreshes the bearer", JSON.stringify(headers) === JSON.stringify(["first-token", "rotated-token"]));
 }
 
-async function testEditorHonoursOpts() {
-  const { ctx } = await uiSession();
-  let calls = 0;
-  dialogFetch(() => { calls += 1; return dialogResponse({ value: "wrong" }); });
-  const controller = new AbortController();
-  controller.abort();
-  assert("aborted editor returns undefined", await ctx.ui.editor("Notes", "prefill", { signal: controller.signal }) === undefined);
-  assert("aborted editor sends no request", calls === 0);
+async function testPartialUiStillInitializes() {
+  const { ctx, registeredTools } = await uiSession("tui", ["editor"]);
+  assert("missing editor stays absent", ctx.ui.editor === undefined);
+  assert("startup registers task tool", !!registeredTools.manage_todo_list);
+  dialogFetch(() => dialogResponse({ confirmed: true }));
+  assert("remaining UI still works", await ctx.ui.confirm("Continue?", "") === true);
 }
 
 async function testActiveDialogCancellation() {
-  for (const phase of ["headers", "body", "backoff"]) {
+  for (const phase of ["already-aborted", "headers", "body", "backoff", "timeout"]) {
     const { ctx } = await uiSession();
     const controller = new AbortController();
     let requestStarted;
@@ -598,14 +598,20 @@ async function testActiveDialogCancellation() {
         opts.signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
         requestStarted();
       });
-      if (phase === "headers") return wait();
+      if (phase === "headers" || phase === "timeout") return wait();
       if (phase === "body") return { ok: true, status: 200, text: wait };
       setTimeout(requestStarted, 10);
       return { ok: false, status: 503 };
     });
-    const pending = ctx.ui.confirm("Continue?", "Test only", { signal: controller.signal, timeout: 2000 });
-    await started;
-    controller.abort();
+    if (phase === "already-aborted") controller.abort();
+    const pending = ctx.ui.confirm("Continue?", "Test only", {
+      ...(phase !== "timeout" ? { signal: controller.signal } : {}),
+      timeout: phase === "timeout" ? 50 : 2000,
+    });
+    if (phase !== "already-aborted" && phase !== "timeout") {
+      await started;
+      controller.abort();
+    }
     let timer;
     try {
       const value = await Promise.race([
@@ -730,14 +736,14 @@ async function testQueuedPromptDuringStartupStaysRunningUntilAgentEnd() {
     await testUnsupportedDialogsFallBackToTui();
     await testDialogCancellationDoesNotRepark();
     await testTuiWrapReparksSameElicitationId();
-    await testEditorHonoursOpts();
+    await testPartialUiStillInitializes();
     await testActiveDialogCancellation();
     await testRpcModeDoesNotWrapUi();
   } finally {
     for (const h of harnesses) {
       if (h.pi.__omnigentInboxPoller) clearInterval(h.pi.__omnigentInboxPoller);
       try {
-        fs.rmSync(h.inboxDir, { recursive: true, force: true });
+        fs.rmSync(h.fixtureRoot, { recursive: true, force: true });
       } catch (_err) {}
     }
   }

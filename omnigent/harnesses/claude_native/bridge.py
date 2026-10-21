@@ -7401,7 +7401,8 @@ def _tool_relay_handler_factory(
                             raise TimeoutError("Dialog wait expired")
                         try:
                             readable, _, _ = select.select([self.connection], [], [], 0.1)
-                            if readable and not self.connection.recv(1, socket.MSG_PEEK):
+                            if readable:
+                                # EOF or pipelined bytes end this single-request wait.
                                 return
                         except OSError:
                             return

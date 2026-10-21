@@ -22,7 +22,7 @@ from omnigent.native.native_coding_agents import (
     native_coding_agent_for_harness,
     native_coding_agent_for_wrapper_label,
 )
-from omnigent.pi_extension_ui import to_elicitation_params, to_ui_response
+from omnigent.pi_extension_ui import timeout_seconds, to_elicitation_params, to_ui_response
 from omnigent.runner.routing import RunnerRouter
 from omnigent.runtime import (
     get_agent_cache,
@@ -1581,12 +1581,9 @@ def register_hooks_routes(
                 "Pi extension UI hook 'elicitation_id' must start with 'elicit_pi_'.",
                 code=ErrorCode.INVALID_INPUT,
             )
-        owner = _harness_elicitation_owners.get(elicitation_id)
-        if owner is not None and owner != session_id:
-            raise OmnigentError(
-                "Pi extension UI elicitation belongs to another session.",
-                code=ErrorCode.INVALID_INPUT,
-            )
+        elicitation_id = _client_supplied_hook_elicitation_id(
+            {"_omnigent_elicitation_id": elicitation_id}, session_id
+        )
         raw_request = payload.get("request")
         if not isinstance(raw_request, dict):
             raise OmnigentError(
@@ -1606,7 +1603,10 @@ def register_hooks_routes(
             request,
             session_id=session_id,
             params=params,
-            timeout_s=_sf._PI_EXTENSION_UI_HOOK_TIMEOUT_S,
+            timeout_s=min(
+                timeout_seconds(raw_request) or _sf._PI_EXTENSION_UI_HOOK_TIMEOUT_S,
+                _sf._PI_EXTENSION_UI_HOOK_TIMEOUT_S,
+            ),
             conversation_store=conversation_store,
             elicitation_id=elicitation_id,
             tool_name="Pi(extension_ui)",

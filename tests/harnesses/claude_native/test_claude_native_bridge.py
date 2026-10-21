@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import contextlib
 import io
 import itertools
 import json
@@ -13346,10 +13345,11 @@ async def test_pi_extension_ui_relay_path_proxies_to_session_hook(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("extra_bytes", [False, True])
 async def test_pi_dialog_disconnect_cancels_upstream_wait(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra_bytes: bool
 ) -> None:
-    """An aborted local fetch must close the server request, not leave a parked card."""
+    """Client EOF or pipelined bytes release the upstream wait without spinning."""
     started, cancelled = asyncio.Event(), asyncio.Event()
 
     class WaitingClient:
@@ -13362,23 +13362,30 @@ async def test_pi_dialog_disconnect_cancels_upstream_wait(
 
     relay, bridge_dir = _hook_relay(tmp_path, monkeypatch, WaitingClient())
     info = json.loads((bridge_dir / claude_native_bridge._TOOL_RELAY_FILE).read_text())
+    from urllib.parse import urlsplit
+
+    url = urlsplit(info["url"])
+    _, writer = await asyncio.open_connection(url.hostname, url.port)
     try:
-        async with httpx.AsyncClient() as client:
-            task = asyncio.create_task(
-                client.post(
-                    info["url"] + "/hook/pi/extension-ui",
-                    headers={"Authorization": f"Bearer {info['token']}"},
-                    json={"elicitation_id": "cancel-check", "request": {"method": "confirm"}},
-                )
-            )
-            try:
-                await asyncio.wait_for(started.wait(), timeout=5)
-            finally:
-                task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
-            await asyncio.wait_for(cancelled.wait(), timeout=2)
+        body = json.dumps({"elicitation_id": "cancel-check", "request": {"method": "confirm"}})
+        writer.write(
+            (
+                "POST /hook/pi/extension-ui HTTP/1.1\r\n"
+                f"Host: {url.netloc}\r\nAuthorization: Bearer {info['token']}\r\n"
+                f"Content-Type: application/json\r\nContent-Length: {len(body)}\r\n\r\n{body}"
+            ).encode()
+        )
+        await writer.drain()
+        await asyncio.wait_for(started.wait(), timeout=5)
+        if extra_bytes:
+            writer.write(b"unexpected pipelined bytes")
+            await writer.drain()
+        else:
+            writer.close()
+        await asyncio.wait_for(cancelled.wait(), timeout=2)
     finally:
+        writer.close()
+        await writer.wait_closed()
         relay.close()
 
 
