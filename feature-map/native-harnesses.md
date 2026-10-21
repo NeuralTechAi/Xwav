@@ -10,6 +10,8 @@ implements them separately, so a fix for one harness does not reach the others.
 ## Sub-features
 
 - `launch-web`: pick the harness in the new-session composer and start a session.
+- `agent-instructions`: Pi native appends authored agent instructions at launch,
+  including resumed sessions, while retaining Pi defaults and explicit additions.
 - `launch-cli`: `omnigent <name>` starts the harness in the user's terminal with
   an Omnigent session behind it.
 - `gemini-gateways`: configure native Gemini URL/key or Databricks profile routing,
@@ -74,6 +76,11 @@ implements them separately, so a fix for one harness does not reach the others.
 **Web:** start a new session, choose the harness in the harness picker, open its
 configuration for model and effort, and send. Approval cards and the Terminal
 view appear in the session.
+
+**Agent instructions (Pi native):** launch an agent whose spec contains inline
+instructions or references a bundled instruction file. Reopen its terminal and
+check the same authored role is present once. The `omnigent pi` wrapper also
+appends its own startup instructions.
 
 **Working status:** watch the session's Chat indicator after sending from the
 new-session composer, an existing-session composer, or the agent terminal.
@@ -277,6 +284,25 @@ Cross-harness journeys:
   before a terminal starts. The supported release must answer terminal and API
   input through the real Pi process; only model replies are scripted locally.
   Each case owns its stack and saves terminal recordings plus API evidence.
+- **`agent-instructions`, Pi native (own environment):**
+  `tests/e2e/test_pi_native_cold_resume_model_rewrite_e2e.py::test_cold_resume_keeps_explicit_openai_codex_selection`
+  uploads a spec with a bundled instruction file through a real server, host,
+  runner and Pi terminal. A test-owned extension reads the real system prompt
+  at fresh launch and process resume; the authored role appears once, Pi's
+  default prompt remains, and the selected model survives. No model call is
+  made. The compatibility test above checks the CLI/server wrapper instructions
+  alongside scripted-provider turns. Run with the CI-pinned Pi executable:
+
+  ```sh
+  OMNIGENT_PI_PATH=/path/to/pi uv run --no-sync pytest tests/e2e/test_pi_native_cold_resume_model_rewrite_e2e.py --reruns 0 -q
+  ```
+
+  Raw/resolved/absent specs and repeated user additions are covered by
+  `tests/runner/test_app_sessions_native_terminals_autocreate.py::test_auto_create_pi_terminal_launches_required_terminal`.
+  `tests/e2e/test_pi_native_fork_parallel_tool_results_e2e.py::test_pi_native_fork_rebuild_keeps_parallel_tool_results_adjacent`
+  checks authored instructions in actual scripted-provider requests before and
+  after a real Pi fork with tool history. These checks do not prove browser
+  launch, OS sandbox access or live-model adherence to the instructions.
 - **`side-chat`, Codex:**
   `tests/e2e_ui/chat/test_native_codex_side_chat.py::test_native_codex_side_chat_inherits_context_and_closes_independently`
   uses a real Codex CLI/app-server and the local mock model. It verifies inherited

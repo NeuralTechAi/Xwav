@@ -14,7 +14,18 @@ import httpx
 from omnigent.harnesses.pi_native.bridge import bridge_dir_for_session_id
 from tests._helpers.host import isolated_host
 from tests._helpers.pi_native import seed_pi_own_login_catalog
+from tests._helpers.polling import poll_until
 from tests._helpers.session import bundle_files, post_session_bundle
+
+_INSTRUCTIONS = "OMNI_PI_AUTHORED_ROLE: act as the chief of staff."
+_OBSERVER = """const fs = require('fs');
+module.exports = function(pi) {
+  pi.on('session_start', (_event, ctx) => {
+    fs.appendFileSync(require('path').join(process.cwd(), 'prompts.jsonl'),
+      JSON.stringify({pid: process.pid, prompt: ctx.getSystemPrompt()}) + '\\n');
+  });
+};
+"""
 
 _SELECTION = "openai-codex/gpt-5.6-sol"
 
@@ -66,6 +77,9 @@ def test_cold_resume_keeps_explicit_openai_codex_selection(
             }
         )
     )
+    observer = agent / "prompt-observer.js"
+    observer.write_text(_OBSERVER)
+    (agent / "settings.json").write_text(json.dumps({"extensions": [str(observer)]}))
     config = {
         "providers": {
             "openrouter": {
@@ -92,7 +106,7 @@ def test_cold_resume_keeps_explicit_openai_codex_selection(
             {
                 "pi-native-ui.yaml": f"""
 name: pi-native-ui
-prompt: Pi is running in the session terminal.
+instructions: role.md
 executor:
   harness: pi-native
   model: {_SELECTION}
@@ -102,7 +116,8 @@ os_env:
   cwd: .
   sandbox:
     type: none
-""".encode()
+""".encode(),
+                "role.md": _INSTRUCTIONS.encode(),
             }
         )
         create = post_session_bundle(
@@ -123,6 +138,11 @@ os_env:
             _wait_for_catalog(http_client, session_id)
             terminal = http_client.get(f"{terminal_url}/terminal_pi_main", timeout=30)
             terminal.raise_for_status()
+            prompts = workspace / "prompts.jsonl"
+            poll_until(lambda: prompts.exists(), timeout_s=30, interval_s=0.2)
+            first_prompt = json.loads(prompts.read_text().splitlines()[0])
+            assert first_prompt["prompt"].count(_INSTRUCTIONS) == 1
+            assert "coding assistant" in first_prompt["prompt"].lower()
             old_pane = terminal.json()["metadata"]
             http_client.delete(f"{terminal_url}/terminal_pi_main", timeout=30).raise_for_status()
             deadline = time.monotonic() + 30
@@ -135,6 +155,7 @@ os_env:
                 json.dumps(
                     {
                         "enabledModels": ["openai-codex/gpt-5.5"],
+                        "extensions": [str(observer)],
                     }
                 )
             )
@@ -171,6 +192,12 @@ os_env:
             ids = {option["id"] for option in options}
             assert ids == {_SELECTION, "openai-codex/gpt-5.5"}
             assert not any(model.startswith("omnigent/") for model in ids)
+            poll_until(
+                lambda: len(prompts.read_text().splitlines()) >= 2, timeout_s=30, interval_s=0.2
+            )
+            resumed_prompt = json.loads(prompts.read_text().splitlines()[-1])
+            assert resumed_prompt["pid"] != first_prompt["pid"]
+            assert resumed_prompt["prompt"].count(_INSTRUCTIONS) == 1
         finally:
             with contextlib.suppress(httpx.HTTPError):
                 http_client.delete(f"/v1/sessions/{session_id}", timeout=10)
