@@ -456,7 +456,8 @@ Cross-harness journeys:
 - **`approvals`, Pi extension dialogs:**
   `tests/e2e/test_pi_extension_ui_round_trip.py::test_real_pi_dialog_answers_and_continues`
   runs real SDK and native Pi through an isolated server/runner with a scripted
-  provider. Browser coverage retains select, multiline editor and binary confirmation.
+  provider. Browser coverage retains multiline editor submission and binary
+  confirmation layout; select options/submission stay in component tests.
   Single-line input rendering/submission is covered by ApprovalCard component
   tests; real-process coverage checks all four methods over SDK/native transport.
   Confirm rejection, select, input and editor answers reach Pi; a

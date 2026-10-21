@@ -473,179 +473,87 @@ async function testRunningIdleShareResponseId() {
   );
 }
 
-function mockUi(overrides = {}) {
+async function uiSession(mode = "tui") {
+  const h = makeHarness({ captureEvents: true });
   const originalCalls = [];
-  const ui = {
-    confirm: async () => {
-      originalCalls.push("confirm");
-      return true;
-    },
-    select: async () => {
-      originalCalls.push("select");
-      return "Allow";
-    },
-    input: async () => {
-      originalCalls.push("input");
-      return "typed";
-    },
-    editor: async () => {
-      originalCalls.push("editor");
-      return "edited";
-    },
-    notify: (msg) => {
-      originalCalls.push("notify");
-      return msg;
-    },
-    setStatus: () => {
-      originalCalls.push("setStatus");
-    },
-    setTitle: () => {
-      originalCalls.push("setTitle");
-    },
-    ...overrides,
-  };
-  return { ui, originalCalls };
+  const ui = {};
+  for (const [method, result] of Object.entries({
+    confirm: true, select: "Allow", input: "typed", editor: "edited",
+    notify: undefined, setStatus: undefined, setTitle: undefined,
+  })) {
+    ui[method] = () => { originalCalls.push(method); return result; };
+  }
+  const ctx = { mode, ui };
+  await h.handlers.session_start({}, ctx);
+  return { ...h, ctx, originalCalls };
+}
+
+function dialogFetch(respond) {
+  global.fetch = async (url, opts) => String(url).includes("pi-extension-ui")
+    ? respond(opts) : { ok: true, status: 204 };
+}
+
+function dialogResponse(value) {
+  return { ok: true, status: 200, text: async () => JSON.stringify(value) };
 }
 
 async function testTuiWrapParksConfirmWithoutCallingOriginal() {
-  const h = makeHarness({ captureEvents: true });
-  const hookCalls = [];
-  global.fetch = async (url, opts) => {
-    const u = String(url);
-    if (u.includes("pi-extension-ui") || u.includes("/hook/pi/")) {
-      hookCalls.push({ url: u, body: JSON.parse(opts.body) });
-      return { ok: true, status: 200, text: async () => JSON.stringify({ type: "extension_ui_response", confirmed: true }) };
-    }
-    return { ok: true, status: 204, text: async () => "" };
-  };
-  const { ui, originalCalls } = mockUi();
-  const ctx = { mode: "tui", ui };
-  await h.handlers.session_start({}, ctx);
-  const confirmed = await ctx.ui.confirm("Clear session?", "All messages will be lost.");
-  assert("wrapped confirm returns true on accept", confirmed === true);
-  assert(
-    "original confirm is not called",
-    !originalCalls.includes("confirm"),
-    JSON.stringify(originalCalls),
-  );
-  assert("hook was posted", hookCalls.length === 1, `calls=${hookCalls.length}`);
-  assert(
-    "hook path is pi-extension-ui",
-    String(hookCalls[0].url).includes("pi-extension-ui"),
-    hookCalls[0].url,
-  );
-  assert(
-    "hook body carries elicitation_id and confirm request",
-    typeof hookCalls[0].body.elicitation_id === "string" &&
-      hookCalls[0].body.request.method === "confirm",
-    JSON.stringify(hookCalls[0].body),
-  );
+  const { ctx, originalCalls } = await uiSession();
+  dialogFetch((opts) => {
+    const body = JSON.parse(opts.body);
+    assert("confirm carries its correlation ID and request", body.elicitation_id &&
+      body.request.method === "confirm" && body.request.title === "Clear?");
+    return dialogResponse({ confirmed: true });
+  });
+  assert("confirm returns the server answer", await ctx.ui.confirm("Clear?", "Lost.") === true);
+  assert("original TUI dialog is bypassed", !originalCalls.includes("confirm"));
+  ctx.ui.notify("hello");
+  ctx.ui.setStatus("test", "ready");
+  assert("notifications remain local", originalCalls.includes("notify") && originalCalls.includes("setStatus"));
 }
 
 async function testTuiWrapReparksSameElicitationId() {
-  const h = makeHarness({ captureEvents: true });
-  const ids = [];
-  const headers = [];
-  const configPath = path.join(h.inboxDir, "config");
+  const { ctx, inboxDir } = await uiSession();
+  const ids = [], headers = [];
+  const configPath = path.join(inboxDir, "config");
   const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
   const setToken = (token) => fs.writeFileSync(configPath, JSON.stringify({ ...config, authHeaders: { authorization: token } }));
   setToken("first-token");
-  let n = 0;
-  global.fetch = async (url, opts) => {
-    const u = String(url);
-    if (u.includes("pi-extension-ui") || u.includes("/hook/pi/")) {
-      const body = JSON.parse(opts.body);
-      ids.push(body.elicitation_id);
-      headers.push(opts.headers.authorization);
-      assert("caller timeout reaches the server", body.request.timeout === 6000);
-      n += 1;
-      if (n === 1) {
-        setToken("rotated-token");
-        return { ok: true, status: 200, text: async () => "" };
-      }
-      return {
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify({ type: "extension_ui_response", value: "Allow" }),
-      };
+  dialogFetch((opts) => {
+    const body = JSON.parse(opts.body);
+    ids.push(body.elicitation_id);
+    headers.push(opts.headers.authorization);
+    assert("caller timeout reaches the server", body.request.timeout === 6000);
+    if (ids.length === 1) {
+      setToken("rotated-token");
+      return { ok: true, status: 200, text: async () => "" };
     }
-    return { ok: true, status: 204, text: async () => "" };
-  };
-  const { ui } = mockUi();
-  const ctx = { mode: "tui", ui };
-  await h.handlers.session_start({}, ctx);
-  const value = await ctx.ui.select("Allow dangerous command?", ["Allow", "Block"], { timeout: 6000 });
-  assert("select returns chosen label", value === "Allow", `value=${value}`);
-  assert("re-park used the same elicitation id", ids.length === 2 && ids[0] === ids[1], JSON.stringify(ids));
-  assert("re-park rereads the current bearer", JSON.stringify(headers) === JSON.stringify(["first-token", "rotated-token"]), JSON.stringify(headers));
-}
-
-async function testEmptyReparkBacksOff() {
-  // An immediately-empty 200 (consumed tombstone, a proxy ending the long
-  // poll) must not hot-loop: the re-attach sleeps before re-POSTing.
-  const h = makeHarness({ captureEvents: true });
-  let n = 0;
-  global.fetch = async (url) => {
-    const u = String(url);
-    if (u.includes("pi-extension-ui") || u.includes("/hook/pi/")) {
-      n += 1;
-      if (n === 1) return { ok: true, status: 200, text: async () => "" };
-      return {
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify({ type: "extension_ui_response", confirmed: true }),
-      };
-    }
-    return { ok: true, status: 204, text: async () => "" };
-  };
-  const { ui } = mockUi();
-  const ctx = { mode: "tui", ui };
-  await h.handlers.session_start({}, ctx);
+    return dialogResponse({ value: "Allow" });
+  });
   const started = Date.now();
-  await ctx.ui.confirm("Proceed?", "Really?");
-  const elapsed = Date.now() - started;
-  assert("empty 200 re-park slept before retrying", elapsed >= 900, `elapsed=${elapsed}ms`);
+  assert("select returns chosen label", await ctx.ui.select("Choice?", ["Allow", "Block"], { timeout: 6000 }) === "Allow");
+  assert("empty responses back off", Date.now() - started >= 900);
+  assert("re-park preserves its ID", ids.length === 2 && ids[0] === ids[1]);
+  assert("re-park refreshes the bearer", JSON.stringify(headers) === JSON.stringify(["first-token", "rotated-token"]));
 }
 
 async function testEditorHonoursOpts() {
-  // editor takes opts like confirm/select/input; an already-aborted signal
-  // short-circuits before any park POST.
-  const h = makeHarness({ captureEvents: true });
-  const hookCalls = [];
-  global.fetch = async (url, opts) => {
-    const u = String(url);
-    if (u.includes("pi-extension-ui") || u.includes("/hook/pi/")) {
-      hookCalls.push(u);
-      return {
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify({ type: "extension_ui_response", confirmed: true }),
-      };
-    }
-    return { ok: true, status: 204, text: async () => "" };
-  };
-  const { ui } = mockUi();
-  const ctx = { mode: "tui", ui };
-  await h.handlers.session_start({}, ctx);
+  const { ctx } = await uiSession();
+  let calls = 0;
+  dialogFetch(() => { calls += 1; return dialogResponse({ value: "wrong" }); });
   const controller = new AbortController();
   controller.abort();
-  const value = await ctx.ui.editor("Notes", "prefill", { signal: controller.signal });
-  assert("aborted editor returns undefined", value === undefined, `value=${value}`);
-  assert("aborted editor posted no park", hookCalls.length === 0, JSON.stringify(hookCalls));
+  assert("aborted editor returns undefined", await ctx.ui.editor("Notes", "prefill", { signal: controller.signal }) === undefined);
+  assert("aborted editor sends no request", calls === 0);
 }
 
 async function testActiveDialogCancellation() {
   for (const phase of ["headers", "body", "backoff"]) {
-    const h = makeHarness({ captureEvents: true });
-    const { ui } = mockUi();
-    const ctx = { mode: "tui", ui };
+    const { ctx } = await uiSession();
     const controller = new AbortController();
     let requestStarted;
     const started = new Promise((resolve) => { requestStarted = resolve; });
-    global.fetch = async (url, opts) => {
-      if (!String(url).includes("pi-extension-ui")) {
-        return { ok: true, status: 204, text: async () => "" };
-      }
+    dialogFetch((opts) => {
       const wait = () => new Promise((_, reject) => {
         opts.signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
         requestStarted();
@@ -653,9 +561,8 @@ async function testActiveDialogCancellation() {
       if (phase === "headers") return wait();
       if (phase === "body") return { ok: true, status: 200, text: wait };
       setTimeout(requestStarted, 10);
-      return { ok: false, status: 503, text: async () => "" };
-    };
-    await h.handlers.session_start({}, ctx);
+      return { ok: false, status: 503 };
+    });
     const pending = ctx.ui.confirm("Continue?", "Test only", { signal: controller.signal, timeout: 2000 });
     await started;
     controller.abort();
@@ -665,38 +572,18 @@ async function testActiveDialogCancellation() {
         pending,
         new Promise((resolve) => { timer = setTimeout(() => resolve("still-waiting"), 500); }),
       ]);
-      assert(`${phase}: active abort returns cancellation`, value === false, String(value));
+      assert(`${phase}: abort releases the caller`, value === false, String(value));
     } finally {
       clearTimeout(timer);
     }
-    global.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ type: "extension_ui_response", confirmed: true }) });
+    dialogFetch(() => dialogResponse({ confirmed: true }));
     assert(`${phase}: a later dialog works`, await ctx.ui.confirm("Again?", "Test only") === true);
   }
 }
 
 async function testRpcModeDoesNotWrapUi() {
-  const h = makeHarness({ captureEvents: true });
-  global.fetch = async () => ({ ok: true, status: 204, text: async () => "" });
-  const { ui, originalCalls } = mockUi();
-  const ctx = { mode: "rpc", ui };
-  await h.handlers.session_start({}, ctx);
-  const confirmed = await ctx.ui.confirm("Clear?", "Lost.");
-  assert("rpc confirm still calls original", confirmed === true && originalCalls.includes("confirm"));
-}
-
-async function testNotifyAndSetStatusStayUnwrapped() {
-  const h = makeHarness({ captureEvents: true });
-  global.fetch = async () => ({ ok: true, status: 204, text: async () => "" });
-  const { ui, originalCalls } = mockUi();
-  const ctx = { mode: "tui", ui };
-  await h.handlers.session_start({}, ctx);
-  ctx.ui.notify("hello", "info");
-  ctx.ui.setStatus("k", "v");
-  assert(
-    "notify and setStatus still hit the original TUI methods",
-    originalCalls.includes("notify") && originalCalls.includes("setStatus"),
-    JSON.stringify(originalCalls),
-  );
+  const { ctx, originalCalls } = await uiSession("rpc");
+  assert("RPC mode keeps its original UI", await ctx.ui.confirm("Clear?", "Lost.") === true && originalCalls.includes("confirm"));
 }
 
 async function testSessionStartupDoesNotCompleteATurn() {
@@ -801,11 +688,9 @@ async function testQueuedPromptDuringStartupStaysRunningUntilAgentEnd() {
     await testAgentStartClearsStaleWindow();
     await testTuiWrapParksConfirmWithoutCallingOriginal();
     await testTuiWrapReparksSameElicitationId();
-      await testEmptyReparkBacksOff();
     await testEditorHonoursOpts();
     await testActiveDialogCancellation();
     await testRpcModeDoesNotWrapUi();
-    await testNotifyAndSetStatusStayUnwrapped();
   } finally {
     for (const h of harnesses) {
       if (h.pi.__omnigentInboxPoller) clearInterval(h.pi.__omnigentInboxPoller);

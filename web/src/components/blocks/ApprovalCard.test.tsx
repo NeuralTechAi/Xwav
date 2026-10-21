@@ -202,25 +202,6 @@ describe("ApprovalCard — binary approve/reject", () => {
       execpolicy_amendment: [".venv/bin/python", "-m", "pytest"],
     });
   });
-
-  it("keeps the blank line between a Pi confirm's title and message", () => {
-    // Pi confirm dialogs need pre-line whitespace to preserve title/message breaks.
-    render(
-      <ApprovalCard
-        elicitationId="elic_pi_confirm_newline"
-        message={"Confirm production deploy\n\nReally deploy v2.4.0 to production right now?"}
-        phase="pi_extension_ui"
-        policyName="pi_native_extension_ui"
-        contentPreview=""
-        requestedSchema={{}}
-        status="pending"
-        response={null}
-      />,
-    );
-    const node = screen.getByText(/Confirm production deploy/);
-    expect(node.textContent).toContain("\n\n");
-    expect(node.className).toContain("whitespace-pre-line");
-  });
 });
 
 describe("ApprovalCard — approve & switch to auto mode", () => {
@@ -1030,16 +1011,23 @@ describe("ApprovalCard — AskUserQuestion form (parsed from content_preview)", 
     expect(screen.queryByText("Claude has questions")).toBeNull();
   });
 
-  it("limits Pi select prompts to their supplied options", () => {
+  it.each([
+    {
+      name: "select",
+      options: [{ label: "Allow" }, { label: "Block" }],
+      isOther: false,
+      value: "Allow",
+    },
+    { name: "input", options: [], isOther: true, value: "hello world" },
+  ])("submits a Pi $name using its supported inputs", ({ options, isOther, value }) => {
     const submitSpy = vi.fn().mockResolvedValue(undefined);
     useChatStore.setState({ submitApproval: submitSpy } as Partial<
       ReturnType<typeof useChatStore.getState>
     >);
-
     render(
       <ApprovalCard
-        elicitationId="elic_pi_select"
-        message="Allow dangerous command?"
+        elicitationId="elic_pi"
+        message="Pi question"
         phase="pi_extension_ui"
         policyName="pi_native_extension_ui"
         contentPreview=""
@@ -1050,67 +1038,28 @@ describe("ApprovalCard — AskUserQuestion form (parsed from content_preview)", 
           questions: [
             {
               id: "0",
-              question: "Allow dangerous command?",
-              options: [{ label: "Allow" }, { label: "Block" }],
+              question: "Pi question",
+              options,
               multiSelect: false,
-              isOther: false,
+              isOther,
             },
           ],
         }}
       />,
     );
-
     expect(screen.getByText("Pi needs your input")).toBeDefined();
     expect(screen.queryByText("Claude has questions")).toBeNull();
-    expect(screen.queryByTestId("ask-user-question-custom-input")).toBeNull();
-    fireEvent.click(screen.getByLabelText("Allow"));
-    fireEvent.click(screen.getByTestId("ask-user-question-submit"));
-    expect(submitSpy).toHaveBeenCalledWith("elic_pi_select", "accept", {
-      "0": "Allow",
-    });
-  });
-
-  it("renders an empty-option Pi input as custom text only", () => {
-    const submitSpy = vi.fn().mockResolvedValue(undefined);
-    useChatStore.setState({ submitApproval: submitSpy } as Partial<
-      ReturnType<typeof useChatStore.getState>
-    >);
-
-    render(
-      <ApprovalCard
-        elicitationId="elic_pi_input"
-        message="Enter a value"
-        phase="pi_extension_ui"
-        policyName="pi_native_extension_ui"
-        contentPreview=""
-        requestedSchema={{}}
-        status="pending"
-        response={null}
-        askUserQuestion={{
-          questions: [
-            {
-              id: "0",
-              question: "Enter a value",
-              header: "Input",
-              options: [],
-              multiSelect: false,
-              isOther: true,
-            },
-          ],
-        }}
-      />,
-    );
-
     const submit = screen.getByTestId("ask-user-question-submit");
     expect(submit.hasAttribute("disabled")).toBe(true);
-    fireEvent.change(screen.getByTestId("ask-user-question-custom-input"), {
-      target: { value: "hello world" },
-    });
+    if (isOther) {
+      fireEvent.change(screen.getByTestId("ask-user-question-custom-input"), { target: { value } });
+    } else {
+      expect(screen.queryByTestId("ask-user-question-custom-input")).toBeNull();
+      fireEvent.click(screen.getByLabelText(value));
+    }
     expect(submit.hasAttribute("disabled")).toBe(false);
     fireEvent.click(submit);
-    expect(submitSpy).toHaveBeenCalledWith("elic_pi_input", "accept", {
-      "0": "hello world",
-    });
+    expect(submitSpy).toHaveBeenCalledWith("elic_pi", "accept", { "0": value });
   });
 
   it("submits multi-select answers as an array", () => {

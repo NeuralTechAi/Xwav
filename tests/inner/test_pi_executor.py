@@ -5561,199 +5561,52 @@ def test_pi_turn_without_usage_leaves_usage_none() -> None:
     _run(_test())
 
 
-def _stdin_json_commands(rpc: _PiRpcSession) -> list[dict[object, object]]:
-    """Decode JSONL commands PiExecutor wrote to the fake process stdin."""
-    assert rpc.process is not None
-    stdin = rpc.process.stdin
-    assert isinstance(stdin, _FakeStreamWriter)
-    payload = b"".join(stdin.data).decode()
-    return [json.loads(line) for line in payload.splitlines() if line]
-
-
-def _run_scripted_turn(
-    lines: list[str],
-    *,
-    form_handler: object | None = None,
-) -> tuple[list[object], _PiRpcSession]:
-    """Drive one ``run_turn`` against scripted RPC stdout; return events + session."""
-    with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
-        executor = PiExecutor()
-    fake_rpc = _PiRpcSession()
-    fake_rpc._line_queue = asyncio.Queue()
-    fake_rpc.process = _FakeProcess()
-    fake_rpc._stderr_lines = []
-    for line in lines:
-        fake_rpc._line_queue.put_nowait(line)
-
-    async def fake_ensure_rpc(*_args: object, **_kwargs: object) -> _PiRpcSession:
-        return fake_rpc
-
-    executor._ensure_rpc = fake_ensure_rpc  # type: ignore[method-assign]
-    if form_handler is not None:
-        executor._form_elicitation_handler = form_handler  # type: ignore[assignment]
-
-    async def _test() -> list[object]:
-        return [
-            event
-            async for event in executor.run_turn(
-                [{"role": "user", "content": "hello"}],
-                [],
-                "system",
-            )
-        ]
-
-    return _run(_test()), fake_rpc
-
-
-def test_pi_extension_ui_confirm_round_trip_writes_stdin_response() -> None:
-    """A confirm dialog parks the handler and writes extension_ui_response."""
-    from omnigent.server.schemas import ElicitationResult
-
-    async def handler(elicitation_id: str, params: object) -> ElicitationResult:
-        del elicitation_id, params
-        return ElicitationResult(action="accept")
-
-    events, rpc = _run_scripted_turn(
-        [
-            json.dumps({"type": "response", "success": True}),
-            json.dumps(
-                {
-                    "type": "extension_ui_request",
-                    "id": "uuid-2",
-                    "method": "confirm",
-                    "title": "Clear session?",
-                    "message": "All messages will be lost.",
-                }
-            ),
-            json.dumps({"type": "agent_end", "messages": []}),
-        ],
-        form_handler=handler,
-    )
-    assert any(isinstance(event, TurnComplete) for event in events)
-    responses = [
-        cmd for cmd in _stdin_json_commands(rpc) if cmd.get("type") == "extension_ui_response"
-    ]
-    assert responses == [
-        {"type": "extension_ui_response", "id": "uuid-2", "confirmed": True},
-    ]
-
-
-def test_pi_extension_ui_select_round_trip_value() -> None:
-    """A select dialog returns the chosen label on stdin."""
+@pytest.mark.parametrize(
+    "method, handler_mode, expected",
+    [
+        ("confirm", "accept", {"confirmed": True}),
+        ("select", "accept", {"value": "Allow"}),
+        ("notify", "missing", None),
+        ("confirm", "missing", {"confirmed": False}),
+        ("confirm", "timeout", {"confirmed": False}),
+    ],
+)
+def test_pi_extension_ui_rpc_round_trip(method: str, handler_mode: str, expected: dict | None):
     from omnigent.server.schemas import ElicitationRequestParams, ElicitationResult
 
-    seen: list[ElicitationRequestParams] = []
+    executor, rpc = _session_executor(
+        [
+            _rpc_frame(type="response", success=True),
+            _rpc_frame(
+                type="extension_ui_request",
+                id="dialog",
+                method=method,
+                title="Continue?",
+                options=["Allow", "Block"],
+                timeout=20,
+            ),
+            _rpc_frame(type="agent_end", messages=[]),
+            _rpc_frame(type="agent_settled"),
+        ]
+    )
 
-    async def handler(elicitation_id: str, params: ElicitationRequestParams) -> ElicitationResult:
-        assert elicitation_id == "elicit_pi_uuid-1"
-        seen.append(params)
+    async def answer(elicitation_id: str, params: ElicitationRequestParams) -> ElicitationResult:
+        assert elicitation_id == "elicit_pi_dialog"
+        assert params.mode == "form" and params.message == "Continue?"
+        if handler_mode == "timeout":
+            await asyncio.sleep(1)
         return ElicitationResult(action="accept", content={"0": "Allow"})
 
-    _events, rpc = _run_scripted_turn(
-        [
-            json.dumps({"type": "response", "success": True}),
-            json.dumps(
-                {
-                    "type": "extension_ui_request",
-                    "id": "uuid-1",
-                    "method": "select",
-                    "title": "Allow dangerous command?",
-                    "options": ["Allow", "Block"],
-                }
-            ),
-            json.dumps({"type": "agent_end", "messages": []}),
-        ],
-        form_handler=handler,
+    if handler_mode != "missing":
+        executor._form_elicitation_handler = answer
+    events = _run(_run_session_turn(executor, "hello"))
+    assert any(isinstance(event, TurnComplete) for event in events)
+    assert rpc.process is not None and isinstance(rpc.process.stdin, _FakeStreamWriter)
+    commands = [json.loads(line) for line in b"".join(rpc.process.stdin.data).splitlines()]
+    responses = [cmd for cmd in commands if cmd.get("type") == "extension_ui_response"]
+    assert responses == (
+        [] if expected is None else [{"type": "extension_ui_response", "id": "dialog", **expected}]
     )
-    assert seen
-    extra = seen[0].model_extra or {}
-    assert "ask_user_question" in extra
-    responses = [
-        cmd for cmd in _stdin_json_commands(rpc) if cmd.get("type") == "extension_ui_response"
-    ]
-    assert responses == [{"type": "extension_ui_response", "id": "uuid-1", "value": "Allow"}]
-
-
-def test_pi_extension_ui_notify_does_not_write_stdin() -> None:
-    """Fire-and-forget chrome methods must not expect an extension_ui_response."""
-    _events, rpc = _run_scripted_turn(
-        [
-            json.dumps({"type": "response", "success": True}),
-            json.dumps(
-                {
-                    "type": "extension_ui_request",
-                    "id": "uuid-5",
-                    "method": "notify",
-                    "message": "Command blocked by user",
-                    "notifyType": "warning",
-                }
-            ),
-            json.dumps({"type": "agent_end", "messages": []}),
-        ]
-    )
-    responses = [
-        cmd for cmd in _stdin_json_commands(rpc) if cmd.get("type") == "extension_ui_response"
-    ]
-    assert responses == []
-
-
-def test_pi_extension_ui_missing_handler_fails_closed() -> None:
-    """Without a form handler, confirm still unblocks Pi with confirmed:false."""
-    _events, rpc = _run_scripted_turn(
-        [
-            json.dumps({"type": "response", "success": True}),
-            json.dumps(
-                {
-                    "type": "extension_ui_request",
-                    "id": "uuid-2",
-                    "method": "confirm",
-                    "title": "Clear session?",
-                    "message": "Lost.",
-                }
-            ),
-            json.dumps({"type": "agent_end", "messages": []}),
-        ]
-    )
-    responses = [
-        cmd for cmd in _stdin_json_commands(rpc) if cmd.get("type") == "extension_ui_response"
-    ]
-    assert responses == [
-        {"type": "extension_ui_response", "id": "uuid-2", "confirmed": False},
-    ]
-
-
-def test_pi_extension_ui_timeout_fails_closed() -> None:
-    """Pi's optional timeout is honored; a late handler does not hang the turn."""
-    from omnigent.server.schemas import ElicitationResult
-
-    async def slow_handler(elicitation_id: str, params: object) -> ElicitationResult:
-        del elicitation_id, params
-        await asyncio.sleep(1)
-        return ElicitationResult(action="accept")
-
-    _events, rpc = _run_scripted_turn(
-        [
-            json.dumps({"type": "response", "success": True}),
-            json.dumps(
-                {
-                    "type": "extension_ui_request",
-                    "id": "uuid-2",
-                    "method": "confirm",
-                    "title": "Clear session?",
-                    "message": "Lost.",
-                    "timeout": 20,
-                }
-            ),
-            json.dumps({"type": "agent_end", "messages": []}),
-        ],
-        form_handler=slow_handler,
-    )
-    responses = [
-        cmd for cmd in _stdin_json_commands(rpc) if cmd.get("type") == "extension_ui_response"
-    ]
-    assert responses == [
-        {"type": "extension_ui_response", "id": "uuid-2", "confirmed": False},
-    ]
 
 
 # ---------------------------------------------------------------------------

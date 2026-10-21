@@ -1,6 +1,4 @@
-"""Tests for the Pi extension UI elicitation adapter."""
-
-from __future__ import annotations
+"""Pi protocol conversion, shared by SDK and native transports."""
 
 import pytest
 
@@ -15,182 +13,117 @@ from omnigent.pi_extension_ui import (
 )
 from omnigent.server.schemas import ElicitationResult
 
-_CONFIRM: dict[str, object] = {
-    "type": "extension_ui_request",
-    "id": "uuid-2",
-    "method": "confirm",
-    "title": "Clear session?",
-    "message": "All messages will be lost.",
-}
 
-_SELECT: dict[str, object] = {
-    "type": "extension_ui_request",
-    "id": "uuid-1",
-    "method": "select",
-    "title": "Allow dangerous command?",
-    "options": ["Allow", "Block"],
-}
-
-_INPUT: dict[str, object] = {
-    "type": "extension_ui_request",
-    "id": "uuid-3",
-    "method": "input",
-    "title": "Enter a value",
-    "placeholder": "type something...",
-}
-
-_EDITOR: dict[str, object] = {
-    "type": "extension_ui_request",
-    "id": "uuid-4",
-    "method": "editor",
-    "title": "Edit some text",
-    "prefill": "Line 1\nLine 2",
-}
-
-_EMPTY_SELECT: dict[str, object] = {
-    "id": "uuid-empty",
-    "method": "select",
-    "title": "Anything to add?",
-    "options": [],
-}
+@pytest.mark.parametrize(
+    "methods, dialog, notification",
+    [
+        (["confirm", "select", "input", "editor"], True, False),
+        (["notify", "setStatus", "setWidget", "setTitle", "set_editor_text"], False, True),
+        (["custom"], False, False),
+    ],
+)
+def test_method_classification(methods: list[str], dialog: bool, notification: bool) -> None:
+    for method in methods:
+        assert is_dialog_method(method) is dialog
+        assert is_fire_and_forget_method(method) is notification
 
 
-class TestMethodClassification:
-    def test_dialog_methods(self) -> None:
-        for method in ("confirm", "select", "input", "editor"):
-            assert is_dialog_method(method)
-            assert not is_fire_and_forget_method(method)
-
-    def test_fire_and_forget_methods(self) -> None:
-        for method in ("notify", "setStatus", "setWidget", "setTitle", "set_editor_text"):
-            assert is_fire_and_forget_method(method)
-            assert not is_dialog_method(method)
-
-    def test_custom_is_neither(self) -> None:
-        assert not is_dialog_method("custom")
-        assert not is_fire_and_forget_method("custom")
+@pytest.mark.parametrize(
+    "dialog_request, expected",
+    [
+        ({"timeout": 5000}, 5.0),
+        ({}, None),
+        ({"timeout": 0}, None),
+        ({"timeout": True}, None),
+        ({"timeout": "5000"}, None),
+    ],
+)
+def test_timeout(dialog_request: dict, expected: float | None) -> None:
+    assert timeout_seconds(dialog_request) == expected
 
 
-class TestTimeoutSeconds:
-    def test_ms_to_seconds(self) -> None:
-        assert timeout_seconds({"timeout": 5000}) == 5.0
-
-    def test_missing_or_invalid(self) -> None:
-        assert timeout_seconds({}) is None
-        assert timeout_seconds({"timeout": 0}) is None
-        assert timeout_seconds({"timeout": True}) is None
-        assert timeout_seconds({"timeout": "5000"}) is None
-
-
-class TestToElicitationParamsConfirm:
-    def test_binary_card(self) -> None:
-        params = to_elicitation_params(_CONFIRM)
-        assert params.mode == "form"
-        assert params.phase == PHASE
-        assert params.policy_name == POLICY_NAME
-        extra = params.model_extra or {}
-        assert "ask_user_question" not in extra
-        assert extra.get("pi_extension_ui") == _CONFIRM
-
-    def test_message_composes_title_and_body_without_markdown(self) -> None:
-        params = to_elicitation_params(_CONFIRM)
-        assert "Clear session?" in params.message
-        assert "All messages will be lost." in params.message
-        assert "**" not in params.message
-
-
-class TestToElicitationParamsSelect:
-    def test_stamps_ask_user_question(self) -> None:
-        params = to_elicitation_params(_SELECT)
-        extra = params.model_extra or {}
-        payload = extra["ask_user_question"]
-        questions = payload["questions"]
-        assert len(questions) == 1
-        question = questions[0]
-        assert question["id"] == "0"
-        assert question["question"] == "Allow dangerous command?"
-        assert question["multiSelect"] is False
-        assert question["isOther"] is False
-        assert [opt["label"] for opt in question["options"]] == ["Allow", "Block"]
-
-    def test_empty_options_become_input(self) -> None:
-        params = to_elicitation_params(_EMPTY_SELECT)
-        extra = params.model_extra or {}
-        question = extra["ask_user_question"]["questions"][0]
-        assert question["options"] == []
-        assert question["header"] == "Input"
-        assert question["isOther"] is True
-
-
-class TestToElicitationParamsInputEditor:
-    def test_input_has_no_dummy_option(self) -> None:
-        params = to_elicitation_params(_INPUT)
-        extra = params.model_extra or {}
-        question = extra["ask_user_question"]["questions"][0]
-        assert question["options"] == []
-        assert question["header"] == "type something..."
-        assert question["isOther"] is True
-
-    def test_input_without_placeholder_uses_input_header(self) -> None:
-        params = to_elicitation_params({"id": "uuid-3", "method": "input", "title": "Name?"})
-        extra = params.model_extra or {}
-        question = extra["ask_user_question"]["questions"][0]
-        assert question["options"] == []
-        assert question["header"] == "Input"
-        assert question["isOther"] is True
-
-    def test_editor_keep_as_is_option(self) -> None:
-        params = to_elicitation_params(_EDITOR)
-        extra = params.model_extra or {}
-        question = extra["ask_user_question"]["questions"][0]
-        assert question["options"][0]["label"] == "Keep as-is"
-        assert question["options"][0]["preview"] == "Line 1\nLine 2"
-        assert question["isOther"] is True
-
-
-class TestToUiResponse:
-    @pytest.mark.parametrize(
-        "action, confirmed", [("accept", True), ("decline", False), (None, False)]
-    )
-    def test_confirm_verdict(self, action: str | None, confirmed: bool) -> None:
-        result = ElicitationResult(action=action) if action else None
-        assert to_ui_response(_CONFIRM, result) == {
-            "type": "extension_ui_response",
-            "id": "uuid-2",
-            "confirmed": confirmed,
+@pytest.mark.parametrize(
+    "dialog_request, options, header, is_other",
+    [
+        (
+            {"method": "select", "options": ["Allow", "Block"]},
+            [{"label": "Allow"}, {"label": "Block"}],
+            None,
+            False,
+        ),
+        ({"method": "select", "options": []}, [], "Input", True),
+        ({"method": "input", "placeholder": "Name"}, [], "Name", True),
+        ({"method": "input"}, [], "Input", True),
+        (
+            {"method": "editor", "prefill": "one\ntwo"},
+            [{"label": "Keep as-is", "preview": "one\ntwo"}],
+            "Editor",
+            True,
+        ),
+    ],
+)
+def test_question_schema(
+    dialog_request: dict, options: list, header: str | None, is_other: bool
+) -> None:
+    dialog_request = {"id": "dialog", "title": "Continue?", **dialog_request}
+    params = to_elicitation_params(dialog_request)
+    assert (params.mode, params.phase, params.policy_name) == ("form", PHASE, POLICY_NAME)
+    assert params.model_extra["pi_extension_ui"] == dialog_request
+    assert params.model_extra["ask_user_question"]["questions"] == [
+        {
+            "id": "0",
+            "question": "Continue?",
+            "options": options,
+            "multiSelect": False,
+            "isOther": is_other,
+            **({"header": header} if header else {}),
         }
+    ]
 
-    @pytest.mark.parametrize(
-        "dialog, content, value",
-        [
-            (_SELECT, {"0": "Allow"}, "Allow"),
-            (_SELECT, {"0": ["", "Allow"]}, "Allow"),
-            (_SELECT, {"Allow dangerous command?": "Block"}, "Block"),
-            (_INPUT, {"0": "hello world"}, "hello world"),
-            (_EDITOR, {"0": "Keep as-is"}, "Line 1\nLine 2"),
-        ],
-    )
-    def test_accepted_text(self, dialog: dict, content: dict, value: str) -> None:
-        result = ElicitationResult(action="accept", content=content)
-        assert to_ui_response(dialog, result) == {
-            "type": "extension_ui_response",
-            "id": dialog["id"],
-            "value": value,
-        }
 
-    @pytest.mark.parametrize("answer", ["Unlisted", ["", "Unlisted"]])
-    def test_select_rejects_unlisted_api_answer(self, answer: object) -> None:
-        result = ElicitationResult(action="accept", content={"0": answer})
-        assert to_ui_response(_SELECT, result)["cancelled"] is True
+def test_confirmation_schema() -> None:
+    params = to_elicitation_params({"method": "confirm", "title": "Clear?", "message": "Lost."})
+    assert params.mode == "form" and params.message == "Clear?\n\nLost."
+    assert "ask_user_question" not in params.model_extra
+    with pytest.raises(ValueError, match="notify"):
+        to_elicitation_params({"method": "notify"})
 
-    def test_select_decline_is_cancelled(self) -> None:
-        result = ElicitationResult(action="decline")
-        assert to_ui_response(_SELECT, result) == {
-            "type": "extension_ui_response",
-            "id": "uuid-1",
-            "cancelled": True,
-        }
 
-    def test_unknown_method_raises(self) -> None:
-        with pytest.raises(ValueError, match="notify"):
-            to_elicitation_params({"method": "notify", "message": "hi"})
+@pytest.mark.parametrize(
+    "action, confirmed", [("accept", True), ("decline", False), (None, False)]
+)
+def test_confirm_answer(action: str | None, confirmed: bool) -> None:
+    result = ElicitationResult(action=action) if action else None
+    assert to_ui_response({"id": "dialog", "method": "confirm"}, result) == {
+        "type": "extension_ui_response",
+        "id": "dialog",
+        "confirmed": confirmed,
+    }
+
+
+@pytest.mark.parametrize(
+    "method, action, content, expected",
+    [
+        ("select", "accept", {"0": "Allow"}, {"value": "Allow"}),
+        ("select", "accept", {"0": ["", "Allow"]}, {"value": "Allow"}),
+        ("select", "accept", {"Choice?": "Block"}, {"value": "Block"}),
+        ("select", "accept", {"0": "Unlisted"}, {"cancelled": True}),
+        ("select", "accept", {"0": ["", "Unlisted"]}, {"cancelled": True}),
+        ("select", "decline", None, {"cancelled": True}),
+        ("input", "accept", {"0": "hello world"}, {"value": "hello world"}),
+        ("editor", "accept", {"0": "Keep as-is"}, {"value": "one\ntwo"}),
+    ],
+)
+def test_text_answer(method: str, action: str, content: dict | None, expected: dict) -> None:
+    dialog_request = {
+        "id": "dialog",
+        "method": method,
+        "title": "Choice?",
+        "options": ["Allow", "Block"],
+        "prefill": "one\ntwo",
+    }
+    assert to_ui_response(dialog_request, ElicitationResult(action=action, content=content)) == {
+        "type": "extension_ui_response",
+        "id": "dialog",
+        **expected,
+    }

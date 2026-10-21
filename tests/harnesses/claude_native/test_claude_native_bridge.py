@@ -12949,17 +12949,18 @@ class _ScriptedPolicyClient:
         self.steps = list(steps)
         self.calls = 0
         self.bodies: list[dict[str, object] | None] = []
+        self.urls: list[str] = []
 
     async def post(self, url: str, json: dict[str, object] | None = None) -> SimpleNamespace:
         """Replay the next step as a minimal httpx-Response-shaped namespace.
 
-        :param url: Evaluate path (ignored).
+        :param url: Forwarded session path, recorded for routing checks.
         :param json: Forwarded EvaluationRequest; recorded for identity checks.
         :returns: Response namespace, or raises the scripted failure.
         """
         import json as _json
 
-        del url
+        self.urls.append(url)
         self.bodies.append(json)
         step = self.steps[min(self.calls, len(self.steps) - 1)]
         self.calls += 1
@@ -13325,22 +13326,7 @@ async def test_pi_extension_ui_relay_path_proxies_to_session_hook(
 ) -> None:
     """The tool relay forwards ``/hook/pi/extension-ui`` to the session hook."""
 
-    class _RecordingClient:
-        def __init__(self) -> None:
-            self.urls: list[str] = []
-            self.payloads: list[object] = []
-
-        async def post(self, url: str, json: dict[str, object] | None = None) -> SimpleNamespace:
-            self.urls.append(url)
-            self.payloads.append(json)
-            raw = b'{"action":"accept"}'
-            return SimpleNamespace(
-                status_code=200,
-                content=raw,
-                headers={"Content-Type": "application/json"},
-            )
-
-    client = _RecordingClient()
+    client = _ScriptedPolicyClient({"type": "extension_ui_response", "confirmed": True})
     relay, bridge_dir = _hook_relay(tmp_path, monkeypatch, client)
     try:
         body = await asyncio.to_thread(
@@ -13352,8 +13338,9 @@ async def test_pi_extension_ui_relay_path_proxies_to_session_hook(
                 "request": {"method": "confirm", "title": "Clear?", "message": "Lost."},
             },
         )
-        assert json.loads(body) == {"action": "accept"}
+        assert json.loads(body) == {"type": "extension_ui_response", "confirmed": True}
         assert client.urls == ["/v1/sessions/conv_hook_eval/hooks/pi-extension-ui"]
+        assert client.bodies[0]["elicitation_id"] == "elicit_pi_" + "ab" * 16
     finally:
         relay.close()
 

@@ -255,40 +255,26 @@ async def test_build_terminal_event_handles_pending_task_cancellation() -> None:
 
 
 @pytest.mark.asyncio
-async def test_elicit_emits_resolved_when_cancelled() -> None:
-    """Cancelling ``ctx.elicit`` must still clear the pending card."""
+@pytest.mark.parametrize("cancel", [False, True])
+async def test_elicit_emits_resolved_on_every_exit(cancel: bool) -> None:
     queue: asyncio.Queue[Any] = asyncio.Queue()
-    ctx = TurnContext("resp_elicit_cancel", queue, asyncio.Event())
-    params = ElicitationRequestParams(mode="form", message="approve?")
-    task = asyncio.create_task(ctx.elicit("elicit_test_1", params))
+    ctx = TurnContext("resp_elicit", queue, asyncio.Event())
+    task = asyncio.create_task(
+        ctx.elicit("elicit_test", ElicitationRequestParams(mode="form", message="approve?"))
+    )
     request = await queue.get()
     assert request.type == "response.elicitation_request"
-    assert request.elicitation_id == "elicit_test_1"
-    task.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await task
+    assert request.elicitation_id == "elicit_test"
+    if cancel:
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    else:
+        ctx._pending_elicitations["elicit_test"].set_result(ElicitationResult(action="accept"))
+        assert (await task).action == "accept"
     resolved = await queue.get()
     assert resolved.type == "response.elicitation_resolved"
-    assert resolved.elicitation_id == "elicit_test_1"
-    assert ctx._pending_elicitations == {}
-    assert queue.empty()
-
-
-@pytest.mark.asyncio
-async def test_elicit_emits_resolved_on_verdict() -> None:
-    """A completed elicitation still emits resolved (idempotent duplicate)."""
-    queue: asyncio.Queue[Any] = asyncio.Queue()
-    ctx = TurnContext("resp_elicit_accept", queue, asyncio.Event())
-    params = ElicitationRequestParams(mode="form", message="approve?")
-    task = asyncio.create_task(ctx.elicit("elicit_test_1", params))
-    request = await queue.get()
-    assert request.type == "response.elicitation_request"
-    ctx._pending_elicitations["elicit_test_1"].set_result(ElicitationResult(action="accept"))
-    result = await task
-    assert result.action == "accept"
-    resolved = await queue.get()
-    assert resolved.type == "response.elicitation_resolved"
-    assert resolved.elicitation_id == "elicit_test_1"
+    assert resolved.elicitation_id == "elicit_test"
     assert ctx._pending_elicitations == {}
     assert queue.empty()
 
