@@ -12,6 +12,8 @@ import httpx
 import pytest
 import yaml
 
+from omnigent.testing.process_reaper import reap_leaked_omnigent_processes
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 _MODEL = "e2e-selected-model"
@@ -142,13 +144,8 @@ def test_run_preserves_model_under_config_harness_default(
             timeout=_RUN_TIMEOUT_S,
         )
     finally:
-        subprocess.run(
-            [sys.executable, "-m", "omnigent", "stop"],
-            capture_output=True,
-            env=env,
-            cwd=tmp_path,
-            timeout=120,
-        )
+        _, survivors = reap_leaked_omnigent_processes(data_dir)
+        assert not survivors, survivors
 
     combined = result.stdout + result.stderr
 
