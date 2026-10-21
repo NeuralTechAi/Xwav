@@ -1833,3 +1833,38 @@ async def test_run_now_503_when_scheduler_not_running(
     auth_app.state.scheduled_task_run_now = None
     resp = await auth_client.post(f"/v1/scheduled-tasks/{created['id']}/run", headers=_headers())
     assert resp.status_code == 503, resp.text
+
+
+async def test_database_scheduler_crud_uses_persisted_next_run(
+    auth_app: FastAPI, auth_client: httpx.AsyncClient, db_uri: str
+) -> None:
+    from datetime import datetime
+
+    from omnigent.server.scheduled.dispatch_scheduler import PersistentTaskScheduler
+
+    # The opt-in scheduler has no per-task timers to update; each request persists
+    # its schedule and renders that same value without another scheduler lookup.
+    store = auth_app.state.scheduled_task_scheduler._store
+    auth_app.state.scheduled_task_scheduler.stop()
+    auth_app.state.scheduled_task_scheduler = PersistentTaskScheduler(
+        store, AsyncMock(), AsyncMock(return_value=None)
+    )
+    created = await auth_client.post(
+        "/v1/scheduled-tasks", json=_create_body(), headers=_headers()
+    )
+    assert created.status_code == 200, created.text
+    task = created.json()
+    assert (
+        datetime.fromisoformat(task["next_run_at"]).timestamp()
+        == store.get(task["id"]).next_run_at
+    )
+    url = f"/v1/scheduled-tasks/{task['id']}"
+    paused = await auth_client.patch(url, json={"state": "paused"}, headers=_headers())
+    assert paused.status_code == 200, paused.text
+    assert paused.json()["next_run_at"] is None
+    resumed = await auth_client.patch(url, json={"state": "active"}, headers=_headers())
+    assert resumed.status_code == 200, resumed.text
+    assert resumed.json()["next_run_at"] is not None
+    deleted = await auth_client.delete(url, headers=_headers())
+    assert deleted.status_code == 200, deleted.text
+    assert store.get(task["id"]) is None

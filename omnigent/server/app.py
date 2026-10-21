@@ -133,6 +133,10 @@ from omnigent.server.runner_session_init import (
     runner_response_error_body,
 )
 from omnigent.server.scheduled import ScheduledTaskScheduler
+from omnigent.server.scheduled.dispatch_scheduler import (
+    PersistentTaskScheduler,
+    ScheduledTaskDispatchHooks,
+)
 from omnigent.server.ws_origin import WebSocketOriginMiddleware
 from omnigent.stores import (
     AgentStore,
@@ -151,6 +155,7 @@ from omnigent.stores.permission_store import PermissionStore
 from omnigent.stores.policy_store import PolicyStore
 from omnigent.stores.project_store import ProjectStore
 from omnigent.stores.scheduled_task_store import ScheduledTaskStore
+from omnigent.stores.scheduled_task_store.dispatch import ScheduledTaskDispatchStore
 
 _logger = logging.getLogger(__name__)
 _RECONNECT_BINDING_BATCH_SIZE = 128
@@ -1355,6 +1360,7 @@ def create_app(
     extension_state: ExtensionPluginState | None = None,
     base_path: str | None = None,
     host_sharded: bool = False,
+    scheduled_task_dispatch: ScheduledTaskDispatchHooks | None = None,
 ) -> FastAPI:
     """
     Build and return the FastAPI application with all routes mounted.
@@ -1388,6 +1394,9 @@ def create_app(
         starts an :class:`ScheduledTaskScheduler` that arms a timer per
         active task and fires the injected ``on_fire`` callback on
         schedule. ``None`` disables the scheduler entirely.
+    :param scheduled_task_dispatch: Claimed-run fire/recovery hooks required when
+        the automations_v2 feature is enabled. Supplying hooks alone does
+        not enable database dispatch; the flag defaults off and keeps legacy timers.
     :param project_store: Store for first-class projects (owner-private
         containers that group sessions). ``None`` disables the
         ``/v1/projects`` CRUD endpoints.
@@ -1522,6 +1531,17 @@ def create_app(
     branding_snapshot = load_branding_snapshot(resolved_server_config)
     title_instructions = session_title_instructions(resolved_server_config)
     resolved_feature_flags = feature_flags or resolve_feature_flags()
+    automations_v2_enabled = resolved_feature_flags.enabled(Feature.AUTOMATIONS_V2)
+    if automations_v2_enabled:
+        if scheduled_task_store is None or scheduled_task_dispatch is None:
+            raise ValueError(
+                "automations_v2 requires a scheduled_task_store and scheduled_task_dispatch hooks"
+            )
+        if not isinstance(scheduled_task_store, ScheduledTaskDispatchStore):
+            raise TypeError("Scheduled task store does not support database dispatch")
+        scheduled_task_store.check_dispatch_support()
+    if isinstance(scheduled_task_store, ScheduledTaskDispatchStore):
+        scheduled_task_store.configure_dispatch(automations_v2_enabled)
     resolved_extension_state = _resolve_extension_state(extension_state)
     extension_bundles, extension_asset_errors = _resolve_extension_assets(resolved_extension_state)
 
@@ -1749,12 +1769,8 @@ def create_app(
         # which would run context-free (default workspace) over a
         # workspace-blind registry and never stamp a multi-tenant row.
 
-        # Recurring-task scheduler: arm a timer per active
-        # scheduled task and fire the injected ``on_fire`` callback on
-        # schedule. The callback (see scheduled.fire) re-reads the row,
-        # creates + owner-grants a session, launches its runner, and records
-        # the run — all fire-and-forget so the timer re-arms immediately.
-        scheduled_task_scheduler: ScheduledTaskScheduler | None = None
+        # The release flag selects one scheduler for the lifetime of this server.
+        scheduled_task_scheduler: ScheduledTaskScheduler | PersistentTaskScheduler | None = None
         if scheduled_task_store is not None:
             from omnigent.server.scheduled.fire import FireDeps, build_on_fire, build_run_now
 
@@ -1784,15 +1800,29 @@ def create_app(
             # allowing a paused task to fire. Exposed on app.state for the
             # POST /v1/scheduled-tasks/{id}/run route.
             app_inst.state.scheduled_task_run_now = build_run_now(fire_deps)
-            scheduled_task_scheduler = ScheduledTaskScheduler(
-                store=scheduled_task_store,
-                on_fire=on_fire,
-            )
+            if not automations_v2_enabled:
+                scheduled_task_scheduler = ScheduledTaskScheduler(
+                    store=scheduled_task_store,
+                    on_fire=on_fire,
+                )
+            else:
+                assert scheduled_task_dispatch is not None
+                assert isinstance(scheduled_task_store, ScheduledTaskDispatchStore)
+                scheduled_task_scheduler = PersistentTaskScheduler(
+                    store=scheduled_task_store,
+                    on_fire=scheduled_task_dispatch.on_fire,
+                    on_expired=scheduled_task_dispatch.on_expired,
+                    owns_host=scheduled_task_dispatch.owns_host,
+                )
             app_inst.state.scheduled_task_scheduler = scheduled_task_scheduler
             # Scheduled tasks are a non-critical subsystem: a failure loading the
             # schedule (e.g. a DB error listing active tasks) must not take
             # down server boot. Log and continue with the scheduler unstarted.
             try:
+                if not automations_v2_enabled and isinstance(
+                    scheduled_task_store, ScheduledTaskDispatchStore
+                ):
+                    await asyncio.to_thread(scheduled_task_store.reset_dispatch_cursors)
                 await scheduled_task_scheduler.start()
             except Exception as exc:
                 _logger.exception(
@@ -1828,10 +1858,10 @@ def create_app(
         finally:
             if managed_sandbox_reaper is not None:
                 await managed_sandbox_reaper.shutdown()
-            # Run completion is event-driven (the _publish_status hook) plus a
-            # lazy-on-read stale backstop — there is no run-reconciler task to
-            # cancel. Only the per-job scheduler holds timers that need stopping.
-            if scheduled_task_scheduler is not None:
+            # DB dispatch owns startup tasks/heartbeats; legacy scheduling owns timers.
+            if isinstance(scheduled_task_scheduler, PersistentTaskScheduler):
+                await scheduled_task_scheduler.stop()
+            elif scheduled_task_scheduler is not None:
                 scheduled_task_scheduler.stop()
             metrics_publish_task.cancel()
             with suppress(asyncio.CancelledError):
