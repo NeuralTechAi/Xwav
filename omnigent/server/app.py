@@ -159,6 +159,8 @@ from omnigent.stores.scheduled_task_store import ScheduledTaskStore
 from omnigent.stores.scheduled_task_store.dispatch import ScheduledTaskDispatchStore
 
 _logger = logging.getLogger(__name__)
+_SCHEDULED_TASK_START_RETRY_SECONDS = 30
+
 _RECONNECT_BINDING_BATCH_SIZE = 128
 
 
@@ -1795,6 +1797,7 @@ def create_app(
         # workspace-blind registry and never stamp a multi-tenant row.
 
         # The release flag selects one scheduler for the lifetime of this server.
+        scheduler_start_retry: asyncio.Task[None] | None = None
         scheduled_task_scheduler: ScheduledTaskScheduler | PersistentTaskScheduler | None = None
         if scheduled_task_store is not None:
             from omnigent.server.scheduled.fire import FireDeps, build_on_fire, build_run_now
@@ -1846,21 +1849,41 @@ def create_app(
                     max_startups=dispatch_config.max_startups,
                     recovery_seconds=dispatch_config.recovery_seconds,
                 )
-            app_inst.state.scheduled_task_scheduler = scheduled_task_scheduler
-            # Scheduled tasks are a non-critical subsystem: a failure loading the
-            # schedule (e.g. a DB error listing active tasks) must not take
-            # down server boot. Log and continue with the scheduler unstarted.
+            app_inst.state.scheduled_task_scheduler = None
+
+            async def start_scheduled_tasks() -> None:
+                assert scheduled_task_scheduler is not None
+                try:
+                    if not automations_v2_enabled and isinstance(
+                        scheduled_task_store, ScheduledTaskDispatchStore
+                    ):
+                        await asyncio.to_thread(scheduled_task_store.reset_dispatch_cursors)
+                    await scheduled_task_scheduler.start()
+                except Exception:
+                    if isinstance(scheduled_task_scheduler, ScheduledTaskScheduler):
+                        scheduled_task_scheduler.stop()
+                    raise
+                app_inst.state.scheduled_task_scheduler = scheduled_task_scheduler
+
+            async def retry_scheduler_start() -> None:
+                while True:
+                    await asyncio.sleep(_SCHEDULED_TASK_START_RETRY_SECONDS)
+                    try:
+                        await start_scheduled_tasks()
+                    except Exception:
+                        _logger.exception("Scheduled tasks are not ready; startup will retry")
+                    else:
+                        return
+
             try:
-                if not automations_v2_enabled and isinstance(
-                    scheduled_task_store, ScheduledTaskDispatchStore
-                ):
-                    await asyncio.to_thread(scheduled_task_store.reset_dispatch_cursors)
-                await scheduled_task_scheduler.start()
-            except Exception as exc:
+                await start_scheduled_tasks()
+            except Exception:
                 _logger.exception(
-                    "scheduled task scheduler failed to start; continuing "
-                    "without recurring tasks (%s)",
-                    exc,
+                    "Scheduled tasks could not start; startup will retry. "
+                    "Legacy timers wait until saved scheduling cursors have been cleared"
+                )
+                scheduler_start_retry = asyncio.create_task(
+                    retry_scheduler_start(), name="scheduled-task-startup-retry"
                 )
 
             # Run completion is event-driven (persist_scheduled_run_completion
@@ -1890,6 +1913,10 @@ def create_app(
         finally:
             if managed_sandbox_reaper is not None:
                 await managed_sandbox_reaper.shutdown()
+            if scheduler_start_retry is not None:
+                scheduler_start_retry.cancel()
+                with suppress(asyncio.CancelledError):
+                    await scheduler_start_retry
             # DB dispatch owns startup tasks/heartbeats; legacy scheduling owns timers.
             if isinstance(scheduled_task_scheduler, PersistentTaskScheduler):
                 await scheduled_task_scheduler.stop()

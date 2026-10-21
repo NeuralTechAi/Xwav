@@ -140,10 +140,13 @@ async def test_lifespan_survives_scheduler_start_failure(
 
     # Entering the lifespan must not raise despite start() blowing up.
     async with app.router.lifespan_context(app):
-        scheduler = app.state.scheduled_task_scheduler
-        assert scheduler is not None
-        assert not scheduler.is_started
-        assert scheduler.job_count == 0
+        assert app.state.scheduled_task_scheduler is None
+        retry = next(
+            task
+            for task in asyncio.all_tasks()
+            if task.get_name() == "scheduled-task-startup-retry"
+        )
+    assert retry.done()
 
 
 async def test_lifespan_without_store_has_no_scheduler(
@@ -355,3 +358,42 @@ async def test_automations_v2_rejects_invalid_scheduler_config_at_app_creation(
             dispatch=ScheduledTaskDispatchHooks(AsyncMock(), AsyncMock()),
             server_config={"scheduled_task_scheduler": {"lease_seconds": 30}},
         )
+
+
+@pytest.mark.parametrize("failure", ["reset_dispatch_cursors", "list_active_all_workspaces"])
+async def test_legacy_startup_retries_without_skipping_cursor_reset(
+    runtime_init, db_uri, tmp_path, monkeypatch, failure
+):
+    import omnigent.server.app as app_module
+    from tests._helpers.polling import poll_until_async
+
+    monkeypatch.setenv("OMNIGENT_FEATURES", "-automations_v2")
+    monkeypatch.setattr(app_module, "_SCHEDULED_TASK_START_RETRY_SECONDS", 0.01)
+    store = SqlAlchemyScheduledTaskStore(db_uri)
+    store.configure_dispatch(True)
+    task = store.create(
+        _uid("retry-start"), "retry", "prompt", "FREQ=DAILY", None, _uid("agent"), "UTC"
+    )
+    original = getattr(store, failure)
+    attempts = 0
+
+    def unavailable_once():
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("temporary database outage")
+        return original()
+
+    monkeypatch.setattr(store, failure, unavailable_once)
+    app = _build_app(db_uri, tmp_path, scheduled_task_store=store)
+    async with app.router.lifespan_context(app):
+        assert app.state.scheduled_task_scheduler is None
+        await poll_until_async(
+            lambda: app.state.scheduled_task_scheduler is not None, timeout_s=10
+        )
+        scheduler = app.state.scheduled_task_scheduler
+        assert scheduler.is_started
+        assert scheduler.job_count == 1
+        assert store.get(task.id).next_run_at is None
+        assert attempts == 2
+    assert not scheduler.is_started

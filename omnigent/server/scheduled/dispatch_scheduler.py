@@ -27,6 +27,7 @@ from omnigent.server.scheduled.schedule import (
 from omnigent.stores.scheduled_task_store.dispatch import (
     DispatchCursor,
     ScheduledTaskDispatchStore,
+    TaskCursor,
 )
 
 _logger = logging.getLogger(__name__)
@@ -204,7 +205,8 @@ class PersistentTaskScheduler:
         self._recovery: asyncio.Task[None] | None = None
         self._startups: dict[tuple[int, str], asyncio.Task[None]] = {}
         self._poll_lock = asyncio.Lock()
-        self._initialized = False
+        self._initialization_cursor: TaskCursor | None = None
+        self._cleanup_cursor: TaskCursor | None = None
 
     @property
     def is_started(self) -> bool:
@@ -248,42 +250,41 @@ class PersistentTaskScheduler:
     async def poll_once(self) -> None:
         """One non-overlapping poll; useful for deterministic tests and embedders."""
         async with self._poll_lock:
-            if not self._initialized:
-                self._initialized = await self._initialize()
             if self._recovery is None or self._recovery.done():
                 self._recovery = asyncio.create_task(
                     self._recover(), name="scheduled-task-recovery"
                 )
+            try:
+                await self._initialize()
+            except Exception:
+                _logger.exception(
+                    "Could not read tasks needing a next run time; retrying next poll"
+                )
             await self._claim_due()
 
-    async def _initialize(self) -> bool:
-        # One bootstrap scan. Creates and schedule edits maintain next_run_at.
-        tasks = await asyncio.to_thread(self._store.list_active_all_workspaces)
-        complete = True
+    async def _initialize(self) -> None:
+        tasks = await asyncio.to_thread(
+            self._store.list_uninitialized_tasks,
+            after=self._initialization_cursor,
+            limit=self._batch_size,
+        )
         for task in tasks:
-            if task.next_run_at is not None:
-                continue
+            self._initialization_cursor = (task.workspace_id, task.id)
             try:
                 if not await self._validate_schedule(task):
-                    complete = False
                     continue
                 next_run = await asyncio.to_thread(next_scheduled_time, task, int(self._now()))
-            except RRuleSearchError:
+                if next_run is not None:
+                    with workspace_scope(task.workspace_id):
+                        await asyncio.to_thread(self._store.initialize_next_run_at, task, next_run)
+            except Exception:
                 _logger.exception(
-                    "Could not calculate the next run time for task %s; "
-                    "will try again on the next poll",
+                    "Could not initialize the next run time for task %s; "
+                    "will check it again on a later scan",
                     task.id,
                 )
-                complete = False
-                continue
-            if next_run is not None:
-                with workspace_scope(task.workspace_id):
-                    initialized = await asyncio.to_thread(
-                        self._store.initialize_next_run_at, task, next_run
-                    )
-                if not initialized:
-                    complete = False
-        return complete
+        if len(tasks) < self._batch_size:
+            self._initialization_cursor = None
 
     async def _validate_schedule(self, task: ScheduledTask) -> bool:
         try:
@@ -306,6 +307,12 @@ class PersistentTaskScheduler:
                 "Could not check runs with expired startup leases; "
                 "recovery will try again on the next poll"
             )
+        try:
+            self._cleanup_cursor = await asyncio.to_thread(
+                self._store.purge_deleted_tasks, after=self._cleanup_cursor, limit=self._batch_size
+            )
+        except Exception:
+            _logger.exception("Could not finish deleted-task cleanup; retrying next poll")
 
     async def _reconcile(self) -> None:
         cutoff = int(self._now())
@@ -435,13 +442,31 @@ class PersistentTaskScheduler:
 
     async def _heartbeat(self, lease: StartupLease) -> None:
         while lease.run.status == "starting":
-            await asyncio.sleep(self._renewal_seconds)
+            remaining = (lease.run.lease_expires_at or 0) - self._now()
+            await asyncio.sleep(max(0, min(self._renewal_seconds, remaining)))
             if lease.run.status != "starting":
                 return
             try:
-                await lease.check()
+                remaining = (lease.run.lease_expires_at or 0) - self._now()
+                if remaining <= 0:
+                    raise StartupLeaseLost(f"Startup lease expired for run {lease.run.id}")
+                async with asyncio.timeout(remaining):
+                    await lease.check()
             except StartupLeaseLost:
                 # Finish may have won the lock while this heartbeat was waiting.
                 if lease.run.status != "starting":
                     return
                 raise
+            except Exception as exc:
+                if lease.run.status != "starting":
+                    return
+                if (lease.run.lease_expires_at or 0) <= self._now():
+                    raise StartupLeaseLost(
+                        f"Startup lease expired for run {lease.run.id} while renewal was failing"
+                    ) from exc
+                _logger.warning(
+                    "Could not renew the startup lease for run %s; retrying while its "
+                    "last confirmed lease remains valid",
+                    lease.run.id,
+                    exc_info=True,
+                )

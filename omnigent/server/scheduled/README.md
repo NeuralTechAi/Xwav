@@ -28,7 +28,9 @@ already in run history, the store advances the schedule without starting it agai
 When this scheduler is enabled, creating a task or changing its schedule, time
 zone, or state updates `next_run_at`. Prompt and run-history updates leave it
 alone. Active tasks without a saved time start with a future occurrence; existing
-saved times survive restarts.
+saved times survive restarts. Each poll initializes one page of active tasks that
+still lack a saved time. A failing row is retried on a later scan without blocking
+other tasks or recovery.
 
 Recurrences count from midnight on the task's creation date in its time zone.
 That reference stays fixed across edits and restarts, including for `COUNT` and
@@ -45,12 +47,15 @@ abandoned resources. It never resends the prompt.
 
 Polling, renewal, and recovery run separately, so slow cleanup does not block due
 tasks. Each server runs one poll and one recovery sweep at a time. Unresolved
-cleanup is retried. Shutdown cancels and waits for local work, leaving unfinished
+cleanup is retried. Temporary renewal errors are retried only while the last
+confirmed lease remains valid; expiry stops local startup. Shutdown cancels and waits for local work, leaving unfinished
 startups to expire. A new host owner does not renew the old startup automatically.
 
 Deleting a task hides it and prevents new scheduled runs. Unfinished claimed runs
-and their task details remain for completion or cleanup; the last one to finish
-removes the retained task. Old runs without a trigger key are deleted immediately.
+and their task details remain for completion or cleanup. History is deleted in
+small transactions, and recovery retries interrupted cleanup. The task row is
+removed once no runs remain; finishing a run never purges a whole history in its
+completion transaction.
 
 ## Configure timing and capacity
 
@@ -142,7 +147,9 @@ while the persistent scheduler is still running. Then set
 clears saved `next_run_at` values and calculates future timer times. Task
 configuration and existing run history remain. Clearing these times does not
 cancel running agent sessions. It prevents a later re-enable from replaying
-occurrences the old timers already handled.
+occurrences the old timers already handled. Cursor clearing uses small transactions.
+If clearing or timer startup fails, the server retries every 30 seconds. Timers
+are exposed to task routes only after clearing and startup succeed.
 
 The flag is read at startup and exposed through `/v1/info`. Changing a running
 server's environment does not switch schedulers or pause work. Per-workspace

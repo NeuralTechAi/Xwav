@@ -188,8 +188,9 @@ async def test_startup_limit_leaves_unclaimed_work_for_next_poll(store) -> None:
     assert store.list_due_tasks(int(clock.now())) == []
 
 
+@pytest.mark.parametrize("transient_failure", [False, True])
 async def test_heartbeat_renews_only_local_startup_and_stops_after_prompt(
-    store, monkeypatch
+    store, monkeypatch, transient_failure
 ) -> None:
     task = _task(store)
     clock = FakeClock(task.next_run_at)
@@ -200,7 +201,13 @@ async def test_heartbeat_renews_only_local_startup_and_stops_after_prompt(
     original_renew = store.renew_starting_run
     loop = asyncio.get_running_loop()
 
+    failed_once = False
+
     def renew(run_id, *, now, lease_seconds):
+        nonlocal failed_once
+        if transient_failure and not failed_once and now() == task.next_run_at + 30:
+            failed_once = True
+            raise RuntimeError("temporary database outage")
         result = original_renew(run_id, now=now, lease_seconds=lease_seconds)
         if now() == task.next_run_at + 30:
             loop.call_soon_threadsafe(renewed.set)
@@ -226,6 +233,7 @@ async def test_heartbeat_renews_only_local_startup_and_stops_after_prompt(
         release.set()
         await _drain(scheduler)
         assert leases[0].run.status == "running"
+        assert failed_once is transient_failure
         assert store.list_runs(task.id)[0][0].lease_expires_at is None
         clock.advance(200)
         await scheduler.poll_once()
@@ -318,21 +326,21 @@ async def test_lease_checkpoint_cannot_revive_expired_claim(store) -> None:
 
 
 async def test_loop_retries_after_boot_database_outage_and_stops(store, monkeypatch) -> None:
-    original = store.list_active_all_workspaces
+    original = store.list_uninitialized_tasks
     attempts = 0
     recovered = asyncio.Event()
     loop = asyncio.get_running_loop()
 
-    def read():
+    def read(**kwargs):
         nonlocal attempts
         attempts += 1
         if attempts == 1:
             raise RuntimeError("temporary outage")
-        result = original()
+        result = original(**kwargs)
         loop.call_soon_threadsafe(recovered.set)
         return result
 
-    monkeypatch.setattr(store, "list_active_all_workspaces", read)
+    monkeypatch.setattr(store, "list_uninitialized_tasks", read)
     scheduler = PersistentTaskScheduler(store, AsyncMock(), AsyncMock(), poll_seconds=0.01)
     await scheduler.start()
     await scheduler.start()
@@ -515,8 +523,9 @@ async def test_slow_recovery_does_not_block_due_tasks_and_is_drained_on_stop(sto
 
 
 @pytest.mark.parametrize("bootstrap", [False, True])
+@pytest.mark.parametrize("unexpected", [False, True])
 async def test_schedule_search_failure_preserves_cursor_and_retries(
-    store, monkeypatch, bootstrap
+    store, monkeypatch, bootstrap, unexpected
 ) -> None:
     from sqlalchemy import update
 
@@ -541,6 +550,8 @@ async def test_schedule_search_failure_preserves_cursor_and_retries(
     def calculate(rule, after, tz, *, anchor=None):
         # Distinguish the task without replacing schedule error handling.
         if failing and rule == "FREQ=HOURLY":
+            if unexpected:
+                raise OverflowError("invalid persisted timestamp")
             raise RRuleSearchError("RRULE search exceeds the supported time limit")
         return original(rule, after, tz, anchor=anchor)
 
@@ -568,3 +579,87 @@ async def test_schedule_search_failure_preserves_cursor_and_retries(
         assert store.list_runs(task.id)[0][0].status == "running"
     finally:
         await scheduler.stop()
+
+
+async def test_initialization_advances_pages_past_bad_rows_while_work_continues(
+    store, monkeypatch
+):
+    from sqlalchemy import update
+
+    from omnigent.db.db_models import SqlScheduledTask
+
+    legacy = sorted([_task(store, f"legacy-{i}") for i in range(5)], key=lambda task: task.id)
+    due = _task(store, "due")
+    expired = _task(store, "expired")
+    clock = FakeClock(due.next_run_at + 120)
+    store.claim_scheduled_run(
+        expired,
+        now=due.next_run_at,
+        next_run_at=due.next_run_at + 3600,
+        host_id=None,
+        lease_seconds=120,
+    )
+    with store._session_immediate("test_uninitialized_tasks") as session:
+        session.execute(
+            update(SqlScheduledTask)
+            .where(SqlScheduledTask.id.in_([t.id for t in legacy]))
+            .values(next_run_at=None)
+        )
+    original = store.initialize_next_run_at
+    attempted = []
+
+    def initialize(task, next_run_at):
+        attempted.append(task.id)
+        if task.id == legacy[0].id:
+            raise RuntimeError("bad persisted row")
+        return original(task, next_run_at)
+
+    monkeypatch.setattr(store, "initialize_next_run_at", initialize)
+
+    async def fire(task, lease):
+        await lease.finish("running")
+
+    recovery = AsyncMock(return_value="failed")
+    scheduler = PersistentTaskScheduler(store, fire, recovery, now=clock.now, batch_size=2)
+    try:
+        for expected in (2, 4, 5):
+            await scheduler.poll_once()
+            await _drain(scheduler)
+            assert len(attempted) == expected
+        assert attempted == [task.id for task in legacy]
+        assert store.get(legacy[0].id).next_run_at is None
+        assert all(store.get(task.id).next_run_at is not None for task in legacy[1:])
+        assert store.list_runs(due.id)[0][0].status == "running"
+        assert store.list_runs(expired.id)[0][0].status == "failed"
+        recovery.assert_awaited_once()
+    finally:
+        await scheduler.stop()
+
+
+async def test_heartbeat_stops_retrying_at_last_confirmed_expiry(store, monkeypatch):
+    task = _task(store)
+    clock = FakeClock(task.next_run_at)
+    run = store.claim_scheduled_run(
+        task,
+        now=task.next_run_at,
+        next_run_at=task.next_run_at + 3600,
+        host_id=None,
+        lease_seconds=120,
+    )
+    lease = StartupLease(store, run, now=clock.now, lease_seconds=120)
+    attempts = 0
+
+    def unavailable(*args, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        clock.advance(60)
+        raise RuntimeError("database unavailable")
+
+    monkeypatch.setattr(store, "renew_starting_run", unavailable)
+    scheduler = PersistentTaskScheduler(
+        store, AsyncMock(), AsyncMock(), now=clock.now, renewal_seconds=0.01
+    )
+    with pytest.raises(StartupLeaseLost, match="expired"):
+        await scheduler._heartbeat(lease)
+    assert attempts == 2
+    assert store.list_runs(task.id)[0] == [run]
