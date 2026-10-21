@@ -26,7 +26,6 @@ import os
 import shlex
 import socket
 import sys
-import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -119,6 +118,7 @@ def _isolate_ambient_provider_state(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     """
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
     monkeypatch.setattr("omnigent.onboarding.ambient._claude_login_detected", lambda: False)
     monkeypatch.setattr(ambient, "CLAUDE_CODE_MANAGED_SETTINGS_PATHS", ())
 
@@ -2367,30 +2367,24 @@ def test_stale_login_cache_cannot_shadow_claude_sdk_fallback(
     monkeypatch: pytest.MonkeyPatch,
     real_ambient_probes: SimpleNamespace,
 ) -> None:
-    """A TTL-cached login verdict from an earlier test must not shadow the fallback.
-
-    An earlier test's ambient sweep can run ``claude auth status`` while a
-    vendor key sits in the environment; the CLI reports a login for that key
-    and the positive verdict is TTL-cached per ``(key, binary)``, outliving the
-    test that produced it. A later test with an isolated ``$HOME`` would then
-    consume the stale positive and route through a subscription provider
-    instead of its configured anthropic credential. The fixture boundary must
-    make that cache unreachable.
-    """
+    """A cached CLI login must not bypass ambient-provider isolation."""
     monkeypatch.setattr(sys, "platform", "darwin")
-    # Prime the cache under the key production writes: (family, resolved
-    # binary path). Binary resolution is stubbed so the cache is hit — and the
-    # status subprocess never spawns — on machines with no claude install.
     fake_binary = "/fake/bin/claude"
     monkeypatch.setattr(
         harness_install, "shutil", SimpleNamespace(which=lambda _name: fake_binary)
     )
-    harness_install._LOGIN_PROBE_CACHE[("anthropic", fake_binary)] = time.monotonic() + 3600.0
     monkeypatch.setenv("HOME", str(config_home))
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
-    # Calibration: the unpatched detector consumes the stale positive.
-    assert real_ambient_probes.claude_login_detected() is True
+    # Populate the cache through the probe, then prove the detector reuses it.
+    with patch.object(
+        harness_install.subprocess,
+        "run",
+        return_value=SimpleNamespace(returncode=0, stdout='{"loggedIn": true}', stderr=""),
+    ) as login_probe:
+        assert harness_install.harness_cli_logged_in("anthropic") is True
+        assert real_ambient_probes.claude_login_detected() is True
+        login_probe.assert_called_once()
     # Isolation: the patched detector never reaches the cache.
     assert ambient._claude_login_detected() is False
 

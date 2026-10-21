@@ -1958,8 +1958,12 @@ def test_content_search_process_boundaries(tmp_path: Path, mode: str) -> None:
         "query = 'needle'\ncase_sensitive = False\nregex = False\nlimit = 2\nglob_args = []\n"
     )
     timer = (
-        "import threading\noriginal_timer = threading.Timer\n"
-        "threading.Timer = lambda seconds, callback: original_timer(0.2, callback)\n"
+        (
+            "import threading\noriginal_timer = threading.Timer\n"
+            "threading.Timer = lambda seconds, callback: original_timer(0.2, callback)\n"
+        )
+        if mode == "timeout"
+        else ""
     )
     completed = subprocess.run(
         [sys.executable, "-I", "-c", parameters + timer + _SEARCH_SCRIPT],
