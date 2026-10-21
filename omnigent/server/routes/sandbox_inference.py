@@ -251,7 +251,7 @@ def create_sandbox_inference_router(
                 result.update(models=models, status="ready" if models else "empty")
                 if not models:
                     result["error"] = "The gateway lists no usable models for this harness."
-            except Exception:  # noqa: BLE001 - optional preview must not block a default launch
+            except Exception:  # optional preview must not block a default launch
                 _logger.warning(
                     "AI Gateway model preview failed for %s/%s", provider, harness, exc_info=True
                 )

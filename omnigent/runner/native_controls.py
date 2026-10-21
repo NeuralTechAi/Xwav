@@ -607,7 +607,7 @@ def build_native_controls(
                         "detail": "Codex did not confirm the settings update in time.",
                     },
                 ), settings
-        except Exception as exc:  # noqa: BLE001 - surface app-server settings failures.
+        except Exception as exc:  # surface app-server settings failures.
             _logger.warning(
                 "Codex-native thread/settings/update failed for session=%s thread=%s settings=%s",
                 conv_id,
@@ -932,7 +932,7 @@ def build_native_controls(
             await asyncio.to_thread(
                 model_catalog_store.write_catalog, "codex-native", fingerprint, shaped
             )
-        except Exception:  # noqa: BLE001 — write-back is best-effort
+        except Exception:  # write-back is best-effort
             _logger.debug(
                 "codex model-catalog write-back skipped",
                 exc_info=True,
@@ -1252,7 +1252,7 @@ def build_native_controls(
                 await asyncio.to_thread(
                     confirm_dialog_if_open, bridge_dir, hint=SWITCH_MODEL_DIALOG_HINT
                 )
-            except Exception:  # noqa: BLE001 — best-effort; the report reconciles
+            except Exception:  # best-effort; the report reconciles
                 _logger.debug(
                     "late model-dialog watch errored for session=%s",
                     conv_id,
