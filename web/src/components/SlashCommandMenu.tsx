@@ -170,9 +170,54 @@ interface SlashCommandMenuProps {
   onRetrySkills?: () => void;
   /** Replace suggestions with the read-only MCP inventory for an exact `/mcp`. */
   showMcpServers?: boolean;
-  /** Effective MCP servers returned by the active session's agent endpoint. */
+  /** Effective MCP servers: agent-declared plus host-native for the active harness. */
   mcpServers?: readonly { name: string; description?: string | null }[];
   mcpServersError?: boolean;
+}
+
+function McpServerRows({
+  servers,
+  error,
+}: {
+  servers?: readonly { name: string; description?: string | null }[];
+  error?: boolean;
+}) {
+  if (servers === undefined) {
+    return (
+      <div role="status" className="px-2 py-2 text-ui text-muted-foreground">
+        Loading MCP servers…
+      </div>
+    );
+  }
+  if (servers.length === 0 && !error) {
+    return (
+      <div role="status" className="px-2 py-2 text-ui text-muted-foreground">
+        No MCP servers enabled for this session.
+      </div>
+    );
+  }
+  return (
+    <>
+      {servers.map((server) => (
+        <div key={server.name} className="flex items-start gap-2 rounded-md px-2 py-1.5">
+          <PlugIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
+          <div className="min-w-0">
+            <div className="text-ui text-foreground">{server.name}</div>
+            {server.description && (
+              <div className="truncate text-xs leading-4 text-muted-foreground">
+                {server.description}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+      {error && (
+        <div role="status" className="px-2 py-2 text-ui text-muted-foreground">
+          Couldn’t load MCP servers from this session’s host.
+        </div>
+      )}
+    </>
+  );
 }
 
 function McpServerMenu({
@@ -192,33 +237,7 @@ function McpServerMenu({
         <div className="text-xs leading-4 text-muted-foreground">Enabled for this session</div>
       </div>
       <div className="max-h-64 overflow-y-auto">
-        {error ? (
-          <div role="status" className="px-2 py-2 text-ui text-muted-foreground">
-            Couldn’t load MCP servers from this session’s host.
-          </div>
-        ) : servers === undefined ? (
-          <div role="status" className="px-2 py-2 text-ui text-muted-foreground">
-            Loading MCP servers…
-          </div>
-        ) : servers.length === 0 ? (
-          <div role="status" className="px-2 py-2 text-ui text-muted-foreground">
-            No MCP servers enabled for this session.
-          </div>
-        ) : (
-          servers.map((server) => (
-            <div key={server.name} className="flex items-start gap-2 rounded-md px-2 py-1.5">
-              <PlugIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
-              <div className="min-w-0">
-                <div className="text-ui text-foreground">{server.name}</div>
-                {server.description && (
-                  <div className="truncate text-xs leading-4 text-muted-foreground">
-                    {server.description}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
-        )}
+        <McpServerRows servers={servers} error={error} />
       </div>
       <div className="mt-1 border-border border-t px-2 pt-2 text-xs text-muted-foreground">
         <Link className="underline hover:text-foreground" to="/settings">
@@ -354,7 +373,7 @@ export function SlashCommandMenu({
       data-testid="slash-command-menu"
       className="absolute bottom-full left-0 z-10 mb-2 w-[28rem] max-w-[calc(100vw-24px)] overflow-hidden rounded-[16px] border border-border bg-popover p-2 shadow-menu dark:backdrop-blur-xl dark:backdrop-saturate-150"
     >
-      <div ref={listRef} className="max-h-80 overflow-y-auto">
+      <div ref={listRef} className="max-h-[22rem] overflow-y-auto">
         {builtinRows.length > 0 && sectionHeader("Commands")}
         {builtinRows.map((row) => (
           <MenuRowButton
