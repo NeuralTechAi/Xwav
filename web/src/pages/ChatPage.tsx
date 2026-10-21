@@ -199,6 +199,7 @@ import { useMarkConversationSeen } from "@/hooks/useUnseenConversations";
 import { useFileDropTarget } from "@/hooks/useFileDropTarget";
 import { useComposerAttachments } from "@/hooks/useComposerAttachments";
 import { useSlashCompletion } from "@/hooks/useSlashCompletion";
+import { useHostMcpServers } from "@/hooks/useHarnessInventory";
 import { HostBadge } from "@/components/HostBadge";
 import {
   BUILTIN_SLASH_COMMANDS,
@@ -2007,12 +2008,14 @@ export function buildSlashCommandMap(
   showSide = false,
   skillPrefix: "/" | "$" = "/",
   supportsModelReset = false,
+  showMcp = false,
 ): Record<string, string> {
   const m: Record<string, string> = {};
   for (const [name, description] of Object.entries(BUILTIN_SLASH_COMMANDS)) {
     if (name === "/effort" && !showEffort) continue;
     if (name === "/model" && !showModel) continue;
     if (name === "/compact" && !showCompact) continue;
+    if (name === "/mcp" && !showMcp) continue;
     // /btw is a Claude Code CLI built-in — only offer it on claude-native.
     if (name === "/btw" && !showBtw) continue;
     // /side is a Codex CLI built-in (ephemeral fork) — only offer it on codex-native.
@@ -2451,6 +2454,16 @@ function ComposerImpl(
   // A send held while the host was offline goes out once the host is back.
   useReleaseHostHeldSends(composerSessionId);
   const { session: composerSession } = useSession(composerSessionId);
+  const mcpPanelRequested = composerSessionId !== null && value.trim() === "/mcp";
+  const nativeMcpHarness = nativeCodingAgentForHarness(sessionHarness)?.key;
+  const hostMcpHarness =
+    nativeMcpHarness === "claude" || nativeMcpHarness === "codex" || nativeMcpHarness === "cursor"
+      ? nativeMcpHarness
+      : null;
+  const hostMcpQuery = useHostMcpServers(
+    composerSession?.hostId ?? null,
+    mcpPanelRequested && hostMcpHarness !== null,
+  );
   const composerBranch = useChatStore((s) => s.gitBranch);
   const claudePermissionMode = useChatStore((s) => s.claudePermissionMode);
   const codexApprovalMode = useChatStore((s) => s.codexApprovalMode);
@@ -2697,6 +2710,7 @@ function ComposerImpl(
         showSide,
         skillPrefix,
         supportsModelReset,
+        composerSessionId !== null,
       ),
     [
       skills,
@@ -2707,6 +2721,7 @@ function ComposerImpl(
       showSide,
       skillPrefix,
       supportsModelReset,
+      composerSessionId,
     ],
   );
   const slashCommandNames = useMemo(() => Object.keys(slashCommands), [slashCommands]);
@@ -3059,6 +3074,9 @@ function ComposerImpl(
         setCommandError(lines.join("\n"));
         return true;
       }
+      case "/mcp":
+        // The exact token opens the read-only inventory above the composer.
+        return true;
       case "/help": {
         const lines = Object.entries(slashCommands).map(([name, desc]) => `${name} — ${desc}`);
         setCommandError(lines.join("\n"));
@@ -3080,6 +3098,11 @@ function ComposerImpl(
 
   // Skills insert at the caret; Enter/click executes standalone no-argument built-ins.
   const applyMenuSelection = (cmd: string) => {
+    if (cmd === "/mcp" && !slashCompletion.inline) {
+      setValue("/mcp");
+      dirtyRef.current = true;
+      return;
+    }
     if (slashCompletion.inline || slashCommandsWithArgs.has(cmd)) {
       completeMenuSelection(cmd);
     } else {
@@ -3099,6 +3122,28 @@ function ComposerImpl(
     [skills, skillPrefix],
   );
   const skillLabels = useMemo(() => skillDisplayNames(skills, skillPrefix), [skills, skillPrefix]);
+  const selectedAgent = agents?.find((agent) => agent.id === selectedAgentId) ?? agents?.[0];
+  const mcpServers = useMemo(() => {
+    if (hostMcpHarness !== null && hostMcpQuery.isPending) return undefined;
+    const byName = new Map(
+      (hostMcpQuery.data ?? [])
+        .filter((server) => server.harness === hostMcpHarness)
+        .map((server) => [
+          server.name,
+          {
+            name: server.name,
+            description:
+              [server.plugin && `${server.plugin} plugin`, server.url_host]
+                .filter(Boolean)
+                .join(" · ") || undefined,
+          },
+        ]),
+    );
+    for (const server of selectedAgent?.mcp_servers ?? []) {
+      byName.set(server.name, { name: server.name, description: server.description ?? undefined });
+    }
+    return [...byName.values()];
+  }, [hostMcpHarness, hostMcpQuery.data, hostMcpQuery.isPending, selectedAgent?.mcp_servers]);
 
   // Complete the token at the caret; inline suggestions only insert skills.
   const slashCompletion = useSlashCompletion({
@@ -3117,6 +3162,8 @@ function ComposerImpl(
     onTabComplete: completeMenuSelection,
     clearText: () => setValue(""),
   });
+  const showMcpServers =
+    composerSessionId !== null && !slashCompletion.inline && value.trim() === "/mcp";
 
   // Auto-grow the textarea from 1 row up to 10 rows, then let it scroll.
   // Growth stays in the flex column so the transcript viewport ends where the
@@ -3710,6 +3757,9 @@ function ComposerImpl(
                   labels={slashCompletion.labels}
                   skillsStatus={skillsStatus}
                   onRetrySkills={() => void refreshSkills()}
+                  showMcpServers={showMcpServers}
+                  mcpServers={mcpServers}
+                  mcpServersError={hostMcpHarness !== null && hostMcpQuery.isError}
                 />
               )}
               {/* "@"-file-mention browser — native coding-agent sessions only.

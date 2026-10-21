@@ -4,6 +4,7 @@ import type { SkillSummary, SkillsStatus } from "@/lib/types";
 import type * as UseWorkspaceChangedFilesModule from "@/hooks/useWorkspaceChangedFiles";
 import type * as UseSessionModule from "@/hooks/useSession";
 import type * as UseHostsModule from "@/hooks/useHosts";
+import type * as UseHarnessInventoryModule from "@/hooks/useHarnessInventory";
 import type * as RunnerHealthProviderModule from "@/hooks/RunnerHealthProvider";
 import type * as AgentLabelsModule from "@/lib/agentLabels";
 import type * as GoalApiModule from "@/lib/goalApi";
@@ -144,6 +145,17 @@ vi.mock("@/hooks/useSession", async (importOriginal) => ({
 vi.mock("@/hooks/useHosts", async (importOriginal) => ({
   ...(await importOriginal<typeof UseHostsModule>()),
   useHosts: () => ({ data: [] }),
+}));
+const { hostMcpQueryMock } = vi.hoisted(() => ({
+  hostMcpQueryMock: vi.fn(() => ({
+    data: [] as UseHarnessInventoryModule.HostMcpServer[],
+    isPending: false,
+    isError: false,
+  })),
+}));
+vi.mock("@/hooks/useHarnessInventory", async (importOriginal) => ({
+  ...(await importOriginal<typeof UseHarnessInventoryModule>()),
+  useHostMcpServers: hostMcpQueryMock,
 }));
 vi.mock("@/hooks/RunnerHealthProvider", async (importOriginal) => ({
   ...(await importOriginal<typeof RunnerHealthProviderModule>()),
@@ -2940,6 +2952,115 @@ describe("Composer effort slash-command visibility", () => {
     );
     fireEvent.change(textarea(), { target: { value: "/" } });
     expect(screen.getByTestId("slash-menu-item-model")).toBeInTheDocument();
+  });
+});
+
+describe("Composer MCP status command", () => {
+  beforeEach(() => {
+    setComposerState({ conversationId: "conv_mcp", skills: [] });
+  });
+
+  afterEach(() => {
+    cleanup();
+    composerSessionSnapshot.hostId = null;
+    hostMcpQueryMock.mockReset();
+    hostMcpQueryMock.mockReturnValue({ data: [], isPending: false, isError: false });
+  });
+
+  it("shows the effective session MCPs in a read-only panel", () => {
+    render(
+      <MemoryRouter>
+        <Composer
+          {...composerProps({
+            agents: [
+              {
+                id: "agent_mcp",
+                name: "MCP agent",
+                mcp_servers: [
+                  { name: "github", transport: "http", description: "GitHub tools" },
+                  { name: "local-files", transport: "stdio" },
+                ],
+              },
+            ],
+            selectedAgentId: "agent_mcp",
+          })}
+        />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(textarea(), { target: { value: "/" } });
+    fireEvent.click(screen.getByTestId("slash-menu-item-mcp"));
+
+    expect(textarea()).toHaveValue("/mcp");
+    const panel = screen.getByTestId("mcp-server-menu");
+    expect(panel).toHaveTextContent("Enabled for this session");
+    expect(panel).toHaveTextContent("github");
+    expect(panel).toHaveTextContent("GitHub tools");
+    expect(panel).toHaveTextContent("local-files");
+    expect(within(panel).getByRole("link", { name: "Go to Settings" })).toHaveAttribute(
+      "href",
+      "/settings",
+    );
+  });
+
+  it("shows an empty state and stays absent before the session starts", () => {
+    const { unmount } = render(
+      <MemoryRouter>
+        <Composer
+          {...composerProps({
+            agents: [{ id: "agent_empty", name: "Empty agent", mcp_servers: [] }],
+            selectedAgentId: "agent_empty",
+          })}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.change(textarea(), { target: { value: "/mcp" } });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "No MCP servers enabled for this session.",
+    );
+    unmount();
+
+    setComposerState({ conversationId: null });
+    render(<Composer {...composerProps()} />);
+    fireEvent.change(textarea(), { target: { value: "/" } });
+    expect(screen.queryByTestId("slash-menu-item-mcp")).toBeNull();
+  });
+
+  it("shows only the active native harness MCPs from the bound host", () => {
+    composerSessionSnapshot.hostId = "host_native";
+    setComposerState({ sessionHarness: "codex-native" });
+    hostMcpQueryMock.mockReturnValue({
+      data: [
+        {
+          name: "docs",
+          harness: "codex",
+          transport: "http",
+          scope: "user",
+          url_host: "docs.example.com",
+        },
+        {
+          name: "github",
+          harness: "claude",
+          transport: "stdio",
+          scope: "user",
+        },
+      ],
+      isPending: false,
+      isError: false,
+    });
+    render(
+      <MemoryRouter>
+        <Composer {...composerProps()} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(textarea(), { target: { value: "/mcp" } });
+
+    const panel = screen.getByTestId("mcp-server-menu");
+    expect(panel).toHaveTextContent("docs");
+    expect(panel).toHaveTextContent("docs.example.com");
+    expect(panel).not.toHaveTextContent("github");
+    expect(hostMcpQueryMock).toHaveBeenCalledWith("host_native", true);
   });
 });
 
