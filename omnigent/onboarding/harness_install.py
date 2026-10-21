@@ -59,12 +59,11 @@ from omnigent.harnesses.opencode_native.client import (
     OPENCODE_MIN_VERSION,
 )
 from omnigent.onboarding.provider_config import ANTHROPIC_FAMILY, GEMINI_FAMILY, OPENAI_FAMILY
-from omnigent.util.env_credentials import env_names_with_omnigent_prefix
-
-CLAUDE_SUBSCRIPTION_ENV_UNSET: tuple[str, ...] = tuple(
-    name
-    for credential in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
-    for name in env_names_with_omnigent_prefix(credential)
+from omnigent.util.env_credentials import (
+    CLAUDE_SUBSCRIPTION_ENV_UNSET as CLAUDE_SUBSCRIPTION_ENV_UNSET,
+)
+from omnigent.util.env_credentials import (
+    claude_subscription_env_unset,
 )
 
 # Pi is not a configure-menu family (the menu is Claude + Codex), but the
@@ -1215,9 +1214,9 @@ def harness_cli_logged_in(
         ``"openai"`` (Codex), or ``"gemini"`` (Antigravity, via ``agy models``).
     :param timeout: Seconds to wait for the status subprocess, e.g. ``10.0`` on
         the readiness path where a hung CLI must not stall the refresh.
-    :param subscription_only: Claude-only check for ``claude.ai`` / ``oauth_token``
-        auth, with competing API key/bearer variables removed from the child env.
-        Managed settings still apply; callers must credit managed gateways separately.
+    :param subscription_only: Check Claude's own auth with competing API credentials
+        removed. CLI helpers, saved keys and third-party routing remain supported;
+        an explicit gateway keeps its paired environment credentials.
     :returns: ``True`` when the CLI reports a usable login; ``False`` when the
         key has no status command, the CLI binary is missing, the status
         process failed to spawn, or the CLI reports no login.
@@ -1240,14 +1239,11 @@ def harness_cli_logged_in(
             raise ClaudeLoginProbeError("Claude subscription auth status could not find the CLI.")
         return False
     probe_env = dict(os.environ)
-    if subscription_only:
-        for name in CLAUDE_SUBSCRIPTION_ENV_UNSET:
-            probe_env.pop(name, None)
-    # Positive verdicts are TTL-cached (see the cache block above): logins
-    # are sticky, and the readiness loop re-probing a logged-in CLI every
-    # refresh is the ambient storm. Negatives always re-probe so a login
-    # made a moment ago is seen immediately.
-    # ponytail: unrelated environment changes can cause an extra probe, not a stale login.
+    env_unset = claude_subscription_env_unset(probe_env) if subscription_only else ()
+    for name in env_unset:
+        probe_env.pop(name, None)
+    # Cache positives only so fresh logins are visible immediately.
+    # ponytail: hash the full child env; unrelated changes can cost an extra probe.
     env_signature = hashlib.sha256(json.dumps(probe_env, sort_keys=True).encode()).hexdigest()
     cache_key = (key, binary, subscription_only, env_signature)
     with _PROBE_CACHE_LOCK:
@@ -1298,10 +1294,8 @@ def harness_cli_logged_in(
                 raise ClaudeLoginProbeError(
                     "Claude subscription auth status exited unsuccessfully."
                 )
-            logged_in = payload[status_key] and payload["authMethod"] in (
-                "claude.ai",
-                "oauth_token",
-            )
+            # Settings can supply the same env names we removed from the parent.
+            logged_in = payload[status_key] and payload["authMethod"] != "none"
         elif isinstance(payload, dict) and status_key in payload:
             logged_in = bool(payload[status_key])
     if logged_in:

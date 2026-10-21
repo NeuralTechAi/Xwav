@@ -450,7 +450,7 @@ def test_selected_claude_subscription_ignores_ambient_api_key(
                 '{"claudeAiOauth":{"accessToken":"synthetic", "refreshToken":"synthetic"}}'
             )
     assert _harness_availability(harness) == (True if subscription_login else "needs-auth")
-    assert probes == ([True] if harness == "claude-native" else [])
+    assert probes == ([True] if harness == "claude-native" or not subscription_login else [])
 
 
 @pytest.mark.parametrize("harness", ["claude-native", "claude-sdk"])
@@ -487,8 +487,9 @@ def test_selected_sdk_subscription_accepts_cli_oauth_token(
     assert readiness._harness_availability("claude-sdk") == expected
 
 
-def test_subscription_probe_error_keeps_other_harness_readiness(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+def test_subscription_probe_error_rejects_partial_readiness(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     _all_clis_installed(monkeypatch)
     (tmp_path / "config.yaml").write_text(
@@ -501,12 +502,8 @@ def test_subscription_probe_error_keeps_other_harness_readiness(
         return True
 
     monkeypatch.setattr(hi, "harness_cli_logged_in", timeout)
-    readiness = configured_harness_map()
-    assert "claude-native" not in readiness
-    assert "native-claude" not in readiness
-    assert readiness["claude-sdk"] == "needs-auth"
-    assert readiness["openai-agents"] == "needs-auth"
-    assert "readiness is unknown" in caplog.text
+    with pytest.raises(hi.ClaudeLoginProbeError, match="timed out"):
+        configured_harness_map()
 
 
 def test_auth_aware_native_harness_launch_gate_stays_binary_only(

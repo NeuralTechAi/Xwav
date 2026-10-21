@@ -1171,11 +1171,24 @@ def test_harness_cli_logged_in_uses_claude_json_verdict(
 
 
 @pytest.mark.parametrize(
-    ("auth_method", "expected"),
-    [("none", False), ("claude.ai", True), ("oauth_token", True), ("api_key", False)],
+    ("auth_method", "source", "base_url", "expected"),
+    [
+        ("none", None, None, False),
+        ("claude.ai", None, None, True),
+        ("oauth_token", None, None, True),
+        ("api_key_helper", None, None, True),
+        ("third_party", None, None, True),
+        ("api_key", "ANTHROPIC_API_KEY", None, True),
+        ("api_key", "ANTHROPIC_API_KEY", "https://gateway.example", True),
+    ],
 )
 def test_claude_subscription_probe_removes_competing_credentials(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, auth_method: str, expected: bool
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    auth_method: str,
+    source: str | None,
+    base_url: str | None,
+    expected: bool,
 ) -> None:
     monkeypatch.setattr(hi.shutil, "which", lambda _name: None)
     monkeypatch.setattr(hi, "resolve_cli_binary", lambda _name: "/fallback/bin/claude")
@@ -1184,6 +1197,9 @@ def test_claude_subscription_probe_removes_competing_credentials(
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
     monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "subscription-token")
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    if base_url:
+        monkeypatch.setenv("ANTHROPIC_BASE_URL", base_url)
     parent_env = dict(os.environ)
 
     def _run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -1192,13 +1208,20 @@ def test_claude_subscription_probe_removes_competing_credentials(
         assert kwargs["stdin"] == subprocess.DEVNULL
         env = kwargs["env"]
         assert isinstance(env, dict)
-        assert not set(hi.CLAUDE_SUBSCRIPTION_ENV_UNSET).intersection(env)
+        for name in hi.CLAUDE_SUBSCRIPTION_ENV_UNSET:
+            assert (name in env) is bool(base_url)
         for name in ("HOME", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN"):
             assert env[name] == parent_env[name]
         return subprocess.CompletedProcess(
             argv,
             1 if auth_method == "none" else 0,
-            stdout=json.dumps({"loggedIn": auth_method != "none", "authMethod": auth_method}),
+            stdout=json.dumps(
+                {
+                    "loggedIn": auth_method != "none",
+                    "authMethod": auth_method,
+                    "apiKeySource": source,
+                }
+            ),
         )
 
     monkeypatch.setattr(hi.subprocess, "run", _run)

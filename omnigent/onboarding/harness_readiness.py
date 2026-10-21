@@ -35,6 +35,7 @@ from pathlib import Path
 
 import omnigent.onboarding.kimi_auth as _kimi_auth
 from omnigent._platform import IS_WINDOWS, resolve_cli_binary
+from omnigent.errors import OmnigentError
 from omnigent.harness_aliases import HARNESS_ALIASES, NATIVE_HARNESSES, canonicalize_harness
 from omnigent.harness_availability import (
     CODEX_CANONICAL_HARNESSES,
@@ -57,7 +58,6 @@ from omnigent.onboarding.harness_install import (
     PI_KEY,
     QWEN_KEY,
     READINESS_CLI_PROBE_TIMEOUT_S,
-    ClaudeLoginProbeError,
     harness_cli_binary,
     harness_cli_installed,
     required_cli_for_harness,
@@ -842,7 +842,7 @@ def _selected_claude_subscription_availability(harness: str) -> HarnessAvailabil
         return None
     try:
         provider = default_provider_for_harness(load_config(), harness)
-    except Exception as exc:
+    except (OSError, OmnigentError) as exc:
         _logger.debug("readiness: subscription config check failed (%s)", type(exc).__name__)
         return None
     if provider is None or provider.kind != SUBSCRIPTION_KIND:
@@ -1070,8 +1070,7 @@ def configured_harness_map() -> dict[str, HarnessAvailability]:
     harnesses report ``"needs-auth"`` when no local credential source is
     visible. Codex entries distinguish ``"binary-missing"`` from
     ``"needs-auth"``.
-    Inconclusive Claude subscription probes omit the affected aliases so
-    their readiness stays unknown.
+    Inconclusive probes raise; the host reports the whole map as unknown.
 
     :returns: Mapping of harness spelling to readiness, e.g.
         ``{"claude-native": False, "codex-native": "needs-auth",
@@ -1125,15 +1124,9 @@ def configured_harness_map() -> dict[str, HarnessAvailability]:
             cache_key: executor.submit(_harness_availability, canonical)
             for cache_key, canonical in canonical_by_cache_key.items()
         }
-        availability_cache: dict[tuple[str, ...], HarnessAvailability] = {}
-        for cache_key, future in futures.items():
-            try:
-                availability_cache[cache_key] = future.result()
-            except ClaudeLoginProbeError as exc:
-                _logger.warning("Claude subscription readiness is unknown: %s", exc)
+        availability_cache = {cache_key: future.result() for cache_key, future in futures.items()}
 
     return {
         spelling: availability_cache[cache_key]
         for spelling, cache_key in cache_key_by_spelling.items()
-        if cache_key in availability_cache
     }

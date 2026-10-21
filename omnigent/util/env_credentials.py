@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Mapping
+from urllib.parse import urlsplit
 
 OMNIGENT_ENV_PREFIX = "OMNIGENT_"
 
@@ -34,6 +35,24 @@ def env_names_with_omnigent_prefix(name: str) -> tuple[str, ...]:
     if prefixed == name:
         return (name,)
     return (name, prefixed)
+
+
+CLAUDE_SUBSCRIPTION_ENV_UNSET: tuple[str, ...] = tuple(
+    name
+    for credential in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
+    for name in env_names_with_omnigent_prefix(credential)
+)
+
+
+def claude_subscription_env_unset(environ: Mapping[str, str] | None = None) -> tuple[str, ...]:
+    """Exclude competing API credentials while preserving explicit gateway auth."""
+    env = os.environ if environ is None else environ
+    base_url = env.get("ANTHROPIC_BASE_URL", "")
+    if base_url:
+        hostname = (urlsplit(base_url).hostname or "").lower()
+        if hostname != "anthropic.com" and not hostname.endswith(".anthropic.com"):
+            return ()
+    return CLAUDE_SUBSCRIPTION_ENV_UNSET
 
 
 def getenv_with_omnigent_prefix(

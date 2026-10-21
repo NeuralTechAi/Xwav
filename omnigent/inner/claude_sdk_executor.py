@@ -1920,9 +1920,11 @@ class ClaudeSDKExecutor(Executor):
             sdk_env = getattr(options, "env", None)
             subscription_env_unset: tuple[str, ...] = ()
             if self._subscription_only:
-                from omnigent.onboarding.harness_install import CLAUDE_SUBSCRIPTION_ENV_UNSET
+                from omnigent.util.env_credentials import claude_subscription_env_unset
 
-                subscription_env_unset = CLAUDE_SUBSCRIPTION_ENV_UNSET
+                subscription_env_unset = claude_subscription_env_unset(
+                    {**os.environ, **sdk_env} if isinstance(sdk_env, dict) else None
+                )
                 if isinstance(sdk_env, dict):
                     for name in subscription_env_unset:
                         sdk_env.pop(name, None)

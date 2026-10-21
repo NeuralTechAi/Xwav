@@ -3784,6 +3784,7 @@ def _build_host_daemon_env(
     but unrelated shell secrets are not inherited merely because the daemon
     runs on the user's machine. Runners launched by the daemon apply
     :func:`omnigent.host.connect._build_runner_env` separately.
+    Passthrough names and saved provider references are trusted host-owner inputs.
 
     :param server_url: Omnigent server URL for remote mode, e.g.
         ``"https://example.databricksapps.com"``, or a falsey value

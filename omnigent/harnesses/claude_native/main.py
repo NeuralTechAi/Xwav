@@ -459,7 +459,7 @@ def _serves_canonical_anthropic_ids(claude_config: ClaudeNativeUcodeConfig) -> b
         return False
     base_url = claude_config.env.get(_UCODE_CLAUDE_BASE_URL_ENV)
     if not base_url:
-        return not _ambient_env_is_non_anthropic_gateway()
+        return not claude_config.env_unset or not _ambient_env_is_non_anthropic_gateway()
     host = (urlparse(base_url).hostname or "").lower()
     return host == "anthropic.com" or host.endswith(".anthropic.com")
 
@@ -729,7 +729,12 @@ def claude_config_with_launch_model_pinned(
         normalized_model_id,
     )
 
-    if claude_config is None or not launch_model or not launch_model.strip():
+    if (
+        claude_config is None
+        or (claude_config.env_unset and not claude_config.env)
+        or not launch_model
+        or not launch_model.strip()
+    ):
         return claude_config
     model = launch_model.strip()
     if model in _UCODE_CLAUDE_TIER_TO_ENV or model == _UCODE_CLAUDE_CUSTOM_TIER:
@@ -3284,13 +3289,15 @@ def _native_claude_config_from_entry(
     if entry.kind == DATABRICKS_KIND:
         log_info_once(_logger, "native-claude routing: Databricks ucode profile %r", entry.profile)
         return _ucode_config_for_profile(entry.profile, refresh_models=refresh_models)
-    if entry.kind == SUBSCRIPTION_KIND and not managed_claude_gateway_signal()[1]:
-        from omnigent.onboarding.harness_install import CLAUDE_SUBSCRIPTION_ENV_UNSET
-
-        return ClaudeNativeUcodeConfig(env={}, env_unset=CLAUDE_SUBSCRIPTION_ENV_UNSET)
     log_info_once(
         _logger, "native-claude routing: Claude CLI login (subscription provider %r)", entry.name
     )
+    if entry.kind == SUBSCRIPTION_KIND and not managed_claude_gateway_signal()[1]:
+        from omnigent.util.env_credentials import claude_subscription_env_unset
+
+        env_unset = claude_subscription_env_unset()
+        if env_unset:
+            return ClaudeNativeUcodeConfig(env={}, env_unset=env_unset)
     return None
 
 

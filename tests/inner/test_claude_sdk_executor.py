@@ -3544,8 +3544,12 @@ def test_non_databricks_model_without_routing_does_not_raise() -> None:
 @pytest.mark.asyncio
 @pytest.mark.parametrize("subscription_only", [False, True])
 @pytest.mark.parametrize("connect_fails", [False, True])
+@pytest.mark.parametrize("base_url", ["https://api.anthropic.com", "https://gateway.example"])
 async def test_anthropic_api_key_stripped_during_connect(
-    monkeypatch, subscription_only: bool, connect_fails: bool
+    monkeypatch,
+    subscription_only: bool,
+    connect_fails: bool,
+    base_url: str,
 ):
     """Selected subscriptions exclude competing auth only during the CLI spawn."""
     from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
@@ -3586,7 +3590,7 @@ async def test_anthropic_api_key_stripped_during_connect(
         "OMNIGENT_ANTHROPIC_AUTH_TOKEN": "prefixed-token",
     }
     preserved_env = {
-        "ANTHROPIC_BASE_URL": "https://unselected.example.com",
+        "ANTHROPIC_BASE_URL": base_url,
         "CLAUDE_CODE_USE_BEDROCK": "1",
         "CLAUDE_CODE_USE_VERTEX": "1",
         "CLAUDE_CODE_USE_FOUNDRY": "1",
@@ -3619,7 +3623,7 @@ async def test_anthropic_api_key_stripped_during_connect(
     assert os.environ["ANTHROPIC_API_KEY"] == "sk-ant-test-secret"
     assert os.environ["CLAUDECODE"] == "parent-value"
     for name, value in competing_env.items():
-        if subscription_only:
+        if subscription_only and base_url == "https://api.anthropic.com":
             assert name not in connect_env
         else:
             assert connect_env[name] == value

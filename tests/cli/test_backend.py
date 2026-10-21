@@ -408,7 +408,7 @@ def test_build_host_daemon_env_remote_keeps_runner_env_passthrough(
 
 
 @pytest.mark.parametrize("server_url", [None, "https://server.example.com"])
-@pytest.mark.parametrize("source", ["provider-config", "passthrough"])
+@pytest.mark.parametrize("source", ["provider-config", "passthrough", "malformed-config"])
 def test_host_daemon_preserves_explicit_credential_environment(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -431,6 +431,8 @@ def test_host_daemon_preserves_explicit_credential_environment(
         monkeypatch.delenv("OMNIGENT_RUNNER_ENV_PASSTHROUGH", raising=False)
     else:
         monkeypatch.setenv("OMNIGENT_RUNNER_ENV_PASSTHROUGH", " MY_GATEWAY_TOKEN, ,MISSING ")
+        if source == "malformed-config":
+            (tmp_path / "config.yaml").write_text("providers: [")
 
     daemon_env = _build_host_daemon_env(server_url=server_url)
     runner_env = _build_runner_env(

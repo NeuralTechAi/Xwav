@@ -618,49 +618,31 @@ def claude_managed_gateway_display_name(paths: tuple[Path, ...] | None = None) -
 
 
 def _claude_login_detected(*, subscription_only: bool = False) -> bool:
-    """Return whether a usable Claude Code subscription login is present.
+    """Detect Claude's own auth, checking stored OAuth credentials first.
 
-    File-first, with a macOS Keychain fallback. Claude Code stores its OAuth
-    credential in ``~/.claude/.credentials.json`` on Linux but in the **macOS
-    Keychain** on macOS — so the fast, no-subprocess file check
-    (:func:`claude_auth_has_credential`) is accurate on Linux yet silently
-    misses a real, working subscription on a Mac, where that file does not
-    exist. That gap is why ``configure harnesses`` failed to auto-detect a
-    Claude subscription that the same machine could sign in to without a web
-    login (the CLI had already cached the credential in the Keychain).
+    Ambient discovery probes the CLI only on macOS for Keychain logins.
+    Selected-login readiness also probes an installed CLI on other platforms
+    for helpers, saved API keys and third-party auth. Stored OAuth credentials
+    work without a standalone CLI, including for the bundled SDK.
 
-    To close the gap without slowing the common path, this checks the file
-    first and, only on macOS and only when the file check comes up empty, falls
-    back to the authoritative CLI status check
-    (:func:`omnigent.onboarding.harness_install.harness_cli_logged_in`, which
-    runs ``claude auth status`` — the command that reads wherever the CLI
-    actually stored the credential, Keychain included). The fallback costs one
-    subprocess and runs only on macOS when the file is absent (the normal macOS
-    case), so Linux detection stays purely file-based and subprocess-free.
-
-    The fallback is a no-op when the ``claude`` binary is not on ``PATH``
-    (``harness_cli_logged_in`` returns ``False`` there), so a Keychain
-    credential is detected only when the CLI that wrote it is still installed.
-
-    :param subscription_only: Exclude competing API credentials from the
-        Keychain probe; probe errors propagate instead of implying no login.
-    :returns: ``True`` when a usable Claude subscription login is present — via
-        the credentials file on any platform, or via the macOS Keychain through
-        the CLI status fallback; ``False`` otherwise.
+    :param subscription_only: Exclude competing API credentials from the probe;
+        explicit gateway credentials retain their pairing with the endpoint.
+    :returns: Whether a locally visible auth source is available.
+    :raises ClaudeLoginProbeError: A selected-login probe could not determine auth.
     """
     if claude_auth_has_credential(_claude_credentials_path()):
         return True
-    if sys.platform == "darwin":
-        # macOS stores the Claude OAuth token in the Keychain, not the file
-        # checked above. Ask the CLI itself (``claude auth status`` reads the
-        # Keychain) rather than reimplement Keychain access here. Lazy import
-        # keeps this module's import graph light and pays nothing off-macOS.
+    if sys.platform == "darwin" or subscription_only:
+        # The CLI owns Keychain, helper and third-party auth resolution.
         from omnigent.onboarding.harness_install import (
             READINESS_CLI_PROBE_TIMEOUT_S,
             harness_cli_logged_in,
+            resolve_cli_binary,
         )
 
         if subscription_only:
+            if resolve_cli_binary("claude") is None:
+                return False
             return harness_cli_logged_in(
                 ANTHROPIC_FAMILY, subscription_only=True, timeout=READINESS_CLI_PROBE_TIMEOUT_S
             )

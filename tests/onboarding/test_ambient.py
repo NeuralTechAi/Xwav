@@ -361,18 +361,32 @@ def test_claude_macos_keychain_login_detected(clean_env, monkeypatch: pytest.Mon
     ]
 
 
-def test_claude_selected_subscription_uses_strict_keychain_probe(clean_env, monkeypatch) -> None:
+@pytest.mark.parametrize("platform", ["linux", "darwin"])
+@pytest.mark.parametrize("installed", [False, True])
+def test_claude_selected_subscription_uses_available_cli(
+    clean_env,
+    monkeypatch,
+    platform: str,
+    installed: bool,
+) -> None:
     from omnigent.onboarding import harness_install
 
-    monkeypatch.setattr(ambient.sys, "platform", "darwin")
+    monkeypatch.setattr(ambient.sys, "platform", platform)
+    monkeypatch.setattr(
+        harness_install,
+        "resolve_cli_binary",
+        lambda name: "/usr/bin/claude" if installed else None,
+    )
+    probes: list[bool] = []
 
     def logged_in(key: str, *, subscription_only: bool = False, **kwargs: object) -> bool:
         assert key == "anthropic"
-        return not subscription_only
+        probes.append(subscription_only)
+        return True
 
     monkeypatch.setattr(harness_install, "harness_cli_logged_in", logged_in)
-    assert ambient._claude_login_detected() is True
-    assert ambient._claude_login_detected(subscription_only=True) is False
+    assert ambient._claude_login_detected(subscription_only=True) is installed
+    assert probes == ([True] if installed else [])
 
 
 def test_claude_macos_keychain_absent_not_detected(

@@ -3354,16 +3354,35 @@ async def test_run_drains_shielded_model_catalog_probe_on_shutdown(
         await asyncio.gather(*probes, return_exceptions=True)
 
 
+@pytest.mark.parametrize("failure", ["permission", "claude-status"])
 async def test_capability_probe_failure_does_not_block_registration(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    failure: str,
 ) -> None:
     """Optional startup discovery fails visibly but hello still reaches the server."""
 
     def _denied() -> dict[str, bool]:
         raise PermissionError(13, "Permission denied", "/usr/local/bin/codex")
 
-    monkeypatch.setattr("omnigent.host.connect.configured_harness_map", _denied)
+    if failure == "permission":
+        monkeypatch.setattr("omnigent.host.connect.configured_harness_map", _denied)
+        expected_error = "Permission denied: '/usr/local/bin/codex'"
+    else:
+        from omnigent.onboarding import harness_readiness
+        from omnigent.onboarding.harness_install import ClaudeLoginProbeError
+
+        def _availability(harness: str) -> bool:
+            if harness == "claude-native":
+                raise ClaudeLoginProbeError("Claude status timed out")
+            return True
+
+        monkeypatch.setattr(harness_readiness, "_harness_availability", _availability)
+        monkeypatch.setattr(
+            "omnigent.host.connect.configured_harness_map",
+            harness_readiness.configured_harness_map,
+        )
+        expected_error = "Claude status timed out"
     monkeypatch.setattr(
         "omnigent.host.connect.gateway_inference_map",
         lambda: {"codex": False},
@@ -3380,7 +3399,15 @@ async def test_capability_probe_failure_does_not_block_registration(
     assert hello.configured_harnesses is None
     assert hello.gateway_inference == {"codex": False}
     assert host._capabilities_initialized
-    assert "Permission denied: '/usr/local/bin/codex'" in capsys.readouterr().err
+    assert expected_error in capsys.readouterr().err
+    from omnigent.harness_availability import (
+        harness_launch_availability,
+        reported_harness_availability,
+    )
+
+    for harness in ("claude-native", "claude-sdk"):
+        assert reported_harness_availability(harness, hello.configured_harnesses) == (None, None)
+        assert harness_launch_availability(harness, hello.configured_harnesses) == (None, None)
 
 
 async def test_hello_advertises_installed_version() -> None:

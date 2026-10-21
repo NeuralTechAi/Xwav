@@ -8828,21 +8828,33 @@ def test_resolve_native_claude_config_subscription_uses_cli_login(
 
     # An auth-only config still inherits the CLI's routing/model settings.
     before = claude_native.claude_catalog_fingerprint(cfg)
+    assert claude_native.claude_config_with_launch_model_pinned(cfg, "exact-model-id") is cfg
+    assert claude_native.claude_config_with_routed_arms_pinned(cfg, ["exact-model-id"]) is cfg
+    assert claude_native.claude_catalog_fingerprint(cfg) == before
     monkeypatch.setenv("ANTHROPIC_BASE_URL", "https://gateway.example")
     assert claude_native.claude_catalog_fingerprint(cfg) != before
     assert not claude_native._serves_canonical_anthropic_ids(cfg)
 
 
-def test_selected_native_subscription_preserves_managed_gateway(
-    _isolated_provider_config: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("source", ["managed", "environment"])
+def test_selected_native_subscription_preserves_gateway(
+    _isolated_provider_config: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    source: str,
 ) -> None:
     _seed_config(
         _isolated_provider_config,
         {"claude": {"kind": "subscription", "cli": "claude", "default": True}},
     )
-    monkeypatch.setattr(
-        claude_native, "managed_claude_gateway_signal", lambda: ("https://gateway.example", True)
-    )
+    if source == "managed":
+        monkeypatch.setattr(
+            claude_native,
+            "managed_claude_gateway_signal",
+            lambda: ("https://gateway.example", True),
+        )
+    else:
+        monkeypatch.setenv("ANTHROPIC_BASE_URL", "https://gateway.example")
+        monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "synthetic-gateway-token")
     assert claude_native.resolve_native_claude_config(spec=_no_auth_claude_spec()) is None
 
 

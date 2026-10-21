@@ -30,9 +30,11 @@ be able to write resources without a separate Omnigent account.
   pending host sign-in, its first message waits on that same runner until the
   sign-in finishes or its bounded wait expires.
 - `proxy-env`: login detects the right mode even with HTTP proxy variables set.
-- `selected-claude-auth`: a selected Claude subscription checks its own login,
-  excluding competing API credentials in readiness and launch. A missing login
-  warns in both host modes; an inconclusive status probe remains unknown.
+- `selected-claude-auth`: a selected Claude subscription checks the CLI's own
+  auth, including helpers and third-party routing. Competing API credentials
+  are excluded; explicit gateways retain their endpoint and credentials.
+  A missing login warns in both host modes; a failed probe leaves the host's
+  whole readiness report unknown so it does not block launch.
 - `host-lifecycle`: register in the foreground or background, run as a per-user
   system service, and check status, stop, stop a session, or reset the host ID.
   A machine runs one host per host ID and Databricks workspace, even through
@@ -169,7 +171,7 @@ Never run these commands against the real `~/.omnigent` or `~/.databrickscfg`.
   isolated homes, synthetic keys, and real host advertisements. Both a saved
   provider environment reference and an explicitly named runner passthrough
   must keep Codex ready after background startup. Named passthrough must also
-  preserve a Claude SDK subscription OAuth token. An unrelated Gemini key must
+  keep Claude SDK ready with a subscription OAuth token. An unrelated Gemini key must
   remain excluded. No model requests are sent. The SDK case requires isolated
   machine authentication; it uses bubblewrap when managed settings exist on
   Linux and skips if isolation is unavailable. This checks fresh background
