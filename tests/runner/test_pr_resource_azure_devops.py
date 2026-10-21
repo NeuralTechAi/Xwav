@@ -45,6 +45,7 @@ NO_CAPABILITIES = {
     "line_counts": False,
     "linked_pr_diff": False,
     "label_editing": False,
+    "reviewer_editing": False,
 }
 LEGACY_FIELDS = {"gh_available", "authenticated", "accounts", "selected_account"}
 CHANGES = [

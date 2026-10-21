@@ -17,7 +17,7 @@ from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import suppress
 from dataclasses import dataclass
 from threading import Lock
-from typing import Any
+from typing import Any, Literal
 
 from filelock import Timeout as FileLockTimeout
 
@@ -33,6 +33,7 @@ from omnigent.runner.git_providers import (
     PR_DIFF_OBJECT,
     ProviderCapabilities,
     PullRequestFacet,
+    ReviewerRef,
     local_git,
     unsupported_remote_info,
 )
@@ -51,6 +52,8 @@ _PR_TITLE_REQUEST_SECONDS = 8.0
 _PROVIDER_CONFIG_KEY = "omnigent.gitprovider"
 # GitHub allows at most 100 labels on a pull request, so no larger edit can apply.
 _MAX_LABEL_EDIT = 100
+# Bounds one reviewer edit's request body; the panel sends one reviewer at a time.
+_MAX_REVIEWER_EDIT = 100
 
 _DISCOVERY_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="pr-discovery")
 _DISCOVERY_LOCK = Lock()
@@ -538,22 +541,28 @@ def set_pr_preference(
     return pr_info(root, session_id=session_id)
 
 
-def _label_target(
-    session_id: str | None, pr_url: str | None
+def _edit_target(
+    session_id: str | None,
+    pr_url: str | None,
+    capability: Literal["label_editing", "reviewer_editing"],
+    subject: str,
 ) -> tuple[PullRequestFacet, SessionPullRequest]:
-    """Return the selected tracked PR and its facet, which must support label editing."""
+    """Return the selected tracked PR and its facet, which must have ``capability``.
+
+    :param subject: What the edit changes, for messages, e.g. ``"labels"``.
+    """
     if not session_id or not pr_url:
-        raise ValueError("Select a pull request to edit its labels")
+        raise ValueError(f"Select a pull request to edit its {subject}")
     reference = _selected_pr(session_id, pr_url)
     facet = _facet(reference.provider)
-    if facet is None or not facet.capabilities.label_editing:
+    if facet is None or not getattr(facet.capabilities, capability):
         display = provider_display(reference.provider)
         kind = (
             f"{display['display_name']} {display['request_name']}"
             if display
             else f"{reference.provider} pull request"
         )
-        raise ValueError(f"Editing {kind} labels is not supported")
+        raise ValueError(f"Editing {kind} {subject} is not supported")
     return facet, reference
 
 
@@ -580,7 +589,7 @@ def pr_labels(
     :raises ValueError: Without a selected tracked PR, or when its provider
         cannot edit labels.
     """
-    facet, reference = _label_target(session_id, pr_url)
+    facet, reference = _edit_target(session_id, pr_url, "label_editing", "labels")
     return facet.repo_labels(root, reference)
 
 
@@ -612,8 +621,69 @@ def update_pr_labels(
         raise ValueError("Remove labels named . or .. on GitHub")
     if len(add_names) + len(remove_names) > _MAX_LABEL_EDIT:
         raise ValueError(f"Edit at most {_MAX_LABEL_EDIT} labels at once")
-    facet, reference = _label_target(session_id, pr_url)
+    facet, reference = _edit_target(session_id, pr_url, "label_editing", "labels")
     return facet.edit_labels(root, reference, add=add_names, remove=remove_names)
+
+
+def _reviewer_refs(value: object, field: str) -> list[ReviewerRef]:
+    """Return a request field's ``{login, kind}`` reviewers, without case-insensitive repeats.
+
+    GitHub logins and team slugs ignore case, so the first spelling sent is kept.
+    """
+    if not isinstance(value, (list, tuple)):
+        raise ValueError(f"Expected {field} to be a list of reviewers")
+    unique: dict[tuple[str, str], ReviewerRef] = {}
+    for item in value:
+        login = item.get("login") if isinstance(item, dict) else None
+        kind = item.get("kind") if isinstance(item, dict) else None
+        if not isinstance(login, str) or not login.strip() or kind not in ("user", "team"):
+            raise ValueError(f"Expected {field} to be a list of reviewers")
+        unique.setdefault((kind, login.casefold()), ReviewerRef(login=login.strip(), kind=kind))
+    return list(unique.values())
+
+
+def pr_review_candidates(
+    root: str, *, session_id: str | None = None, pr_url: str | None = None
+) -> dict[str, Any]:
+    """List the users and teams a review of the selected PR can be requested from.
+
+    :raises ValueError: Without a selected tracked PR, or when its provider
+        cannot edit reviewers.
+    """
+    facet, reference = _edit_target(session_id, pr_url, "reviewer_editing", "reviewers")
+    return facet.review_candidates(root, reference)
+
+
+def update_pr_reviewers(
+    root: str,
+    *,
+    session_id: str | None = None,
+    pr_url: str | None = None,
+    add: object = (),
+    remove: object = (),
+) -> dict[str, Any]:
+    """Request reviews on the selected PR and withdraw pending requests.
+
+    :param add: ``{login, kind}`` users and teams to request a review from; one
+        who already reviewed is asked again.
+    :param remove: ``{login, kind}`` reviewers whose pending request to withdraw;
+        one without a request is ignored.
+    :returns: A ``session.github.pr_reviewers`` with the PR's resulting reviewers.
+    :raises ValueError: On an empty, overlapping, or oversized edit, without a
+        selected tracked PR, or when the provider refuses the change.
+    """
+    add_refs = _reviewer_refs(add, "add")
+    remove_refs = _reviewer_refs(remove, "remove")
+    if not add_refs and not remove_refs:
+        raise ValueError("Expected reviewers to add or remove")
+    if {(ref.kind, ref.login.casefold()) for ref in add_refs} & {
+        (ref.kind, ref.login.casefold()) for ref in remove_refs
+    }:
+        raise ValueError("A reviewer cannot be both added and removed")
+    if len(add_refs) + len(remove_refs) > _MAX_REVIEWER_EDIT:
+        raise ValueError(f"Edit at most {_MAX_REVIEWER_EDIT} reviewers at once")
+    facet, reference = _edit_target(session_id, pr_url, "reviewer_editing", "reviewers")
+    return facet.edit_reviewers(root, reference, add=add_refs, remove=remove_refs)
 
 
 def pr_changed_files(

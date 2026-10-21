@@ -29,6 +29,9 @@ Payload contract:
 - With ``label_editing``, the repository's labels are a ``list`` of
   ``{name, color, description}`` with ``has_more``, and a label edit returns a
   ``session.github.pr_labels`` with the PR's resulting ``labels``.
+- With ``reviewer_editing``, the review candidates are a ``list`` of
+  ``{login, kind, name}`` with ``has_more``, and a reviewer edit returns a
+  ``session.github.pr_reviewers`` with the PR's resulting ``reviewers``.
 - Changed files are a ``list`` of ``session.github.changed_file`` objects:
   ``path``, ``name``, ``status`` (``created``, ``modified``, ``deleted``, or
   ``renamed``), ``lines_added``, and ``lines_removed``. The PR diff is a
@@ -64,7 +67,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
-from typing import Any, Protocol, TypedDict, runtime_checkable
+from typing import Any, Literal, Protocol, TypedDict, runtime_checkable
 
 from omnigent.runner.session_prs import PullRequestRef
 
@@ -74,6 +77,7 @@ CHANGED_FILE_OBJECT = "session.github.changed_file"
 FILE_DIFF_OBJECT = "session.github.file_diff"
 PR_DIFF_OBJECT = "session.github.pr_diff"
 PR_LABELS_OBJECT = "session.github.pr_labels"
+PR_REVIEWERS_OBJECT = "session.github.pr_reviewers"
 # Info ``reason`` when no provider recognizes the workspace's git remote.
 UNSUPPORTED_REMOTE = "unsupported_remote"
 # PR diff ``unavailable_reason`` when the PR's repository is not the workspace's.
@@ -96,6 +100,9 @@ class ProviderCapabilities:
         ``unavailable_reason: "pr_outside_workspace"`` for such a PR.
     :ivar label_editing: The user can add and remove the PR's labels through
         :meth:`PullRequestFacet.repo_labels` and :meth:`PullRequestFacet.edit_labels`.
+    :ivar reviewer_editing: The user can request and withdraw reviews through
+        :meth:`PullRequestFacet.review_candidates` and
+        :meth:`PullRequestFacet.edit_reviewers`.
     """
 
     account_switching: bool
@@ -103,10 +110,23 @@ class ProviderCapabilities:
     line_counts: bool
     linked_pr_diff: bool
     label_editing: bool = False
+    reviewer_editing: bool = False
 
     def to_json(self) -> dict[str, bool]:
         """Return the capabilities as the payload's ``capabilities`` object."""
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class ReviewerRef:
+    """A user or team a review is requested from.
+
+    :ivar login: A user's login, e.g. ``"octocat"``, or a team's slug, e.g. ``"core"``.
+    :ivar kind: ``"user"`` or ``"team"``.
+    """
+
+    login: str
+    kind: Literal["user", "team"]
 
 
 class CliStatus(TypedDict):
@@ -333,6 +353,31 @@ class PullRequestFacet(Protocol):
         non-empty name lists. Removing a label the PR lacks is not an error.
 
         :returns: A ``session.github.pr_labels`` with the PR's resulting ``labels``.
+        :raises ValueError: With a user-facing message when the provider refuses.
+        """
+        ...
+
+    def review_candidates(self, root: str, reference: PullRequestRef) -> dict[str, Any]:
+        """Return the users and teams a review can be requested from, as a ``list``.
+
+        The orchestrator calls it only with ``reviewer_editing``.
+        """
+        ...
+
+    def edit_reviewers(
+        self,
+        root: str,
+        reference: PullRequestRef,
+        *,
+        add: Sequence[ReviewerRef],
+        remove: Sequence[ReviewerRef],
+    ) -> dict[str, Any]:
+        """Request reviews from ``add`` and withdraw the pending requests of ``remove``.
+
+        The orchestrator calls it only with ``reviewer_editing``, with disjoint
+        lists that are not both empty. Withdrawing a request the PR lacks is not an error.
+
+        :returns: A ``session.github.pr_reviewers`` with the PR's resulting ``reviewers``.
         :raises ValueError: With a user-facing message when the provider refuses.
         """
         ...

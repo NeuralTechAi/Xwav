@@ -37,6 +37,7 @@ workspace: only the owner's workspace-relative reads reach the runner marked
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
@@ -895,28 +896,37 @@ async def test_content_search_distinguishes_older_runner_from_missing_resource(
     )
 
 
-_LABELS_PATH = "/v1/sessions/conv_share/resources/github/labels"
-_LABELS_PR_URL = "https://github.com/acme/widgets/pull/17"
+_PR_EDIT_PR_URL = "https://github.com/acme/widgets/pull/17"
+_PR_EDITS = [
+    ("/v1/sessions/conv_share/resources/github/labels", "bug"),
+    (
+        "/v1/sessions/conv_share/resources/github/reviewers",
+        {"login": "octocat", "kind": "user"},
+    ),
+]
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("path, added", _PR_EDITS, ids=["labels", "reviewers"])
 @pytest.mark.parametrize(
     "caller,expected",
     [("owner@example.com", 200), ("viewer@example.com", 403)],
     ids=["edit-allowed", "read-denied"],
 )
-async def test_pr_label_routes_require_edit(
+async def test_pr_edit_routes_require_edit(
     client: httpx.AsyncClient,
     runner_client: _RecordingRunnerClient,
     caller: str,
     expected: int,
+    path: str,
+    added: object,
 ) -> None:
-    """Listing and editing PR labels act with the host's account, so viewers are refused."""
+    """PR label and reviewer routes act as the host's account, so viewers are refused."""
     headers = {"X-Forwarded-Email": caller}
-    listed = await client.get(_LABELS_PATH, params={"pr_url": _LABELS_PR_URL}, headers=headers)
+    listed = await client.get(path, params={"pr_url": _PR_EDIT_PR_URL}, headers=headers)
     edited = await client.post(
-        _LABELS_PATH,
-        json={"pr_url": _LABELS_PR_URL, "add": ["bug"], "session_id": "untrusted"},
+        path,
+        json={"pr_url": _PR_EDIT_PR_URL, "add": [added], "session_id": "untrusted"},
         headers=headers,
     )
 
@@ -924,21 +934,22 @@ async def test_pr_label_routes_require_edit(
     if expected == 403:
         assert runner_client.gets == runner_client.posts == []
         return
-    assert runner_client.gets == [_LABELS_PATH]
-    assert runner_client.get_params == [{"pr_url": _LABELS_PR_URL}]
+    assert runner_client.gets == [path]
+    assert runner_client.get_params == [{"pr_url": _PR_EDIT_PR_URL}]
     assert runner_client.posts == [
-        (_LABELS_PATH, {"pr_url": _LABELS_PR_URL, "add": ["bug"], "remove": []})
+        (path, {"pr_url": _PR_EDIT_PR_URL, "add": [added], "remove": []})
     ]
 
 
 @pytest.mark.asyncio
-async def test_pr_label_edit_requires_a_json_body(
-    client: httpx.AsyncClient, runner_client: _RecordingRunnerClient
+@pytest.mark.parametrize("path, added", _PR_EDITS, ids=["labels", "reviewers"])
+async def test_pr_edit_requires_a_json_body(
+    client: httpx.AsyncClient, runner_client: _RecordingRunnerClient, path: str, added: object
 ) -> None:
-    """A cross-site form post cannot change labels with the host's account."""
+    """A cross-site form post cannot edit the PR with the host's account."""
     resp = await client.post(
-        _LABELS_PATH,
-        content=f'{{"pr_url": "{_LABELS_PR_URL}", "add": ["bug"]}}',
+        path,
+        content=json.dumps({"pr_url": _PR_EDIT_PR_URL, "add": [added]}),
         headers={"X-Forwarded-Email": "owner@example.com", "Content-Type": "text/plain"},
     )
 
