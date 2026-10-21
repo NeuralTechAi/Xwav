@@ -107,7 +107,7 @@ def test_pi_extension_select_renders_options_and_returns_the_choice(
 
     verdict = _join_hook(hook_thread, holder)
     assert verdict["action"] == "accept", verdict
-    assert _ALLOW_ONCE in str(verdict.get("content")), verdict
+    assert expected in (verdict.get("content") or {}).values(), verdict
 
 
 @pytest.mark.timeout(90)
