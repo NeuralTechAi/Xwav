@@ -173,6 +173,8 @@ def test_merge_options_offer_allowed_methods_with_a_default(
     [
         ((1, "", "HTTP 404"), "could not read this repository's merge settings"),
         ((0, "not json", ""), "unexpected merge settings"),
+        ((0, "null", ""), "unexpected merge settings"),
+        ((0, "[]", ""), "unexpected merge settings"),
     ],
 )
 def test_merge_option_failures_are_user_facing(
@@ -285,6 +287,45 @@ def test_a_merge_past_its_deadline_reports_an_unknown_outcome(
 
     first = ["gh", "auth", "token"] if slow == "account lookup" else ["gh", "pr", "merge"]
     assert [command[:3] for command in commands] == [first]
+
+
+@pytest.mark.parametrize("operation", ["merge", "disable auto-merge"])
+def test_a_selected_account_without_a_token_never_runs_as_another(
+    monkeypatch: pytest.MonkeyPatch, operation: str
+) -> None:
+    """A saved account that gh can't sign in as stops the merge, not falls back."""
+    monkeypatch.setattr(github, "_in_sandbox", lambda: False)
+    monkeypatch.setattr(github._config, "github_account_preference", lambda _repo: "work")
+    calls: list[GhCall] = []
+    monkeypatch.setattr(
+        github,
+        "_gh",
+        _fake_gh(calls, [(1, "", "no oauth token found for github.com account work")]),
+    )
+    reference = PullRequestRef.from_url(PR_URL)
+
+    with pytest.raises(ValueError, match="account work isn't signed in on the host"):
+        if operation == "merge":
+            github._merge_pr("/workspace", reference, merge_method="merge", expected_head=HEAD_SHA)
+        else:
+            github._disable_auto_merge("/workspace", reference)
+
+    assert [argv[:2] for argv, _token in calls] == [["auth", "token"]]
+
+
+def test_without_a_selected_account_gh_runs_as_its_active_account(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(github, "_in_sandbox", lambda: False)
+    monkeypatch.setattr(github._config, "github_account_preference", lambda _repo: None)
+    calls: list[GhCall] = []
+    monkeypatch.setattr(github, "_gh", _fake_gh(calls, [(0, "", "")]))
+
+    github._disable_auto_merge("/workspace", PullRequestRef.from_url(PR_URL))
+
+    assert calls == [
+        (["pr", "merge", "17", "-R", "github.com/acme/widgets", "--disable-auto"], None)
+    ]
 
 
 @pytest.fixture
@@ -437,3 +478,16 @@ async def test_runner_routes_read_options_and_merge_the_selected_pr(
     assert disable_missing_url.status_code == 400
     assert [argv[:2] for argv in calls] == [["repo", "view"], ["pr", "merge"], ["pr", "merge"]]
     assert calls[-1][-1] == "--disable-auto"
+
+
+@pytest.mark.parametrize("provider", ["gitlab", "azure_devops"])
+@pytest.mark.parametrize("operation", ["merge_options", "merge", "disable_auto_merge"])
+def test_other_providers_reject_merge_operations(provider: str, operation: str) -> None:
+    from importlib import import_module
+
+    facet = import_module(f"omnigent.runner.git_providers.{provider}").PULL_REQUESTS
+    kwargs = {"merge_method": "merge", "expected_head": HEAD_SHA} if operation == "merge" else {}
+
+    assert facet.capabilities.merging is False
+    with pytest.raises(ValueError, match="not supported yet"):
+        getattr(facet, operation)("/workspace", PullRequestRef.from_url(PR_URL), **kwargs)

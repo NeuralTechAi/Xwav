@@ -1516,7 +1516,8 @@ def _merge_options(root: str, reference: PullRequestRef) -> dict[str, Any]:
         data = json.loads(out)
     except ValueError as exc:
         raise ValueError("GitHub returned unexpected merge settings") from exc
-    data = data if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        raise ValueError("GitHub returned unexpected merge settings")
     methods = [method for method, field in _MERGE_METHODS if data.get(field) is True]
     preferred = data.get("viewerDefaultMergeMethod")
     preferred = preferred.lower() if isinstance(preferred, str) else None
@@ -1549,7 +1550,8 @@ def _run_pr_merge(
 ) -> None:
     """Run ``gh pr merge <flags>`` on the PR as its selected account.
 
-    Every ``gh`` call shares :data:`_PR_EDIT_REQUEST_SECONDS`.
+    Every ``gh`` call shares :data:`_PR_EDIT_REQUEST_SECONDS`. Without a saved
+    account, ``gh``'s active account runs it; a saved one without a token refuses.
 
     :param action: What the command does, for error messages.
     :param timed_out: Message when the deadline leaves the outcome unknown.
@@ -1558,9 +1560,17 @@ def _run_pr_merge(
     with _gh_deadline_scope(time.monotonic() + _PR_EDIT_REQUEST_SECONDS):
         _host_args(root, reference)
         token = _pr_token(root, reference)
+        # Without the selected account's token gh would run as another account.
         if _gh_timed_out.get():
-            # The selected account's token is unknown, so gh must not run as another.
             raise ValueError(timed_out)
+        login = (
+            None if _in_sandbox() else _config.github_account_preference(_repo_argument(reference))
+        )
+        if login and token is None:
+            raise ValueError(
+                f"The selected GitHub account {login} isn't signed in on the host. "
+                "Sign in with gh or choose another account."
+            )
         rc, _, err = _gh(
             ["pr", "merge", str(reference.number), "-R", _repo_argument(reference), *flags],
             cwd=root,

@@ -1,7 +1,7 @@
 // The Summary tab's Merge button: its state follows GitHub's mergeStateStatus and
 // auto-merge, and a click opens a confirmation where the merge method can change.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GitMergeIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,14 +53,34 @@ const BLOCKED_HINTS: Record<string, string> = {
   BEHIND: "Update the branch first.",
   DIRTY: "Resolve conflicts first.",
   DRAFT: "Mark the pull request ready for review first.",
-  UNSTABLE: "Some checks aren’t passing.",
 };
+
+/** Caveats for states GitHub still merges, by mergeStateStatus. */
+const READY_HINTS: Record<string, string> = {
+  UNSTABLE: "Checks that aren’t required are failing or still running.",
+  HAS_HOOKS: "The repository’s pre-receive hooks run on merge and can still reject it.",
+};
+
+// After this long, a requested merge or auto-merge change the refetch hasn't shown
+// (say, a PR waiting in a merge queue) stops holding the button busy.
+const REFRESH_TIMEOUT_MS = 30_000;
 
 export type MergeButtonState =
   | { kind: "auto_merge" }
   | { kind: "checking"; hint: string }
   | { kind: "blocked"; hint: string }
-  | { kind: "ready"; headSha: string };
+  | { kind: "ready"; headSha: string; hint?: string };
+
+/** A value that clears itself after {@link REFRESH_TIMEOUT_MS}. */
+function useExpiringValue<T>(): [T | null, (value: T) => void] {
+  const [value, setValue] = useState<T | null>(null);
+  useEffect(() => {
+    if (value === null) return;
+    const timer = setTimeout(() => setValue(null), REFRESH_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [value]);
+  return [value, setValue];
+}
 
 /** What the Merge button shows for a PR, from its auto-merge and merge state. */
 export function mergeButtonState(
@@ -68,9 +88,12 @@ export function mergeButtonState(
 ): MergeButtonState {
   if (pr.auto_merge) return { kind: "auto_merge" };
   const status = pr.merge_state_status;
-  if (status === "CLEAN" && pr.head_sha) return { kind: "ready", headSha: pr.head_sha };
+  const mergeable = status === "CLEAN" || (!!status && status in READY_HINTS);
+  if (mergeable && pr.head_sha) {
+    return { kind: "ready", headSha: pr.head_sha, hint: status ? READY_HINTS[status] : undefined };
+  }
   // GitHub computes the state after a push; the next poll usually has it.
-  if (!status || status === "UNKNOWN" || status === "CLEAN") {
+  if (!status || status === "UNKNOWN" || mergeable) {
     return { kind: "checking", hint: "Checking whether it can merge…" };
   }
   return {
@@ -79,12 +102,66 @@ export function mergeButtonState(
   };
 }
 
+/** The dialog's method picker, or why there is nothing to pick. */
+function MergeMethodPicker({
+  options,
+  method,
+  disabled,
+  onChange,
+}: {
+  options: ReturnType<typeof usePullRequestMergeOptions>;
+  method: PullRequestMergeMethod | null;
+  disabled: boolean;
+  onChange: (method: PullRequestMergeMethod) => void;
+}) {
+  if (options.isPending) {
+    return (
+      <p role="status" className="text-ui text-muted-foreground">
+        Loading merge methods…
+      </p>
+    );
+  }
+  if (options.isError) {
+    return (
+      <p role="alert" className="text-ui text-destructive">
+        {options.error.message}
+      </p>
+    );
+  }
+  if (options.data.methods.length === 0) {
+    return (
+      <p role="alert" className="text-ui text-destructive">
+        This repository allows no merge method.
+      </p>
+    );
+  }
+  return (
+    <Select
+      value={method ?? undefined}
+      onValueChange={(value) => onChange(value as PullRequestMergeMethod)}
+      disabled={disabled}
+    >
+      <SelectTrigger aria-label="Merge method" className="h-8 w-full text-ui">
+        <SelectValue placeholder="Merge method" />
+      </SelectTrigger>
+      <SelectContent>
+        {options.data.methods.map((value) => (
+          <SelectItem key={value} value={value}>
+            {MERGE_METHOD_LABELS[value]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 /** Confirms the merge and picks its method; the head is fixed when the dialog opens. */
 function PullRequestMergeDialog({
   conversationId,
   prUrl,
   pr,
   headSha,
+  warning,
   onClose,
   onMerged,
 }: {
@@ -92,6 +169,8 @@ function PullRequestMergeDialog({
   prUrl: string;
   pr: PullRequest;
   headSha: string;
+  /** A caveat GitHub still merges with, e.g. failing optional checks. */
+  warning?: string;
   onClose: () => void;
   onMerged: () => void;
 }) {
@@ -100,6 +179,9 @@ function PullRequestMergeDialog({
   const [chosen, setChosen] = useState<PullRequestMergeMethod | null>(null);
   const methods = options.data?.methods ?? [];
   const method = chosen && methods.includes(chosen) ? chosen : (options.data?.default ?? null);
+
+  const methodLabel = method ? MERGE_BUTTON_LABELS[method] : "Merge pull request";
+  const confirmLabel = merge.isPending ? "Merging…" : methodLabel;
 
   // `isPending` updates after a render, so a fast second click needs this guard.
   const submitting = useRef(false);
@@ -135,36 +217,17 @@ function PullRequestMergeDialog({
             This can’t be undone.
           </DialogDescription>
         </DialogHeader>
-        {options.isPending ? (
-          <p role="status" className="text-ui text-muted-foreground">
-            Loading merge methods…
+        {warning && (
+          <p role="note" className="text-ui text-amber-700 dark:text-amber-400">
+            {warning}
           </p>
-        ) : options.isError ? (
-          <p role="alert" className="text-ui text-destructive">
-            {options.error.message}
-          </p>
-        ) : methods.length === 0 ? (
-          <p role="alert" className="text-ui text-destructive">
-            This repository allows no merge method.
-          </p>
-        ) : (
-          <Select
-            value={method ?? undefined}
-            onValueChange={(value) => setChosen(value as PullRequestMergeMethod)}
-            disabled={merge.isPending}
-          >
-            <SelectTrigger aria-label="Merge method" className="h-8 w-full text-ui">
-              <SelectValue placeholder="Merge method" />
-            </SelectTrigger>
-            <SelectContent>
-              {methods.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {MERGE_METHOD_LABELS[value]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         )}
+        <MergeMethodPicker
+          options={options}
+          method={method}
+          disabled={merge.isPending}
+          onChange={setChosen}
+        />
         {merge.isError && (
           <p role="alert" className="text-ui text-destructive">
             {merge.error.message}
@@ -180,11 +243,7 @@ function PullRequestMergeDialog({
             onClick={confirm}
           >
             {merge.isPending && <Spinner aria-hidden />}
-            {merge.isPending
-              ? "Merging…"
-              : method
-                ? MERGE_BUTTON_LABELS[method]
-                : "Merge pull request"}
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -204,7 +263,7 @@ function PullRequestAutoMerge({
 }) {
   const disable = useDisablePullRequestAutoMerge(conversationId);
   // The auto-merge GitHub turned off; it shows as on here until the refetch lands.
-  const [disabledAt, setDisabledAt] = useState<string | null>(null);
+  const [disabledAt, setDisabledAt] = useExpiringValue<string>();
   const enabledAt = pr.auto_merge?.enabled_at ?? "";
   const busy = disable.isPending || disabledAt === enabledAt;
   // `isPending` updates after a render, so a fast second click needs this guard.
@@ -252,7 +311,7 @@ export function PullRequestMerge({
   // The head the user confirms, kept while the dialog is open even if a poll moves it.
   const [confirmingHead, setConfirmingHead] = useState<string | null>(null);
   // GitHub accepted a merge of this head; the PR stays open here until the refetch lands.
-  const [mergedHead, setMergedHead] = useState<string | null>(null);
+  const [mergedHead, setMergedHead] = useExpiringValue<string>();
 
   if (pr.auto_merge) {
     return (
@@ -286,6 +345,7 @@ export function PullRequestMerge({
           prUrl={prUrl}
           pr={pr}
           headSha={confirmingHead}
+          warning={state.kind === "ready" ? state.hint : undefined}
           onMerged={() => setMergedHead(confirmingHead)}
           onClose={() => setConfirmingHead(null)}
         />

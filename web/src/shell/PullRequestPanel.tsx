@@ -1800,6 +1800,8 @@ function PullRequestPanelDetails({
               pr.merge_state_status !== undefined &&
               data.selected_pr_url && (
                 <PullRequestMerge
+                  // A different PR starts fresh, so an open dialog can't outlive its PR.
+                  key={data.selected_pr_url}
                   conversationId={conversationId}
                   prUrl={data.selected_pr_url}
                   pr={pr}

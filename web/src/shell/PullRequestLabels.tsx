@@ -90,12 +90,12 @@ function PullRequestLabelPicker({
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
-          // Fits within the heading's line height, so the header row stays level with Reviewers.
-          size="icon-xxs"
+          size="icon-xs"
           aria-label="Edit labels"
-          className="text-muted-foreground hover:text-foreground"
+          // Negative margins keep the header row at text height, level with Reviewers.
+          className="-my-1 text-muted-foreground"
         >
-          <PlusIcon aria-hidden />
+          <PlusIcon aria-hidden className="size-3.5" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="p-0">

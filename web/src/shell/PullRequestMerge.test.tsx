@@ -88,12 +88,17 @@ async function openDialog(buttonName = "Squash and merge") {
 describe("mergeButtonState", () => {
   it.each([
     ["CLEAN", "ready", undefined],
+    ["UNSTABLE", "ready", "Checks that aren’t required are failing or still running."],
+    [
+      "HAS_HOOKS",
+      "ready",
+      "The repository’s pre-receive hooks run on merge and can still reject it.",
+    ],
     ["BLOCKED", "blocked", "Required checks or reviews haven’t passed."],
     ["BEHIND", "blocked", "Update the branch first."],
     ["DIRTY", "blocked", "Resolve conflicts first."],
     ["DRAFT", "blocked", "Mark the pull request ready for review first."],
-    ["UNSTABLE", "blocked", "Some checks aren’t passing."],
-    ["HAS_HOOKS", "blocked", "GitHub reports that it can’t merge yet."],
+    ["OTHER", "blocked", "GitHub reports that it can’t merge yet."],
     ["UNKNOWN", "checking", "Checking whether it can merge…"],
     [null, "checking", "Checking whether it can merge…"],
   ])("%s → %s", (status, kind, hint) => {
@@ -141,7 +146,6 @@ describe("with auto-merge enabled", () => {
     expect(screen.getByRole("region", { name: "Merge" })).toHaveTextContent(
       "This pull request will merge automatically when all requirements are met.",
     );
-    expect(screen.getByText("merge automatically").tagName).toBe("STRONG");
     expect(screen.queryByText(/dev/)).toBeNull();
     // Merge options name the merge button, which auto-merge replaces.
     expect(fetch).not.toHaveBeenCalled();
@@ -188,20 +192,21 @@ it("merges once with the chosen method at the head the dialog opened on", async 
   const { invalidate, rerender } = renderMerge(pullRequest());
 
   await openDialog();
-  expect(screen.getByRole("combobox", { name: "Merge method" })).toHaveTextContent(
-    "Squash and merge",
-  );
+  const picker = screen.getByRole("combobox", { name: "Merge method" });
+  expect(picker).toHaveTextContent("Squash and merge");
+  fireEvent.click(picker);
+  fireEvent.click(screen.getByRole("option", { name: "Rebase and merge" }));
   // A poll that moves the head after the dialog opened doesn't change what merges.
   rerender(pullRequest({ head_sha: "b".repeat(40) }));
 
   const dialog = screen.getByRole("dialog");
-  const confirm = within(dialog).getByRole("button", { name: "Squash and merge" });
+  const confirm = within(dialog).getByRole("button", { name: "Rebase and merge" });
   fireEvent.click(confirm);
   fireEvent.click(confirm);
   await waitFor(() => expect(posts).toHaveLength(1));
   expect(posts[0]).toMatchObject({
     path: MERGE_PATH,
-    body: { pr_url: PR_URL, merge_method: "squash", expected_head: HEAD },
+    body: { pr_url: PR_URL, merge_method: "rebase", expected_head: HEAD },
   });
   expect(screen.getByRole("button", { name: "Merging…" })).toBeDisabled();
   // Nothing claims the merge happened before GitHub answers.
@@ -256,23 +261,78 @@ it("shows GitHub's merge refusal inline and keeps the dialog open", async () => 
   expect(confirm).toBeEnabled();
 });
 
-it("labels the button with the only allowed method", async () => {
-  stubFetch(mergeOptions(["rebase"], "rebase"));
+it.each([
+  ["UNSTABLE", "Checks that aren’t required are failing or still running."],
+  ["HAS_HOOKS", "The repository’s pre-receive hooks run on merge and can still reject it."],
+])(
+  "lets a %s PR merge, with the caveat beside the button and in the dialog",
+  async (status, hint) => {
+    stubFetch(allMethods);
+    renderMerge(pullRequest({ merge_state_status: status }));
+
+    expect(await screen.findByRole("button", { name: "Squash and merge" })).toBeEnabled();
+    expect(screen.getByText(hint)).toBeInTheDocument();
+    await openDialog();
+    expect(within(screen.getByRole("dialog")).getByRole("note")).toHaveTextContent(hint);
+  },
+);
+
+it("says why the dialog can't merge when merge options fail to load", async () => {
+  stubFetch(() => json({ detail: "GitHub could not read this repository's merge settings." }, 400));
   renderMerge(pullRequest());
 
-  await openDialog("Rebase and merge");
-  expect(screen.getByRole("combobox", { name: "Merge method" })).toHaveTextContent(
-    "Rebase and merge",
-  );
+  await openDialog("Merge pull request");
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("could not read this repository");
+  expect(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "Merge pull request" }),
+  ).toBeDisabled();
+});
+
+describe("a change the refetch hasn't shown", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("stops holding the merge button busy after 30 seconds", async () => {
+    const { posts } = stubFetch(allMethods);
+    renderMerge(pullRequest());
+    await openDialog();
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Squash and merge" }),
+    );
+    await waitFor(() => expect(posts).toHaveLength(1));
+    vi.useFakeTimers();
+    await act(async () => {
+      posts[0].respond(json({ object: "session.github.pr_merge", pr_url: PR_URL }));
+    });
+    expect(screen.getByText("Merge requested. Refreshing…")).toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(30_000));
+
+    expect(screen.queryByText("Merge requested. Refreshing…")).toBeNull();
+    expect(screen.getByRole("button", { name: "Squash and merge" })).toBeEnabled();
+  });
+
+  it("stops holding disable auto-merge busy after 30 seconds", async () => {
+    const { posts } = stubFetch(allMethods);
+    renderMerge(pullRequest({ auto_merge: AUTO_MERGE }));
+    fireEvent.click(screen.getByRole("button", { name: "Disable auto-merge" }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    vi.useFakeTimers();
+    await act(async () => {
+      posts[0].respond(json({ object: "session.github.pr_merge", pr_url: PR_URL }));
+    });
+    expect(screen.getByRole("button", { name: "Disable auto-merge" })).toBeDisabled();
+
+    act(() => vi.advanceTimersByTime(30_000));
+
+    expect(screen.getByRole("button", { name: "Disable auto-merge" })).toBeEnabled();
+  });
 });
 
 it("can't confirm when the repository allows no method", async () => {
   stubFetch(mergeOptions([], null));
   renderMerge(pullRequest());
 
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Merge pull request" })).toBeEnabled(),
-  );
   await openDialog("Merge pull request");
 
   expect(await screen.findByRole("alert")).toHaveTextContent("allows no merge method");

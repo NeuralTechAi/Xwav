@@ -522,6 +522,12 @@ describe("PullRequestPanel", () => {
         },
       ],
       [
+        "a provider that can't merge",
+        () => {
+          state.info!.data!.capabilities!.merging = false;
+        },
+      ],
+      [
         "a host that doesn't report the merge state",
         () => {
           delete state.info!.data!.pr!.merge_state_status;
