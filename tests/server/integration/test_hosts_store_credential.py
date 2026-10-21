@@ -224,13 +224,17 @@ async def cred_setup(
 # ── Happy path ──────────────────────────────────────────
 
 
+@pytest.mark.parametrize("probe_fails", [False, True])
 async def test_store_key_forwards_frame_and_returns_readiness(
     cred_setup: tuple[
         FastAPI, HostRegistry, list[HostStoreSecretFrame], dict[str, dict[str, Any]]
     ],
+    probe_fails: bool,
 ) -> None:
     """A key write forwards the credential to the host and returns readiness."""
-    app, _reg, received, _replies = cred_setup
+    app, _reg, received, replies = cred_setup
+    readiness = None if probe_fails else {"claude": True}
+    replies["claude"] = {"status": "ok", "configured_harnesses": readiness}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(
             f"/v1/hosts/{_HOST_ID}/harnesses/claude/credential",
@@ -240,7 +244,7 @@ async def test_store_key_forwards_frame_and_returns_readiness(
     body = resp.json()
     assert body["object"] == "harness_credential"
     assert body["harness"] == "claude"
-    assert body["configured_harnesses"]["claude"] is True
+    assert body["configured_harnesses"] == readiness
     # The server forwarded the credential faithfully (pass-through).
     assert len(received) == 1
     assert received[0].harness == "claude"

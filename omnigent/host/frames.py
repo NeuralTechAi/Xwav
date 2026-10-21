@@ -808,7 +808,7 @@ class HostInstallHarnessResultFrame:
     :param configured_harnesses: The host's readiness map recomputed
         after the install attempt, e.g. ``{"claude-native": True,
         "codex-native": "needs-auth"}``. ``None`` when the install could
-        not run (the server keeps its prior readiness view).
+        not run or the probe failed (the server keeps its prior readiness view).
     :param version: Installed CLI version after the operation, e.g.
         ``"1.18.4"``. ``None`` when an older host does not report it or the
         version could not be determined.
@@ -905,7 +905,8 @@ class HostStoreSecretResultFrame:
     :param status: ``"ok"`` when the credential was written, ``"failed"``
         otherwise (paired with a non-secret ``error``).
     :param configured_harnesses: Readiness recomputed after the write, e.g.
-        ``{"claude-native": True}``. ``None`` when the write could not run.
+        ``{"claude-native": True}``. ``None`` when the write could not run
+        or the probe failed; ``status`` still reports the write's outcome.
     :param gateway_inference: Per-harness flag for whether that family's
         launch on this host resolves AI-Gateway-backed inference, e.g.
         ``{"claude-native": True, "codex": False}`` (see

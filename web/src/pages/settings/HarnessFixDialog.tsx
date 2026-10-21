@@ -38,7 +38,7 @@ import { HarnessCredentialForm } from "@/shell/HarnessCredentialForm";
 export type HarnessFixMode = "reconfigure" | "update" | "install";
 
 export interface HarnessFixResult {
-  configuredHarnesses: Record<string, boolean | string>;
+  configuredHarnesses: Record<string, boolean | string> | null;
   credentialKind?: HarnessCredentialKind;
   version?: string;
   gatewayInference?: Record<string, boolean> | null;
@@ -104,7 +104,7 @@ export function HarnessFixDialog(props: HarnessFixDialogProps) {
 
   const finish = useCallback(
     (
-      configuredHarnesses: Record<string, boolean | string>,
+      configuredHarnesses: Record<string, boolean | string> | null,
       credentialKind?: HarnessCredentialKind,
       version?: string | null,
       announce = true,
@@ -156,7 +156,7 @@ export function HarnessFixDialog(props: HarnessFixDialogProps) {
     try {
       const result = await installHarness(harness);
       if (runId.current !== id) return;
-      if (result.configured_harnesses[harness] === true) {
+      if (result.configured_harnesses?.[harness] === true) {
         finish(result.configured_harnesses, undefined, result.version);
         return;
       }

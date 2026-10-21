@@ -17,6 +17,8 @@ implements them separately, so a fix for one harness does not reach the others.
 - `needs-auth`: a harness without usable credentials is shown as needing
   sign-in, with a repair hint, instead of failing after launch. A harness the
   host has not configured can be hidden from the picker.
+  Claude uses the [selected login](./login-and-host-auth.md) for both terminal
+  and web launches, excluding competing ambient keys while preserving gateways.
 - `model-and-effort`: the harness's own model catalog, and reasoning effort where
   the harness declares it. The web picker should offer what the CLI offers.
 - `smart-routing`: Pi applies the chosen route before inference from the

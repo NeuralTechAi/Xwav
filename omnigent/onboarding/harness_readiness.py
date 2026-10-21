@@ -1070,7 +1070,8 @@ def configured_harness_map() -> dict[str, HarnessAvailability]:
     harnesses report ``"needs-auth"`` when no local credential source is
     visible. Codex entries distinguish ``"binary-missing"`` from
     ``"needs-auth"``.
-    Inconclusive probes raise; the host reports the whole map as unknown.
+    Inconclusive probes raise; startup reports unknown readiness, while
+    periodic refresh preserves the last successful report.
 
     :returns: Mapping of harness spelling to readiness, e.g.
         ``{"claude-native": False, "codex-native": "needs-auth",

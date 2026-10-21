@@ -14,6 +14,7 @@ from packaging.version import Version
 import omnigent._platform as _platform
 from omnigent.onboarding import harness_install as hi
 from omnigent.onboarding.provider_config import ANTHROPIC_FAMILY, GEMINI_FAMILY, OPENAI_FAMILY
+from omnigent.util.env_credentials import CLAUDE_SUBSCRIPTION_ENV_UNSET
 
 
 @pytest.fixture(autouse=True)
@@ -1192,7 +1193,7 @@ def test_claude_subscription_probe_removes_competing_credentials(
 ) -> None:
     monkeypatch.setattr(hi.shutil, "which", lambda _name: None)
     monkeypatch.setattr(hi, "resolve_cli_binary", lambda _name: "/fallback/bin/claude")
-    for name in hi.CLAUDE_SUBSCRIPTION_ENV_UNSET:
+    for name in CLAUDE_SUBSCRIPTION_ENV_UNSET:
         monkeypatch.setenv(name, "competing-credential")
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
@@ -1208,7 +1209,7 @@ def test_claude_subscription_probe_removes_competing_credentials(
         assert kwargs["stdin"] == subprocess.DEVNULL
         env = kwargs["env"]
         assert isinstance(env, dict)
-        for name in hi.CLAUDE_SUBSCRIPTION_ENV_UNSET:
+        for name in CLAUDE_SUBSCRIPTION_ENV_UNSET:
             assert (name in env) is bool(base_url)
         for name in ("HOME", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN"):
             assert env[name] == parent_env[name]
@@ -1232,7 +1233,7 @@ def test_claude_subscription_probe_removes_competing_credentials(
         is expected
     )
     assert dict(os.environ) == parent_env
-    assert hi.CLAUDE_SUBSCRIPTION_ENV_UNSET == (
+    assert CLAUDE_SUBSCRIPTION_ENV_UNSET == (
         "ANTHROPIC_API_KEY",
         "OMNIGENT_ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN",
@@ -1301,7 +1302,7 @@ def test_claude_subscription_and_broad_probe_caches_are_independent(
 ) -> None:
     monkeypatch.setattr(hi.shutil, "which", lambda _name: "/fake/bin/claude")
     monkeypatch.setattr(hi, "resolve_cli_binary", lambda _name: "/fake/bin/claude")
-    for name in hi.CLAUDE_SUBSCRIPTION_ENV_UNSET:
+    for name in CLAUDE_SUBSCRIPTION_ENV_UNSET:
         monkeypatch.delenv(name, raising=False)
     calls: list[object] = []
 

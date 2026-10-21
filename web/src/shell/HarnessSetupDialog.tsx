@@ -117,7 +117,7 @@ export function HarnessSetupDialog({
         // The install succeeded, but the harness may still need a credential
         // (e.g. Codex → "needs-auth"): key the toast on the refreshed readiness
         // so it doesn't claim "ready" while a sign-in row is still showing.
-        const ready = result.configured_harnesses[h] === true;
+        const ready = result.configured_harnesses?.[h] === true;
         showToast(
           ready
             ? `${name} is ready on ${host?.name}.`

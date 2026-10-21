@@ -267,6 +267,7 @@ async def test_install_harness_survives_idle_mock_host(
     assert response.json()["configured_harnesses"]["claude"] is True
 
 
+@pytest.mark.parametrize("probe_fails", [False, True])
 async def test_install_harness_returns_refreshed_readiness(
     install_setup: tuple[
         FastAPI,
@@ -275,6 +276,7 @@ async def test_install_harness_returns_refreshed_readiness(
         dict[str, dict[str, Any]],
         asyncio.Task[None],
     ],
+    probe_fails: bool,
 ) -> None:
     """
     A successful install returns the harness flipped to ready.
@@ -285,9 +287,10 @@ async def test_install_harness_returns_refreshed_readiness(
     round-trip through the endpoint.
     """
     app, _reg, _comm, replies, _drain = install_setup
+    readiness = None if probe_fails else {"claude": True, "claude-native": True}
     replies["claude"] = {
         "status": "ok",
-        "configured_harnesses": {"claude": True, "claude-native": True},
+        "configured_harnesses": readiness,
         "version": "2.1.295",
     }
 
@@ -298,7 +301,7 @@ async def test_install_harness_returns_refreshed_readiness(
     body = resp.json()
     assert body["object"] == "harness_install"
     assert body["harness"] == "claude"
-    assert body["configured_harnesses"]["claude"] is True
+    assert body["configured_harnesses"] == readiness
     assert body["version"] == "2.1.295"
 
 

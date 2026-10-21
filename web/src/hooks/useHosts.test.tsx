@@ -772,7 +772,7 @@ describe("useHostModelOptions", () => {
 });
 
 describe("useStoreCredential", () => {
-  const credResult = (harness: string, readiness: Record<string, boolean | string>) =>
+  const credResult = (harness: string, readiness: Record<string, boolean | string> | null) =>
     mockResponse({ object: "harness_credential", harness, configured_harnesses: readiness });
 
   it("POSTs the harness in the path and the rest of the input as the body (no secret in the URL)", async () => {
@@ -820,29 +820,32 @@ describe("useStoreCredential", () => {
     expect(result.current.error?.message).toBe("502 Bad Gateway");
   });
 
-  it("patches the hosts cache and invalidates the detect query on success", async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    function sharedWrapper({ children }: { children: ReactNode }) {
-      return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-    }
-    client.setQueryData(
-      ["hosts", { includeSandbox: false }],
-      [{ host_id: "host_1", name: "Laptop", owner: "alice", status: "online" }],
-    );
-    const invalidate = vi.spyOn(client, "invalidateQueries");
+  it.each([{ "codex-native": true }, null])(
+    "patches readiness %j and invalidates the detect query on success",
+    async (readiness) => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      function sharedWrapper({ children }: { children: ReactNode }) {
+        return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+      }
+      client.setQueryData(
+        ["hosts", { includeSandbox: false }],
+        [{ host_id: "host_1", name: "Laptop", owner: "alice", status: "online" }],
+      );
+      const invalidate = vi.spyOn(client, "invalidateQueries");
 
-    const { result } = renderHook(() => useStoreCredential("host_1"), { wrapper: sharedWrapper });
-    fetchMock.mockResolvedValueOnce(credResult("codex-native", { "codex-native": true }));
-    result.current.mutate({ harness: "codex-native", kind: "key", secret: "sk" });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      const { result } = renderHook(() => useStoreCredential("host_1"), { wrapper: sharedWrapper });
+      fetchMock.mockResolvedValueOnce(credResult("codex-native", readiness));
+      result.current.mutate({ harness: "codex-native", kind: "key", secret: "sk" });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const hosts = client.getQueryData<{ configured_harnesses?: Record<string, unknown> }[]>([
-      "hosts",
-      { includeSandbox: false },
-    ]);
-    expect(hosts?.[0].configured_harnesses?.["codex-native"]).toBe(true);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["detected-credentials", "host_1"] });
-  });
+      const hosts = client.getQueryData<{ configured_harnesses?: Record<string, unknown> }[]>([
+        "hosts",
+        { includeSandbox: false },
+      ]);
+      expect(hosts?.[0].configured_harnesses).toEqual(readiness);
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["detected-credentials", "host_1"] });
+    },
+  );
 });
 
 describe("useDetectedCredentials", () => {

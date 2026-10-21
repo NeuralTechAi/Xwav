@@ -1585,14 +1585,20 @@ async def test_live_host_full_refresh_detects_auth_completion(
     _cleanup_host(host)
 
 
+@pytest.mark.parametrize("probe_fails", [False, True])
 async def test_live_host_does_not_repeat_unchanged_readiness(
     monkeypatch: pytest.MonkeyPatch,
+    probe_fails: bool,
 ) -> None:
-    """A periodic full refresh sends nothing when the readiness map is unchanged."""
+    """Unchanged or failed periodic probes preserve the last published readiness."""
+    from omnigent.onboarding.harness_install import ClaudeLoginProbeError
+
     calls = {"n": 0}
 
     def _unchanged_map() -> dict[str, str]:
         calls["n"] += 1
+        if probe_fails:
+            raise ClaudeLoginProbeError("Claude status probe timed out")
         return {"codex": "needs-auth"}
 
     monkeypatch.setattr("omnigent.host.connect.configured_harness_map", _unchanged_map)
@@ -1618,6 +1624,7 @@ async def test_live_host_does_not_repeat_unchanged_readiness(
 
     assert calls["n"] >= 2
     assert ws.sent == []
+    assert host._configured_harnesses == {"codex": "needs-auth"}
     _cleanup_host(host)
 
 
@@ -5021,8 +5028,15 @@ async def test_dispatch_refresh_harnesses_uses_guard_and_updates_capabilities(
     assert host._gateway_inference == {"codex-native": False}
 
 
-def test_handle_install_harness_success_returns_refreshed_readiness(
+@pytest.mark.parametrize(
+    ("installed", "probe_fails"),
+    [(False, False), (False, True), (True, True)],
+    ids=["installed", "installed-probe-error", "already-installed-probe-error"],
+)
+async def test_handle_install_harness_success_returns_refreshed_readiness(
     monkeypatch: pytest.MonkeyPatch,
+    installed: bool,
+    probe_fails: bool,
 ) -> None:
     """
     A successful install returns ``ok`` and the recomputed readiness map.
@@ -5031,27 +5045,40 @@ def test_handle_install_harness_success_returns_refreshed_readiness(
     installer and then re-probe readiness, returning the fresh result.
     """
     import omnigent.host.connect as connect
+    from omnigent.onboarding.harness_install import ClaudeLoginProbeError
 
-    # Not yet installed, so the handler runs the installer.
-    monkeypatch.setattr(connect, "harness_cli_installed", lambda key: False)
-    monkeypatch.setattr(connect, "try_install_harness_cli", lambda key: (True, None))
+    installer = Mock(return_value=(True, None))
+    monkeypatch.setattr(connect, "harness_cli_installed", lambda key: installed)
+    monkeypatch.setattr(connect, "try_install_harness_cli", installer)
     monkeypatch.setattr(connect, "harness_cli_version", lambda key: ("2.1.295", ">=2.1.161"))
+    readiness = {"claude-native": True, "codex-native": "needs-auth"}
     monkeypatch.setattr(
         connect,
         "configured_harness_map",
-        lambda: {"claude-native": True, "codex-native": "needs-auth"},
+        Mock(
+            return_value=readiness,
+            side_effect=ClaudeLoginProbeError("Claude status probe timed out")
+            if probe_fails
+            else None,
+        ),
     )
 
     host = _make_host_process()
-    result = host._handle_install_harness(
-        HostInstallHarnessFrame(request_id="i1", harness="claude")
+    tunnel = _FakeTunnel()
+    await host._dispatch_host_frame(
+        tunnel,
+        HostInstallHarnessFrame(request_id="i1", harness="claude"),  # type: ignore[arg-type]
     )
+    assert len(tunnel.sent) == 1
+    result = decode_host_frame(tunnel.sent[0])
 
     assert isinstance(result, HostInstallHarnessResultFrame)
+    assert result.request_id == "i1"
     assert result.status == "ok"
     assert result.error is None
-    assert result.configured_harnesses == {"claude-native": True, "codex-native": "needs-auth"}
+    assert result.configured_harnesses == (None if probe_fails else readiness)
     assert result.version == "2.1.295"
+    assert installer.call_count == (0 if installed else 1)
 
 
 def test_handle_install_harness_already_installed_skips_installer(
@@ -5170,8 +5197,10 @@ def test_handle_install_harness_rejects_non_allowlisted(
     assert result.configured_harnesses is None
 
 
-def test_handle_store_secret_key_writes_and_returns_readiness(
+@pytest.mark.parametrize("probe_fails", [False, True], ids=["ready", "probe-error"])
+async def test_handle_store_secret_key_writes_and_returns_readiness(
     monkeypatch: pytest.MonkeyPatch,
+    probe_fails: bool,
 ) -> None:
     """A key store-secret request calls the core and returns fresh readiness.
 
@@ -5181,6 +5210,7 @@ def test_handle_store_secret_key_writes_and_returns_readiness(
     """
     import omnigent.host.connect as connect
     from omnigent.onboarding.harness_auth import StoreCredentialResult
+    from omnigent.onboarding.harness_install import ClaudeLoginProbeError
 
     calls: list[dict[str, object]] = []
 
@@ -5189,21 +5219,36 @@ def test_handle_store_secret_key_writes_and_returns_readiness(
         return StoreCredentialResult(True, "anthropic", None)
 
     monkeypatch.setattr(connect, "store_harness_credential", _store)
-    monkeypatch.setattr(connect, "configured_harness_map", lambda: {"claude-native": True})
+    monkeypatch.setattr(
+        connect,
+        "configured_harness_map",
+        Mock(
+            return_value={"claude-native": True},
+            side_effect=ClaudeLoginProbeError("Claude status probe timed out")
+            if probe_fails
+            else None,
+        ),
+    )
 
     host = _make_host_process()
-    result = host._handle_store_secret(
+    tunnel = _FakeTunnel()
+    await host._dispatch_host_frame(
+        tunnel,  # type: ignore[arg-type]
         HostStoreSecretFrame(
             request_id="c1",
             harness="claude",
             kind="key",
             secret_value="sk-ant-x",
             default_model="claude-sonnet-4-6",
-        )
+        ),
     )
+    assert len(tunnel.sent) == 1
+    result = decode_host_frame(tunnel.sent[0])
     assert isinstance(result, HostStoreSecretResultFrame)
+    assert result.request_id == "c1"
     assert result.status == "ok"
-    assert result.configured_harnesses == {"claude-native": True}
+    assert result.error is None
+    assert result.configured_harnesses == (None if probe_fails else {"claude-native": True})
     # The core was called with the resolved family + the frame's fields.
     assert calls == [
         {

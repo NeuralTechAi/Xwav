@@ -59,12 +59,7 @@ from omnigent.harnesses.opencode_native.client import (
     OPENCODE_MIN_VERSION,
 )
 from omnigent.onboarding.provider_config import ANTHROPIC_FAMILY, GEMINI_FAMILY, OPENAI_FAMILY
-from omnigent.util.env_credentials import (
-    CLAUDE_SUBSCRIPTION_ENV_UNSET as CLAUDE_SUBSCRIPTION_ENV_UNSET,
-)
-from omnigent.util.env_credentials import (
-    claude_subscription_env_unset,
-)
+from omnigent.util.env_credentials import claude_subscription_env_unset
 
 # Pi is not a configure-menu family (the menu is Claude + Codex), but the
 # first-run ``run`` flow falls back to it, so it has install metadata too.

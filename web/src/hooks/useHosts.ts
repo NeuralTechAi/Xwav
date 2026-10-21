@@ -175,7 +175,7 @@ export function useHostModelOptions(
 export interface InstallHarnessResult {
   object: "harness_install";
   harness: string;
-  configured_harnesses: Record<string, boolean | string>;
+  configured_harnesses: Record<string, boolean | string> | null;
   version: string | null;
   gateway_inference: Record<string, boolean> | null;
 }
@@ -310,7 +310,7 @@ export interface StoreCredentialInput {
 export interface StoreCredentialResult {
   object: "harness_credential";
   harness: string;
-  configured_harnesses: Record<string, boolean | string>;
+  configured_harnesses: Record<string, boolean | string> | null;
 }
 
 /**

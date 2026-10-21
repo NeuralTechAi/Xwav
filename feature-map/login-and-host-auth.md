@@ -33,8 +33,9 @@ be able to write resources without a separate Omnigent account.
 - `selected-claude-auth`: a selected Claude subscription checks the CLI's own
   auth, including helpers and third-party routing. Competing API credentials
   are excluded; explicit gateways retain their endpoint and credentials.
-  A missing login warns in both host modes; a failed probe leaves the host's
-  whole readiness report unknown so it does not block launch.
+  A missing login warns in both host modes. A failed startup probe leaves all
+  harness readiness unknown; a failed periodic probe retains the last report.
+  Successful installs and credential saves still reply if their probe fails.
 - `host-lifecycle`: register in the foreground or background, run as a per-user
   system service, and check status, stop, stop a session, or reset the host ID.
   A machine runs one host per host ID and Databricks workspace, even through
@@ -179,21 +180,13 @@ Never run these commands against the real `~/.omnigent` or `~/.databrickscfg`.
   launchd/systemd service; those entry points need separate verification.
 - **`selected-claude-auth` (own environment, Linux, installed Claude CLI and bubblewrap):**
   `tests/e2e/test_claude_subscription_readiness.py::test_selected_subscription_host_readiness`
-  selects a subscription with a synthetic API key and no login, then reads
-  real host advertisements from foreground and background CLI launches. Both
-  must report `needs-auth`. With a stored subscription login and no API key,
-  both modes must report `true` for Claude Native and Claude SDK.
-  Network/PID namespaces and hidden managed settings
-  keep the test independent of the developer's account. Credential combinations,
-  managed gateways, probe errors and SDK file/Keychain detection are covered in
-  `tests/onboarding/test_harness_readiness.py`, `test_harness_install.py` and
-  `test_ambient.py`. Native launch env checks cover the local CLI, web runner and
-  model probe in `tests/harnesses/claude_native/test_claude_native.py`; SDK child
-  credentials are checked in `tests/inner/test_claude_sdk_executor.py`.
-  In the web New Chat picker, compare the same host in each mode: no subscription
-  login must show an authentication warning in both, while a stored login must
-  remain available even with an unrelated API key set. These checks make no
-  inference calls and do not install a system service.
+  checks real host advertisements: no login plus a dummy key is `needs-auth`;
+  stored login is `true` for Native and SDK in both modes. Compare the same
+  states in the New Chat picker. Credentials are synthetic; no inference runs.
+  Auth combinations and launch environments are covered by `tests/onboarding/`,
+  `tests/harnesses/claude_native/test_claude_native.py` and
+  `tests/inner/test_claude_sdk_executor.py`; `tests/host/test_connect.py` covers
+  probe failures at startup, periodic refresh, install and credential save.
 - **`host-inline-login` (own environment, Linux):** run
   `uv run --no-sync pytest tests/e2e/test_host_inline_login.py --reruns 0 -q`.
   It starts an isolated real server and a local HTTPS mock workspace, then

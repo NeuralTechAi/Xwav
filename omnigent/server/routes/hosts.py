@@ -1655,7 +1655,7 @@ def create_hosts_router(
         return {
             "object": "harness_install",
             "harness": harness,
-            "configured_harnesses": result.get("configured_harnesses") or {},
+            "configured_harnesses": result.get("configured_harnesses"),
             "version": result.get("version"),
             # Passed through as-is: ``None`` is "unknown", not "none backed".
             "gateway_inference": installed_gateway,
@@ -1768,7 +1768,7 @@ def create_hosts_router(
         return {
             "object": "harness_credential",
             "harness": harness,
-            "configured_harnesses": result.get("configured_harnesses") or {},
+            "configured_harnesses": result.get("configured_harnesses"),
             # Passed through as-is: ``None`` is "unknown", not "none backed".
             "gateway_inference": written_gateway,
         }

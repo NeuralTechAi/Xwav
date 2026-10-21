@@ -3075,7 +3075,7 @@ class HostProcess:
             return HostInstallHarnessResultFrame(
                 request_id=frame.request_id,
                 status="ok",
-                configured_harnesses=configured_harness_map(),
+                configured_harnesses=self._read_configured_harnesses(),
                 version=harness_cli_version(key)[0],
                 gateway_inference=gateway_inference_map(),
             )
@@ -3090,7 +3090,7 @@ class HostProcess:
         return HostInstallHarnessResultFrame(
             request_id=frame.request_id,
             status="ok",
-            configured_harnesses=configured_harness_map(),
+            configured_harnesses=self._read_configured_harnesses(),
             version=harness_cli_version(key)[0],
             gateway_inference=gateway_inference_map(),
         )
@@ -3215,7 +3215,7 @@ class HostProcess:
         return HostStoreSecretResultFrame(
             request_id=frame.request_id,
             status="ok",
-            configured_harnesses=configured_harness_map(),
+            configured_harnesses=self._read_configured_harnesses(),
             gateway_inference=gateway_inference_map(),
         )
 
@@ -3974,8 +3974,16 @@ class HostProcess:
         startup: bool,
     ) -> dict[str, HarnessAvailability] | None:
         """Collect harness readiness without letting a probe break the channel."""
+        return await self._run_host_subprocess_in_thread(
+            lambda: self._read_configured_harnesses(startup=startup)
+        )
+
+    def _read_configured_harnesses(
+        self, *, startup: bool = False
+    ) -> dict[str, HarnessAvailability] | None:
+        """A failed advisory probe must not discard a completed host operation."""
         try:
-            return await self._run_host_subprocess_in_thread(configured_harness_map)
+            return configured_harness_map()
         except Exception as exc:
             _logger.exception("Host harness readiness probe failed")
             if startup:

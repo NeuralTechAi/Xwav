@@ -205,7 +205,10 @@ describe("HarnessCredentialForm", () => {
     expect(onDone).toHaveBeenCalled();
   });
 
-  it("does NOT claim ready when the write leaves the harness not-ready", () => {
+  it.each([
+    [{ pi: "needs-auth" }, "still needs setup"],
+    [null, "couldn't check pi readiness"],
+  ] as const)("does not claim ready with readiness %j", (readiness, message) => {
     // Regression: the toast used to say "ready" unconditionally, contradicting a
     // still-yellow dot. When readiness stays not-true, say so and keep the form
     // open (don't call onDone) so the user can try another option.
@@ -213,7 +216,7 @@ describe("HarnessCredentialForm", () => {
       opts?.onSuccess?.({
         object: "harness_credential",
         harness: "pi",
-        configured_harnesses: { pi: "needs-auth" },
+        configured_harnesses: readiness,
       }),
     );
     const onDone = vi.fn();
@@ -221,10 +224,7 @@ describe("HarnessCredentialForm", () => {
     const keyInput = screen.getByTestId("harness-credential-key") as HTMLInputElement;
     fireEvent.change(keyInput, { target: { value: "sk-x" } });
     fireEvent.click(screen.getByTestId("harness-credential-save"));
-    expect(showToastMock).toHaveBeenCalledWith(
-      expect.stringContaining("still needs setup"),
-      expect.anything(),
-    );
+    expect(showToastMock).toHaveBeenCalledWith(expect.stringContaining(message), expect.anything());
     expect(showToastMock).not.toHaveBeenCalledWith(expect.stringContaining("is ready on"));
     expect(onDone).not.toHaveBeenCalled();
     // The form stays open on a not-ready result; the entered key must not linger

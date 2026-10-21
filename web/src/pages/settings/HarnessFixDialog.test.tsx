@@ -445,43 +445,46 @@ describe("HarnessFixDialog", () => {
     );
   });
 
-  it("installs without a body and then shows the selected Isaac setup", async () => {
-    vi.mocked(authenticatedFetch).mockImplementation(async (input, init) => {
-      const url = String(input);
-      if (url === "/v1/harnesses") return json(catalog);
-      if (url.endsWith("/install")) {
-        expect(init).toEqual({ method: "POST" });
-        return json({
-          object: "harness_install",
-          harness: "codex-native",
-          configured_harnesses: { "codex-native": "needs-auth" },
-          version: "1.0.0",
-        });
-      }
-      if (url.endsWith("/harnesses/refresh")) {
-        expect(init).toEqual({ method: "POST" });
-        return json({
-          configured_harnesses: { "codex-native": true },
-          gateway_inference: { "codex-native": true },
-        });
-      }
-      throw new Error(`Unexpected URL: ${url}`);
-    });
-    const props = renderDialog({ mode: "install" });
-    const user = userEvent.setup();
+  it.each([{ "codex-native": "needs-auth" }, null])(
+    "installs with readiness %j and keeps setup reachable",
+    async (readiness) => {
+      vi.mocked(authenticatedFetch).mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === "/v1/harnesses") return json(catalog);
+        if (url.endsWith("/install")) {
+          expect(init).toEqual({ method: "POST" });
+          return json({
+            object: "harness_install",
+            harness: "codex-native",
+            configured_harnesses: readiness,
+            version: "1.0.0",
+          });
+        }
+        if (url.endsWith("/harnesses/refresh")) {
+          expect(init).toEqual({ method: "POST" });
+          return json({
+            configured_harnesses: { "codex-native": true },
+            gateway_inference: { "codex-native": true },
+          });
+        }
+        throw new Error(`Unexpected URL: ${url}`);
+      });
+      const props = renderDialog({ mode: "install" });
+      const user = userEvent.setup();
 
-    await user.click(screen.getByRole("button", { name: "Install" }));
-    expect(
-      await screen.findByRole("heading", { name: "Set up Isaac for Codex on Local laptop" }),
-    ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Check again" }));
-    await waitFor(() => expect(props.onFixed).toHaveBeenCalled());
-    expect(props.onFixed).toHaveBeenCalledWith({
-      configuredHarnesses: { "codex-native": true },
-      credentialKind: "isaac",
-      gatewayInference: { "codex-native": true },
-    });
-  });
+      await user.click(screen.getByRole("button", { name: "Install" }));
+      expect(
+        await screen.findByRole("heading", { name: "Set up Isaac for Codex on Local laptop" }),
+      ).toBeVisible();
+      await user.click(screen.getByRole("button", { name: "Check again" }));
+      await waitFor(() => expect(props.onFixed).toHaveBeenCalled());
+      expect(props.onFixed).toHaveBeenCalledWith({
+        configuredHarnesses: { "codex-native": true },
+        credentialKind: "isaac",
+        gatewayInference: { "codex-native": true },
+      });
+    },
+  );
 
   it("offers Isaac but not Personal for Pi", async () => {
     renderDialog({ harness: "pi-native", harnessLabel: "Pi" });
