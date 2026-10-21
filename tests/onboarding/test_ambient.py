@@ -27,6 +27,7 @@ from omnigent.onboarding.ambient import (
 # Every provider env var ambient may read — cleared in the base fixture so
 # the host's own keys don't leak into the deterministic detection tests.
 _PROVIDER_ENV_VARS = [
+    "CLAUDE_CONFIG_DIR",
     "ANTHROPIC_API_KEY",
     "OMNIGENT_ANTHROPIC_API_KEY",
     "OPENAI_API_KEY",
@@ -160,14 +161,19 @@ def test_empty_env_key_not_detected(clean_env, monkeypatch: pytest.MonkeyPatch) 
         '"expiresAt": 99999999999999}}',
     ],
 )
-def test_claude_cli_login_detected(clean_env, creds_json: str) -> None:
+@pytest.mark.parametrize("custom_directory", [False, True])
+def test_claude_cli_login_detected(
+    clean_env, monkeypatch, creds_json: str, custom_directory: bool
+) -> None:
     """A ``~/.claude/.credentials.json`` carrying a usable login is detected.
 
     Failure means a genuinely logged-in Claude CLI would not be offered during
     setup. The two shapes cover the "renewable (refresh token)" and "unexpired
     access token" branches of usability.
     """
-    cred_dir = clean_env / ".claude"
+    cred_dir = clean_env / ("custom-claude" if custom_directory else ".claude")
+    if custom_directory:
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(cred_dir))
     cred_dir.mkdir()
     (cred_dir / ".credentials.json").write_text(creds_json, encoding="utf-8")
     detected = detect_providers()
@@ -353,6 +359,20 @@ def test_claude_macos_keychain_login_detected(clean_env, monkeypatch: pytest.Mon
             source="claude CLI login",
         )
     ]
+
+
+def test_claude_selected_subscription_uses_strict_keychain_probe(clean_env, monkeypatch) -> None:
+    from omnigent.onboarding import harness_install
+
+    monkeypatch.setattr(ambient.sys, "platform", "darwin")
+
+    def logged_in(key: str, *, subscription_only: bool = False, **kwargs: object) -> bool:
+        assert key == "anthropic"
+        return not subscription_only
+
+    monkeypatch.setattr(harness_install, "harness_cli_logged_in", logged_in)
+    assert ambient._claude_login_detected() is True
+    assert ambient._claude_login_detected(subscription_only=True) is False
 
 
 def test_claude_macos_keychain_absent_not_detected(

@@ -14,6 +14,7 @@ import yaml
 import omnigent.onboarding.harness_install as hi
 from omnigent.acp_cli_harnesses import ACP_CLI_HARNESSES
 from omnigent.harness_availability import HARNESS_BINARY_MISSING, HARNESS_VERSION_TOO_LOW
+from omnigent.onboarding.ambient import _claude_login_detected
 from omnigent.onboarding.harness_readiness import (
     _READINESS_PROBE_MAX_WORKERS,
     _binary_availability_reason,
@@ -68,7 +69,8 @@ def _isolate_cli_credentials(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     import omnigent.onboarding.databricks_config as _dbc
     from omnigent.onboarding import ambient as _ambient
 
-    monkeypatch.setattr(_ambient, "_claude_login_detected", lambda: False)
+    monkeypatch.setattr(_ambient, "_claude_login_detected", lambda **kwargs: False)
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
     monkeypatch.setattr(
         _ambient, "CLAUDE_CODE_MANAGED_SETTINGS_PATHS", (tmp_path / "managed-absent.json",)
     )
@@ -410,6 +412,101 @@ def test_family_provider_configured_excludes_subscription(
         lambda _cfg, _h: None,
     )
     assert hrmod._family_provider_configured("claude-native") is False
+
+
+@pytest.mark.parametrize("harness", ["claude-native", "claude-sdk"])
+@pytest.mark.parametrize("subscription_login", [False, True])
+def test_selected_claude_subscription_ignores_ambient_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    harness: str,
+    subscription_login: bool,
+) -> None:
+    """An unrelated key cannot satisfy or mask the selected subscription login."""
+    from omnigent.onboarding.harness_readiness import _harness_availability
+
+    _all_clis_installed(monkeypatch)
+    (tmp_path / "config.yaml").write_text(
+        "providers:\n  claude:\n    kind: subscription\n    cli: claude\n    default: true\n"
+    )
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "unrelated-synthetic-key")
+    probes: list[bool] = []
+
+    def logged_in(key: str, *, subscription_only: bool = False, **kwargs: object) -> bool:
+        assert key == "anthropic"
+        probes.append(subscription_only)
+        return subscription_login if subscription_only else True
+
+    monkeypatch.setattr(hi, "harness_cli_logged_in", logged_in)
+    if harness == "claude-sdk":
+        from omnigent.onboarding import ambient
+
+        monkeypatch.setattr(ambient.sys, "platform", "linux")
+        monkeypatch.setattr(ambient, "_claude_login_detected", _claude_login_detected)
+        if subscription_login:
+            directory = tmp_path / ".claude"
+            directory.mkdir()
+            (directory / ".credentials.json").write_text(
+                '{"claudeAiOauth":{"accessToken":"synthetic", "refreshToken":"synthetic"}}'
+            )
+    assert _harness_availability(harness) == (True if subscription_login else "needs-auth")
+    assert probes == ([True] if harness == "claude-native" else [])
+
+
+@pytest.mark.parametrize("harness", ["claude-native", "claude-sdk"])
+def test_selected_claude_subscription_preserves_managed_gateway(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, harness: str
+) -> None:
+    from omnigent.onboarding import harness_readiness as readiness
+
+    _all_clis_installed(monkeypatch)
+    (tmp_path / "config.yaml").write_text(
+        "providers:\n  claude:\n    kind: subscription\n    cli: claude\n    default: true\n"
+    )
+    monkeypatch.setattr(readiness, "_claude_managed_gateway_configured", lambda: True)
+    assert readiness._harness_availability(harness) is True
+
+
+@pytest.mark.parametrize(
+    ("token", "expected"),
+    [
+        ("CLAUDE_CODE_OAUTH_TOKEN", True),
+        ("OMNIGENT_CLAUDE_CODE_OAUTH_TOKEN", "needs-auth"),
+        ("ANTHROPIC_AUTH_TOKEN", "needs-auth"),
+    ],
+)
+def test_selected_sdk_subscription_accepts_cli_oauth_token(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, token: str, expected: bool | str
+) -> None:
+    from omnigent.onboarding import harness_readiness as readiness
+
+    (tmp_path / "config.yaml").write_text(
+        "providers:\n  claude:\n    kind: subscription\n    cli: claude\n    default: true\n"
+    )
+    monkeypatch.setenv(token, "synthetic-oauth-token")
+    assert readiness._harness_availability("claude-sdk") == expected
+
+
+def test_subscription_probe_error_keeps_other_harness_readiness(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    _all_clis_installed(monkeypatch)
+    (tmp_path / "config.yaml").write_text(
+        "providers:\n  claude:\n    kind: subscription\n    cli: claude\n    default: true\n"
+    )
+
+    def timeout(key: str, **kwargs: object) -> bool:
+        if key == "anthropic":
+            raise hi.ClaudeLoginProbeError("Claude subscription status probe timed out")
+        return True
+
+    monkeypatch.setattr(hi, "harness_cli_logged_in", timeout)
+    readiness = configured_harness_map()
+    assert "claude-native" not in readiness
+    assert "native-claude" not in readiness
+    assert readiness["claude-sdk"] == "needs-auth"
+    assert readiness["openai-agents"] == "needs-auth"
+    assert "readiness is unknown" in caplog.text
 
 
 def test_auth_aware_native_harness_launch_gate_stays_binary_only(

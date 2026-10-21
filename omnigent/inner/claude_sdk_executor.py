@@ -1631,6 +1631,7 @@ class ClaudeSDKExecutor(Executor):
         model: str | None = None,
         permission_mode: str = "auto",
         gateway: bool = False,
+        subscription_only: bool = False,
         databricks_profile: str | None = None,
         gateway_host: str | None = None,
         base_url_override: str | None = None,
@@ -1662,6 +1663,8 @@ class ClaudeSDKExecutor(Executor):
                 (base URL + bearer-token command + model). Enables the
                 gateway path regardless of which producer fed it (the
                 Databricks Unity Gateway or a generic provider).
+            subscription_only: Remove competing API credentials while connecting
+                with the selected Claude subscription.
             databricks_profile: Databricks-specific config profile from
                 ~/.databrickscfg, e.g. ``"<your-profile>"``.  Only used by the
                 Databricks producer path (deriving base URL / auth command
@@ -1736,6 +1739,7 @@ class ClaudeSDKExecutor(Executor):
         self._model_override = model
         self._permission_mode = permission_mode
         self._gateway = gateway
+        self._subscription_only = subscription_only
         self._databricks_profile = databricks_profile
         self._gateway_host = gateway_host.rstrip("/") if gateway_host else None
         self._base_url_override = base_url_override
@@ -1913,6 +1917,15 @@ class ClaudeSDKExecutor(Executor):
         state = self._clients.get(session_key)
         if state is None:
             await self._route_options_through_gateway_shim(options)
+            sdk_env = getattr(options, "env", None)
+            subscription_env_unset: tuple[str, ...] = ()
+            if self._subscription_only:
+                from omnigent.onboarding.harness_install import CLAUDE_SUBSCRIPTION_ENV_UNSET
+
+                subscription_env_unset = CLAUDE_SUBSCRIPTION_ENV_UNSET
+                if isinstance(sdk_env, dict):
+                    for name in subscription_env_unset:
+                        sdk_env.pop(name, None)
             # Tee CLI stderr so the connect timeout error carries the
             # tail; ``_on_stderr`` alone only logs at DEBUG.
             connect_stderr: list[str] = []
@@ -1950,10 +1963,11 @@ class ClaudeSDKExecutor(Executor):
                 # non-gateway branch re-adds the key through ``options.env``,
                 # which wins over os.environ, and a non-gateway session keeps
                 # whatever it inherited.
-                sdk_env = getattr(options, "env", None)
                 with ExitStack() as env_stack:
                     env_stack.enter_context(_unset_env_var("CLAUDECODE"))
                     env_stack.enter_context(_unset_env_var("ANTHROPIC_API_KEY"))
+                    for name in subscription_env_unset:
+                        env_stack.enter_context(_unset_env_var(name))
                     if isinstance(sdk_env, dict) and "CLAUDE_CODE_USE_GATEWAY" in sdk_env:
                         env_stack.enter_context(
                             _unset_env_var("CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS")

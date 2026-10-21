@@ -7708,16 +7708,20 @@ def _claude_terminal_env_unset(
     ``ANTHROPIC_API_KEY``: seeing both opens Claude Code's "Detected a custom
     API key" menu, whose selected row uses the same ``❯`` glyph the tmux
     delivery path waits for, so the first web message is typed into the menu.
+    A selected subscription also drops competing API credentials.
 
     :param claude_config: The resolved native launch config, or ``None``
         (Claude's own login) — which still strips the nested-session marker.
     :returns: The env var names to unset, e.g.
         ``["DATABRICKS_CONFIG_PROFILE", "CLAUDECODE", "ANTHROPIC_API_KEY"]``.
     """
-    env_unset = ["DATABRICKS_CONFIG_PROFILE", "CLAUDECODE"]
-    if claude_config is not None and claude_config.api_key_helper:
-        env_unset.append("ANTHROPIC_API_KEY")
-    return env_unset
+    from omnigent.harnesses.claude_native.main import native_claude_auth_env_unset
+
+    return [
+        "DATABRICKS_CONFIG_PROFILE",
+        "CLAUDECODE",
+        *native_claude_auth_env_unset(claude_config),
+    ]
 
 
 def _claude_terminal_launch_cwd(spec: TerminalEnvSpec, parent_os_env: OSEnvSpec | None) -> Path:

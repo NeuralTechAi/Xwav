@@ -56,8 +56,10 @@ def test_create_app_returns_fastapi_with_required_routes() -> None:
     assert "/v1/sessions/{conversation_id}/events" in paths
 
 
+@pytest.mark.parametrize("subscription_only", [False, True])
 def test_executor_factory_reads_env_vars(
     monkeypatch: pytest.MonkeyPatch,
+    subscription_only: bool,
 ) -> None:
     """Factory passes env-var values through to ClaudeSDKExecutor.
 
@@ -69,6 +71,7 @@ def test_executor_factory_reads_env_vars(
     """
     monkeypatch.setenv("HARNESS_CLAUDE_SDK_MODEL", "test-model-id")
     monkeypatch.setenv("HARNESS_CLAUDE_SDK_GATEWAY", "true")
+    monkeypatch.setenv("HARNESS_CLAUDE_SDK_SUBSCRIPTION_ONLY", str(subscription_only))
     monkeypatch.setenv("HARNESS_CLAUDE_SDK_DATABRICKS_PROFILE", "test-profile")
     monkeypatch.setenv("HARNESS_CLAUDE_SDK_GATEWAY_HOST", "https://example.databricks.com")
     monkeypatch.setenv(
@@ -92,6 +95,7 @@ def test_executor_factory_reads_env_vars(
         permission_mode: str,
         system_prompt_preset: str | None,
         gateway: bool,
+        subscription_only: bool,
         databricks_profile: str | None,
         gateway_host: str | None,
         base_url_override: str | None,
@@ -105,6 +109,7 @@ def test_executor_factory_reads_env_vars(
         captured["permission_mode"] = permission_mode
         captured["system_prompt_preset"] = system_prompt_preset
         captured["gateway"] = gateway
+        captured["subscription_only"] = subscription_only
         captured["databricks_profile"] = databricks_profile
         captured["gateway_host"] = gateway_host
         captured["base_url_override"] = base_url_override
@@ -121,6 +126,7 @@ def test_executor_factory_reads_env_vars(
     # constructor kwarg.
     assert captured["model"] == "test-model-id"
     assert captured["gateway"] is True
+    assert captured["subscription_only"] is subscription_only
     assert captured["databricks_profile"] == "test-profile"
     assert captured["gateway_host"] == "https://example.databricks.com"
     assert captured["base_url_override"] == "https://example.databricks.com/ai-gateway/anthropic"

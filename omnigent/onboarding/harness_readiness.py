@@ -57,6 +57,7 @@ from omnigent.onboarding.harness_install import (
     PI_KEY,
     QWEN_KEY,
     READINESS_CLI_PROBE_TIMEOUT_S,
+    ClaudeLoginProbeError,
     harness_cli_binary,
     harness_cli_installed,
     required_cli_for_harness,
@@ -835,6 +836,39 @@ def _global_auth_configured() -> bool:
         return False
 
 
+def _selected_claude_subscription_availability(harness: str) -> HarnessAvailability | None:
+    """Check the selected Claude login without an unrelated key masking it."""
+    if _HARNESS_FAMILY.get(harness) != ANTHROPIC_FAMILY:
+        return None
+    try:
+        provider = default_provider_for_harness(load_config(), harness)
+    except Exception as exc:
+        _logger.debug("readiness: subscription config check failed (%s)", type(exc).__name__)
+        return None
+    if provider is None or provider.kind != SUBSCRIPTION_KIND:
+        return None
+    if _claude_managed_gateway_configured():
+        return True
+    if harness in _SDK_HARNESSES:
+        from omnigent.onboarding.ambient import _claude_login_detected
+
+        return (
+            True
+            if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+            or _claude_login_detected(subscription_only=True)
+            else HARNESS_NEEDS_AUTH
+        )
+    from omnigent.onboarding.harness_install import harness_cli_logged_in
+
+    return (
+        True
+        if harness_cli_logged_in(
+            ANTHROPIC_FAMILY, timeout=READINESS_CLI_PROBE_TIMEOUT_S, subscription_only=True
+        )
+        else HARNESS_NEEDS_AUTH
+    )
+
+
 def _sdk_harness_availability(canonical: str) -> HarnessAvailability:
     """Picker-facing readiness for an in-process SDK harness.
 
@@ -852,6 +886,9 @@ def _sdk_harness_availability(canonical: str) -> HarnessAvailability:
     """
     if canonical == "antigravity":
         return True if _antigravity_credential_configured() else HARNESS_NEEDS_AUTH
+    subscription = _selected_claude_subscription_availability(canonical)
+    if subscription is not None:
+        return subscription
     if _family_provider_configured(canonical):
         return True
     if _family_fallback_provider_configured(canonical):
@@ -916,6 +953,9 @@ def _cli_family_availability(canonical: str, install_key: str) -> HarnessAvailab
         from omnigent.onboarding.opencode_auth import opencode_auth_summary
 
         return True if opencode_auth_summary().has_provider else "needs-auth"
+    subscription = _selected_claude_subscription_availability(canonical)
+    if subscription is not None:
+        return subscription
     # claude: ready when EITHER an omnigent-managed provider serves the family
     # (an API key / gateway the user set, incl. from the UI) OR the harness's
     # own subscription login is present (`claude auth status`, a subprocess —
@@ -1030,6 +1070,8 @@ def configured_harness_map() -> dict[str, HarnessAvailability]:
     harnesses report ``"needs-auth"`` when no local credential source is
     visible. Codex entries distinguish ``"binary-missing"`` from
     ``"needs-auth"``.
+    Inconclusive Claude subscription probes omit the affected aliases so
+    their readiness stays unknown.
 
     :returns: Mapping of harness spelling to readiness, e.g.
         ``{"claude-native": False, "codex-native": "needs-auth",
@@ -1083,9 +1125,15 @@ def configured_harness_map() -> dict[str, HarnessAvailability]:
             cache_key: executor.submit(_harness_availability, canonical)
             for cache_key, canonical in canonical_by_cache_key.items()
         }
-        availability_cache = {cache_key: future.result() for cache_key, future in futures.items()}
+        availability_cache: dict[tuple[str, ...], HarnessAvailability] = {}
+        for cache_key, future in futures.items():
+            try:
+                availability_cache[cache_key] = future.result()
+            except ClaudeLoginProbeError as exc:
+                _logger.warning("Claude subscription readiness is unknown: %s", exc)
 
     return {
         spelling: availability_cache[cache_key]
         for spelling, cache_key in cache_key_by_spelling.items()
+        if cache_key in availability_cache
     }

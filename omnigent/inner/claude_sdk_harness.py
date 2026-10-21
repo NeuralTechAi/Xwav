@@ -28,6 +28,8 @@ Env vars read at startup:
   command + model). The Databricks Unity Gateway is one producer of
   this transport; generic ``key`` / ``gateway`` providers are
   another. Otherwise the SDK uses its built-in API path.
+- ``HARNESS_CLAUDE_SDK_SUBSCRIPTION_ONLY``: remove competing API credentials
+  when the selected provider uses Claude's own login.
 - ``HARNESS_CLAUDE_SDK_DATABRICKS_PROFILE``: Databricks-specific
   ``~/.databrickscfg`` profile name, used by the executor for
   Databricks credential resolution / token refresh when the
@@ -108,6 +110,7 @@ _logger = logging.getLogger(__name__)
 # so misconfigurations surface as a single grep target.
 _ENV_MODEL = "HARNESS_CLAUDE_SDK_MODEL"
 _ENV_GATEWAY = "HARNESS_CLAUDE_SDK_GATEWAY"
+_ENV_SUBSCRIPTION_ONLY = "HARNESS_CLAUDE_SDK_SUBSCRIPTION_ONLY"
 _ENV_DATABRICKS_PROFILE = "HARNESS_CLAUDE_SDK_DATABRICKS_PROFILE"
 _ENV_GATEWAY_HOST = "HARNESS_CLAUDE_SDK_GATEWAY_HOST"
 _ENV_CWD = "HARNESS_CLAUDE_SDK_CWD"
@@ -290,6 +293,8 @@ def _build_claude_sdk_executor() -> Executor:
         permission_mode=os.environ.get(_ENV_PERMISSION_MODE, _DEFAULT_PERMISSION_MODE),
         system_prompt_preset=os.environ.get(_ENV_SYSTEM_PROMPT_PRESET) or None,
         gateway=gateway,
+        subscription_only=os.environ.get(_ENV_SUBSCRIPTION_ONLY, "").strip().lower()
+        in ("1", "true", "yes"),
         databricks_profile=os.environ.get(_ENV_DATABRICKS_PROFILE),
         gateway_host=os.environ.get(_ENV_GATEWAY_HOST) or None,
         base_url_override=os.environ.get(_ENV_GATEWAY_BASE_URL) or None,

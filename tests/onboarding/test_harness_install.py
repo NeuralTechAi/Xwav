@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -1140,6 +1141,8 @@ def test_harness_logout_runs_cli_logout_then_verifies(
     [
         # Claude prints JSON; loggedIn is the verdict regardless of exit code.
         ('{"loggedIn": true, "authMethod": "claude.ai"}', 0, True),
+        ('{"loggedIn": true, "authMethod": "api_key"}', 0, True),
+        ("not JSON", 0, True),
         ('{"loggedIn": false}', 1, False),
         # Exit 0 but loggedIn false → the structured verdict still wins.
         ('{"loggedIn": false}', 0, False),
@@ -1165,6 +1168,174 @@ def test_harness_cli_logged_in_uses_claude_json_verdict(
 
     monkeypatch.setattr(hi.subprocess, "run", _run)
     assert hi.harness_cli_logged_in(ANTHROPIC_FAMILY) is expected
+
+
+@pytest.mark.parametrize(
+    ("auth_method", "expected"),
+    [("none", False), ("claude.ai", True), ("oauth_token", True), ("api_key", False)],
+)
+def test_claude_subscription_probe_removes_competing_credentials(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, auth_method: str, expected: bool
+) -> None:
+    monkeypatch.setattr(hi.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(hi, "resolve_cli_binary", lambda _name: "/fallback/bin/claude")
+    for name in hi.CLAUDE_SUBSCRIPTION_ENV_UNSET:
+        monkeypatch.setenv(name, "competing-credential")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "subscription-token")
+    parent_env = dict(os.environ)
+
+    def _run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert argv == ["/fallback/bin/claude", "auth", "status"]
+        assert kwargs["timeout"] == hi.READINESS_CLI_PROBE_TIMEOUT_S
+        assert kwargs["stdin"] == subprocess.DEVNULL
+        env = kwargs["env"]
+        assert isinstance(env, dict)
+        assert not set(hi.CLAUDE_SUBSCRIPTION_ENV_UNSET).intersection(env)
+        for name in ("HOME", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN"):
+            assert env[name] == parent_env[name]
+        return subprocess.CompletedProcess(
+            argv,
+            1 if auth_method == "none" else 0,
+            stdout=json.dumps({"loggedIn": auth_method != "none", "authMethod": auth_method}),
+        )
+
+    monkeypatch.setattr(hi.subprocess, "run", _run)
+    assert (
+        hi.harness_cli_logged_in(
+            ANTHROPIC_FAMILY, timeout=hi.READINESS_CLI_PROBE_TIMEOUT_S, subscription_only=True
+        )
+        is expected
+    )
+    assert dict(os.environ) == parent_env
+    assert hi.CLAUDE_SUBSCRIPTION_ENV_UNSET == (
+        "ANTHROPIC_API_KEY",
+        "OMNIGENT_ANTHROPIC_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN",
+        "OMNIGENT_ANTHROPIC_AUTH_TOKEN",
+    )
+
+
+@pytest.mark.parametrize(
+    ("stdout", "returncode"),
+    [
+        ("sensitive-output", 0),
+        ("[]", 0),
+        ("{}", 0),
+        ('{"loggedIn": "true", "authMethod": "claude.ai"}', 0),
+        ('{"loggedIn": true}', 0),
+        ('{"loggedIn": true, "authMethod": null}', 0),
+        ('{"loggedIn": true, "authMethod": "claude.ai"}', 1),
+        ('{"loggedIn": false, "authMethod": "none"}', 2),
+    ],
+)
+def test_claude_subscription_probe_rejects_invalid_status(
+    monkeypatch: pytest.MonkeyPatch, stdout: str, returncode: int
+) -> None:
+    monkeypatch.setattr(hi, "resolve_cli_binary", lambda _name: "/fake/bin/claude")
+    monkeypatch.setattr(
+        hi.subprocess,
+        "run",
+        lambda argv, **_kwargs: subprocess.CompletedProcess(
+            argv, returncode, stdout=stdout, stderr="sensitive-output"
+        ),
+    )
+    with pytest.raises(hi.ClaudeLoginProbeError) as error:
+        hi.harness_cli_logged_in(ANTHROPIC_FAMILY, subscription_only=True)
+    assert "sensitive-output" not in str(error.value)
+    assert not hi._LOGIN_PROBE_CACHE
+
+
+@pytest.mark.parametrize(
+    ("failure", "reason"),
+    [
+        (OSError("sensitive-output"), "could not start"),
+        (subprocess.TimeoutExpired("sensitive-output", 10, "sensitive-output"), "timed out"),
+    ],
+)
+def test_claude_subscription_probe_distinguishes_failure_from_missing_login(
+    monkeypatch: pytest.MonkeyPatch, failure: Exception, reason: str
+) -> None:
+    monkeypatch.setattr(hi.shutil, "which", lambda _name: "/fake/bin/claude")
+    monkeypatch.setattr(hi, "resolve_cli_binary", lambda _name: "/fake/bin/claude")
+
+    def _fail(*_args: object, **_kwargs: object) -> None:
+        raise failure
+
+    monkeypatch.setattr(hi.subprocess, "run", _fail)
+    with pytest.raises(hi.ClaudeLoginProbeError, match=reason) as error:
+        hi.harness_cli_logged_in(ANTHROPIC_FAMILY, subscription_only=True)
+    assert "sensitive-output" not in str(error.value)
+    assert error.value.__cause__ is None
+    assert hi.harness_cli_logged_in(ANTHROPIC_FAMILY) is False
+    assert not hi._LOGIN_PROBE_CACHE
+
+
+@pytest.mark.parametrize("strict_first", [False, True])
+def test_claude_subscription_and_broad_probe_caches_are_independent(
+    monkeypatch: pytest.MonkeyPatch, strict_first: bool
+) -> None:
+    monkeypatch.setattr(hi.shutil, "which", lambda _name: "/fake/bin/claude")
+    monkeypatch.setattr(hi, "resolve_cli_binary", lambda _name: "/fake/bin/claude")
+    for name in hi.CLAUDE_SUBSCRIPTION_ENV_UNSET:
+        monkeypatch.delenv(name, raising=False)
+    calls: list[object] = []
+
+    def _run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(kwargs["env"])
+        return subprocess.CompletedProcess(
+            argv, 0, stdout='{"loggedIn": true, "authMethod": "claude.ai"}'
+        )
+
+    monkeypatch.setattr(hi.subprocess, "run", _run)
+    for strict in (strict_first, not strict_first, strict_first, not strict_first):
+        assert hi.harness_cli_logged_in(ANTHROPIC_FAMILY, subscription_only=strict) is True
+    assert len(calls) == 2
+    assert calls[0] == calls[1]
+
+
+@pytest.mark.parametrize("subscription_only", [False, True])
+@pytest.mark.parametrize("env_name", ["HOME", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN"])
+def test_claude_login_probe_cache_tracks_auth_environment(
+    monkeypatch: pytest.MonkeyPatch, env_name: str, subscription_only: bool
+) -> None:
+    monkeypatch.setattr(hi.shutil, "which", lambda _name: "/fake/bin/claude")
+    monkeypatch.setattr(hi, "resolve_cli_binary", lambda _name: "/fake/bin/claude")
+    monkeypatch.setenv(env_name, "first-sensitive-value")
+    runs = 0
+
+    def _run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal runs
+        runs += 1
+        env = kwargs["env"]
+        assert isinstance(env, dict)
+        logged_in = env[env_name] == "first-sensitive-value"
+        return subprocess.CompletedProcess(
+            argv,
+            0 if logged_in else 1,
+            stdout=json.dumps(
+                {"loggedIn": logged_in, "authMethod": "claude.ai" if logged_in else "none"}
+            ),
+        )
+
+    monkeypatch.setattr(hi.subprocess, "run", _run)
+    assert hi.harness_cli_logged_in(ANTHROPIC_FAMILY, subscription_only=subscription_only)
+    assert hi.harness_cli_logged_in(ANTHROPIC_FAMILY, subscription_only=subscription_only)
+    assert runs == 1
+    monkeypatch.setenv(env_name, "second-sensitive-value")
+    assert not hi.harness_cli_logged_in(ANTHROPIC_FAMILY, subscription_only=subscription_only)
+    assert not hi.harness_cli_logged_in(ANTHROPIC_FAMILY, subscription_only=subscription_only)
+    assert runs == 3
+    assert "sensitive-value" not in repr(hi._LOGIN_PROBE_CACHE)
+
+
+def test_claude_subscription_probe_requires_claude_binary(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(hi, "resolve_cli_binary", lambda _name: None)
+    with pytest.raises(hi.ClaudeLoginProbeError, match="could not find the CLI"):
+        hi.harness_cli_logged_in(ANTHROPIC_FAMILY, subscription_only=True)
+    with pytest.raises(ValueError, match="only for Claude"):
+        hi.harness_cli_logged_in(OPENAI_FAMILY, subscription_only=True)
 
 
 @pytest.mark.parametrize(

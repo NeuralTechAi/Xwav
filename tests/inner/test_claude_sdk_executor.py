@@ -3542,15 +3542,12 @@ def test_non_databricks_model_without_routing_does_not_raise() -> None:
 
 
 @pytest.mark.asyncio
-async def test_anthropic_api_key_stripped_during_connect(monkeypatch):
-    """``_get_or_create_client`` must strip ``ANTHROPIC_API_KEY`` from
-    ``os.environ`` during the ``connect()`` window so the Claude CLI
-    uses subscription auth instead of a developer API key.
-
-    This test drives ``_get_or_create_client`` with a stub SDK and
-    captures ``os.environ`` at the moment ``connect()`` is invoked,
-    ensuring both ``CLAUDECODE`` and ``ANTHROPIC_API_KEY`` are absent.
-    """
+@pytest.mark.parametrize("subscription_only", [False, True])
+@pytest.mark.parametrize("connect_fails", [False, True])
+async def test_anthropic_api_key_stripped_during_connect(
+    monkeypatch, subscription_only: bool, connect_fails: bool
+):
+    """Selected subscriptions exclude competing auth only during the CLI spawn."""
     from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     # Env snapshot captured inside connect() -- proves the real code
@@ -3561,17 +3558,17 @@ async def test_anthropic_api_key_stripped_during_connect(monkeypatch):
         """Minimal client whose connect() captures os.environ."""
 
         def __init__(self, options):
-            """Store options for protocol compliance.
-
-            :param options: SDK options object (unused by stub).
-            """
-            self.options = options
+            """Keep the options used to build the SDK child's environment."""
+            self.env = dict(options.env)
             self._query = None
             self._transport = None
 
         async def connect(self) -> None:
             """Record env state at the moment the real code calls connect."""
             connect_env.update(os.environ)
+            connect_env.update(self.env)
+            if connect_fails:
+                raise OSError("synthetic connect failure")
 
         async def disconnect(self) -> None:
             """No-op disconnect."""
@@ -3583,15 +3580,33 @@ async def test_anthropic_api_key_stripped_during_connect(monkeypatch):
 
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test-secret")
     monkeypatch.setenv("CLAUDECODE", "parent-value")
+    competing_env = {
+        "ANTHROPIC_AUTH_TOKEN": "ambient-token",
+        "OMNIGENT_ANTHROPIC_API_KEY": "prefixed-key",
+        "OMNIGENT_ANTHROPIC_AUTH_TOKEN": "prefixed-token",
+    }
+    preserved_env = {
+        "ANTHROPIC_BASE_URL": "https://unselected.example.com",
+        "CLAUDE_CODE_USE_BEDROCK": "1",
+        "CLAUDE_CODE_USE_VERTEX": "1",
+        "CLAUDE_CODE_USE_FOUNDRY": "1",
+        "CLAUDE_CODE_USE_GATEWAY": "1",
+        "CLAUDE_CODE_OAUTH_TOKEN": "selected-subscription-token",
+    }
+    for name, value in {**competing_env, **preserved_env}.items():
+        monkeypatch.setenv(name, value)
 
-    executor = ClaudeSDKExecutor()
-    options = SimpleNamespace()
-    await executor._get_or_create_client(
-        _StubSDK,  # type: ignore[arg-type]
-        session_key="test-session",
-        options=options,
-        model=None,
-    )
+    executor = ClaudeSDKExecutor(subscription_only=subscription_only)
+    options = SimpleNamespace(env={**competing_env, **preserved_env})
+    if connect_fails:
+        with pytest.raises(RuntimeError, match="synthetic connect failure"):
+            await executor._get_or_create_client(
+                _StubSDK, session_key="test-session", options=options, model=None
+            )
+    else:
+        await executor._get_or_create_client(
+            _StubSDK, session_key="test-session", options=options, model=None
+        )
 
     # Both keys must be absent at the moment connect() ran.
     assert "ANTHROPIC_API_KEY" not in connect_env, (
@@ -3603,6 +3618,15 @@ async def test_anthropic_api_key_stripped_during_connect(monkeypatch):
     # Both are restored after _get_or_create_client returns.
     assert os.environ["ANTHROPIC_API_KEY"] == "sk-ant-test-secret"
     assert os.environ["CLAUDECODE"] == "parent-value"
+    for name, value in competing_env.items():
+        if subscription_only:
+            assert name not in connect_env
+        else:
+            assert connect_env[name] == value
+        assert os.environ[name] == value
+    for name, value in preserved_env.items():
+        assert connect_env[name] == value
+        assert os.environ[name] == value
 
 
 @pytest.mark.asyncio

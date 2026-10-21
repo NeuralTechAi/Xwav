@@ -689,6 +689,11 @@ def configure_agent_harness_with_provider(
             # the ChatGPT login — a no-op when the user's config sets no
             # custom default.
             env["HARNESS_CODEX_MODEL_PROVIDER"] = "openai"
+        elif harness_type == "claude-sdk":
+            # Managed gateways use the subscription provider shape but own their auth.
+            env["HARNESS_CLAUDE_SDK_SUBSCRIPTION_ONLY"] = (
+                "false" if claude_managed_gateway()[1] else "true"
+            )
         return
 
     if entry.kind == CLI_CONFIG_KIND:
@@ -1343,7 +1348,7 @@ def _build_claude_sdk_spawn_env(
     :returns: A dict of env-var overrides for
         :meth:`HarnessProcessManager.get_client(env=...)`.
     """
-    env: dict[str, str] = {}
+    env: dict[str, str] = {"HARNESS_CLAUDE_SDK_SUBSCRIPTION_ONLY": "false"}
     model = _resolve_bound_launch_model(spec, "claude-sdk")
     if model is not None:
         from omnigent.inference_config import binding_for_harness, load_runtime_inference_config

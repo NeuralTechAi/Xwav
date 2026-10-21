@@ -8787,21 +8787,63 @@ def test_resolve_native_claude_config_spec_provider_default(
 
 def test_resolve_native_claude_config_subscription_uses_cli_login(
     _isolated_provider_config: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A claude subscription default → None (use the CLI's own enterprise login).
+    """The selected login excludes competing credentials at every native entry point."""
+    from omnigent.onboarding.harness_install import CLAUDE_SUBSCRIPTION_ENV_UNSET
+    from omnigent.runner.native.orchestration import _claude_terminal_env_unset
 
-    A subscription means "use whatever ~/.claude is logged into" (e.g. a
-    Claude Enterprise seat), NOT a gateway. The resolver must return None so
-    the native launch leaves Claude's own login alone — and must NOT fall
-    back to ucode.
-    """
     _seed_config(
         _isolated_provider_config,
         {"claude-subscription": {"kind": "subscription", "cli": "claude", "default": True}},
     )
 
     cfg = claude_native.resolve_native_claude_config(spec=_no_auth_claude_spec())
-    assert cfg is None
+    assert cfg is not None
+    assert cfg.env == {}
+    assert cfg.api_key_helper is None
+    assert cfg.env_unset == CLAUDE_SUBSCRIPTION_ENV_UNSET
+    for name in CLAUDE_SUBSCRIPTION_ENV_UNSET:
+        monkeypatch.setenv(name, "synthetic-competing-key")
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "synthetic-subscription-token")
+
+    body = claude_native._claude_terminal_request(
+        (),
+        command="claude",
+        bridge_dir=_test_bridge_dir(_isolated_provider_config, monkeypatch),
+        claude_config=cfg,
+    )
+    assert body["spec"]["command"] == "env"
+    args = body["spec"]["args"]
+    cli_unset = {args[index + 1] for index, value in enumerate(args) if value == "-u"}
+    runner_unset = _claude_terminal_env_unset(cfg)
+    _, _, probe_env = claude_native._claude_model_probe_invocation(cfg)
+    for name in CLAUDE_SUBSCRIPTION_ENV_UNSET:
+        assert name in cli_unset
+        assert name in runner_unset
+        assert name not in probe_env
+    assert "CLAUDE_CODE_OAUTH_TOKEN" not in cli_unset
+    assert "CLAUDE_CODE_OAUTH_TOKEN" not in runner_unset
+    assert probe_env["CLAUDE_CODE_OAUTH_TOKEN"] == "synthetic-subscription-token"
+
+    # An auth-only config still inherits the CLI's routing/model settings.
+    before = claude_native.claude_catalog_fingerprint(cfg)
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "https://gateway.example")
+    assert claude_native.claude_catalog_fingerprint(cfg) != before
+    assert not claude_native._serves_canonical_anthropic_ids(cfg)
+
+
+def test_selected_native_subscription_preserves_managed_gateway(
+    _isolated_provider_config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _seed_config(
+        _isolated_provider_config,
+        {"claude": {"kind": "subscription", "cli": "claude", "default": True}},
+    )
+    monkeypatch.setattr(
+        claude_native, "managed_claude_gateway_signal", lambda: ("https://gateway.example", True)
+    )
+    assert claude_native.resolve_native_claude_config(spec=_no_auth_claude_spec()) is None
 
 
 def test_resolve_native_claude_config_global_databricks_auth_matches_session(

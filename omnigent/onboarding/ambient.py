@@ -130,12 +130,12 @@ class DetectedProvider:
 def _claude_credentials_path() -> Path:
     """Return the path to the Claude CLI's stored login credentials.
 
-    Honors ``$HOME`` (and thus ``monkeypatch.setenv("HOME", ...)``) so the
-    check can be redirected in tests.
+    Honors ``CLAUDE_CONFIG_DIR`` and falls back to ``$HOME/.claude``.
 
     :returns: Path to ``~/.claude/.credentials.json``.
     """
-    return Path(os.path.expanduser("~")) / ".claude" / ".credentials.json"
+    directory = os.environ.get("CLAUDE_CONFIG_DIR")
+    return (Path(directory) if directory else Path.home() / ".claude") / ".credentials.json"
 
 
 def _codex_auth_path() -> Path:
@@ -617,7 +617,7 @@ def claude_managed_gateway_display_name(paths: tuple[Path, ...] | None = None) -
     return urlsplit(base_url).hostname or "Claude Code gateway"
 
 
-def _claude_login_detected() -> bool:
+def _claude_login_detected(*, subscription_only: bool = False) -> bool:
     """Return whether a usable Claude Code subscription login is present.
 
     File-first, with a macOS Keychain fallback. Claude Code stores its OAuth
@@ -642,6 +642,8 @@ def _claude_login_detected() -> bool:
     (``harness_cli_logged_in`` returns ``False`` there), so a Keychain
     credential is detected only when the CLI that wrote it is still installed.
 
+    :param subscription_only: Exclude competing API credentials from the
+        Keychain probe; probe errors propagate instead of implying no login.
     :returns: ``True`` when a usable Claude subscription login is present — via
         the credentials file on any platform, or via the macOS Keychain through
         the CLI status fallback; ``False`` otherwise.
@@ -653,8 +655,15 @@ def _claude_login_detected() -> bool:
         # checked above. Ask the CLI itself (``claude auth status`` reads the
         # Keychain) rather than reimplement Keychain access here. Lazy import
         # keeps this module's import graph light and pays nothing off-macOS.
-        from omnigent.onboarding.harness_install import harness_cli_logged_in
+        from omnigent.onboarding.harness_install import (
+            READINESS_CLI_PROBE_TIMEOUT_S,
+            harness_cli_logged_in,
+        )
 
+        if subscription_only:
+            return harness_cli_logged_in(
+                ANTHROPIC_FAMILY, subscription_only=True, timeout=READINESS_CLI_PROBE_TIMEOUT_S
+            )
         return harness_cli_logged_in(ANTHROPIC_FAMILY)
     return False
 

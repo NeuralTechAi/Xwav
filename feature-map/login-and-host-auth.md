@@ -30,6 +30,9 @@ be able to write resources without a separate Omnigent account.
   pending host sign-in, its first message waits on that same runner until the
   sign-in finishes or its bounded wait expires.
 - `proxy-env`: login detects the right mode even with HTTP proxy variables set.
+- `selected-claude-auth`: a selected Claude subscription checks its own login,
+  excluding competing API credentials in readiness and launch. A missing login
+  warns in both host modes; an inconclusive status probe remains unknown.
 - `host-lifecycle`: register in the foreground or background, run as a per-user
   system service, and check status, stop, stop a session, or reset the host ID.
   A machine runs one host per host ID and Databricks workspace, even through
@@ -160,6 +163,33 @@ Never run these commands against the real `~/.omnigent` or `~/.databrickscfg`.
   `tests/host/test_service.py::test_service_entry_waits_while_another_daemon_serves_the_workspace`.
   A real check needs two URLs that reach one workspace, so run it only in a
   private-network sandbox against a disposable server.
+- **Background harness credentials (own environment, installed Codex/Claude SDK):**
+  `tests/e2e/test_background_host_harness_credentials.py::test_background_host_preserves_explicit_harness_credentials`
+  compares foreground `host --server` with `host --server --background` using
+  isolated homes, synthetic keys, and real host advertisements. Both a saved
+  provider environment reference and an explicitly named runner passthrough
+  must keep Codex ready after background startup. Named passthrough must also
+  preserve a Claude SDK subscription OAuth token. An unrelated Gemini key must
+  remain excluded. No model requests are sent. The SDK case requires isolated
+  machine authentication; it uses bubblewrap when managed settings exist on
+  Linux and skips if isolation is unavailable. This checks fresh background
+  hosts, not existing-daemon environment refresh, `start`, or an installed
+  launchd/systemd service; those entry points need separate verification.
+- **`selected-claude-auth` (own environment, Linux, installed Claude CLI and bubblewrap):**
+  `tests/e2e/test_claude_subscription_readiness.py::test_selected_subscription_rejects_api_only_host`
+  selects a subscription with a synthetic API key and no login, then reads
+  real host advertisements from foreground and background CLI launches. Both
+  must report `needs-auth`. Network/PID namespaces and hidden managed settings
+  keep the test independent of the developer's account. Credential combinations,
+  managed gateways, probe errors and SDK file/Keychain detection are covered in
+  `tests/onboarding/test_harness_readiness.py`, `test_harness_install.py` and
+  `test_ambient.py`. Native launch env checks cover the local CLI, web runner and
+  model probe in `tests/harnesses/claude_native/test_claude_native.py`; SDK child
+  credentials are checked in `tests/inner/test_claude_sdk_executor.py`.
+  In the web New Chat picker, compare the same host in each mode: no subscription
+  login must show an authentication warning in both, while a stored login must
+  remain available even with an unrelated API key set. These checks make no
+  inference calls and do not install a system service.
 - **`host-inline-login` (own environment, Linux):** run
   `uv run --no-sync pytest tests/e2e/test_host_inline_login.py --reruns 0 -q`.
   It starts an isolated real server and a local HTTPS mock workspace, then

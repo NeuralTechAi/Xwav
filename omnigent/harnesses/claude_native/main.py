@@ -437,6 +437,7 @@ class ClaudeNativeUcodeConfig:
         Claude Code's ``modelOverrides`` setting. Consumers treat both sides
         as opaque ids; an empty map means the provider supplied no reliable
         equivalence information.
+    :param env_unset: Ambient variables excluded by the selected auth source.
     """
 
     env: dict[str, str]
@@ -444,6 +445,7 @@ class ClaudeNativeUcodeConfig:
     model: str | None = None
     routable_models: tuple[str, ...] = ()
     model_overrides: dict[str, str] = field(default_factory=dict)
+    env_unset: tuple[str, ...] = ()
 
 
 def _serves_canonical_anthropic_ids(claude_config: ClaudeNativeUcodeConfig) -> bool:
@@ -457,7 +459,7 @@ def _serves_canonical_anthropic_ids(claude_config: ClaudeNativeUcodeConfig) -> b
         return False
     base_url = claude_config.env.get(_UCODE_CLAUDE_BASE_URL_ENV)
     if not base_url:
-        return True
+        return not _ambient_env_is_non_anthropic_gateway()
     host = (urlparse(base_url).hostname or "").lower()
     return host == "anthropic.com" or host.endswith(".anthropic.com")
 
@@ -971,8 +973,8 @@ def _claude_model_probe_invocation(
     env.pop("DATABRICKS_CONFIG_PROFILE", None)
     env.pop(_CLAUDE_CODE_NESTED_SESSION_ENV, None)
     env.pop(_CLAUDE_NONESSENTIAL_TRAFFIC_ENV, None)
-    if claude_config is not None and claude_config.api_key_helper:
-        env.pop(_ANTHROPIC_API_KEY_ENV, None)
+    for name in native_claude_auth_env_unset(claude_config):
+        env.pop(name, None)
     return command, launch_args, env
 
 
@@ -1314,8 +1316,9 @@ def claude_catalog_fingerprint(claude_config: ClaudeNativeUcodeConfig | None) ->
     from omnigent.onboarding.ambient import claude_managed_model_picker
 
     command, _ = resolve_claude_launch("claude", [])
+    uses_cli_settings = claude_config is None or not claude_config.env
     ambient_gateway = None
-    if claude_config is None:
+    if uses_cli_settings:
         managed_base_url, _ = managed_claude_gateway_signal()
         ambient_gateway = managed_base_url or os.environ.get(_UCODE_CLAUDE_BASE_URL_ENV)
     return fingerprint_of(
@@ -1325,9 +1328,10 @@ def claude_catalog_fingerprint(claude_config: ClaudeNativeUcodeConfig | None) ->
         claude_config.api_key_helper if claude_config is not None else None,
         claude_config.model if claude_config is not None else None,
         sorted(claude_config.routable_models) if claude_config is not None else None,
+        claude_config.env_unset if claude_config is not None else (),
         binary_identity(command),
         ambient_gateway,
-        claude_managed_model_picker() if claude_config is None else None,
+        claude_managed_model_picker() if uses_cli_settings else None,
     )
 
 
@@ -1516,6 +1520,17 @@ def claude_launch_catalog_is_stale(claude_config: ClaudeNativeUcodeConfig | None
     return model_catalog_store.catalog_is_stale(
         "claude-native", claude_catalog_fingerprint(claude_config)
     )
+
+
+def native_claude_auth_env_unset(
+    claude_config: ClaudeNativeUcodeConfig | None,
+) -> tuple[str, ...]:
+    """Ambient credentials that would override the selected Claude auth source."""
+    if claude_config is None:
+        return ()
+    if claude_config.api_key_helper:
+        return (*claude_config.env_unset, _ANTHROPIC_API_KEY_ENV)
+    return claude_config.env_unset
 
 
 def build_native_claude_terminal_env(
@@ -3245,8 +3260,8 @@ def _native_claude_config_from_entry(
     - ``bedrock`` → Bedrock-style gateway config
       (:func:`_bedrock_config_for_native_claude`).
     - ``databricks`` → the existing ucode path keyed on the provider profile.
-    - ``subscription`` → ``None`` (use the ``claude`` CLI's own login, e.g. a
-      Claude Enterprise seat) — intentional, not a fallback to ucode.
+    - ``subscription`` → use the CLI's login without competing ambient API
+      credentials. Managed gateway settings retain control of their own auth.
 
     :param entry: The resolved provider entry.
     :param refresh_models: Forwarded to the ucode path's model discovery; pass
@@ -3259,6 +3274,7 @@ def _native_claude_config_from_entry(
         GATEWAY_KIND,
         KEY_KIND,
         LOCAL_KIND,
+        SUBSCRIPTION_KIND,
     )
 
     if entry.kind in (KEY_KIND, GATEWAY_KIND, LOCAL_KIND):
@@ -3268,6 +3284,10 @@ def _native_claude_config_from_entry(
     if entry.kind == DATABRICKS_KIND:
         log_info_once(_logger, "native-claude routing: Databricks ucode profile %r", entry.profile)
         return _ucode_config_for_profile(entry.profile, refresh_models=refresh_models)
+    if entry.kind == SUBSCRIPTION_KIND and not managed_claude_gateway_signal()[1]:
+        from omnigent.onboarding.harness_install import CLAUDE_SUBSCRIPTION_ENV_UNSET
+
+        return ClaudeNativeUcodeConfig(env={}, env_unset=CLAUDE_SUBSCRIPTION_ENV_UNSET)
     log_info_once(
         _logger, "native-claude routing: Claude CLI login (subscription provider %r)", entry.name
     )
@@ -6548,8 +6568,9 @@ def _claude_terminal_request(
         unset_env_vars = [
             _ANTHROPIC_API_KEY_ENV,
             _CLAUDE_CODE_NESTED_SESSION_ENV,
+            *native_claude_auth_env_unset(claude_config),
         ]
-        env_args = [part for var in unset_env_vars for part in ("-u", var)]
+        env_args = [part for var in dict.fromkeys(unset_env_vars) for part in ("-u", var)]
         spec["command"] = "env"
         spec["args"] = [*env_args, command, *args]
     return {

@@ -577,6 +577,37 @@ def managed_claude_settings(config_home: Path, monkeypatch: pytest.MonkeyPatch) 
     return settings
 
 
+@pytest.mark.parametrize("selection", ["named", "default"])
+def test_claude_sdk_selected_subscription_ignores_ambient_api_credentials(
+    config_home: Path, monkeypatch: pytest.MonkeyPatch, selection: str
+) -> None:
+    """A selected subscription reaches the executor without adopting an ambient key."""
+    _write_config(
+        config_home,
+        {
+            "providers": {
+                "claude-subscription": {
+                    "kind": "subscription",
+                    "cli": "claude",
+                    "default": selection == "default",
+                }
+            }
+        },
+    )
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "unselected-key")
+    spec = _make_spec(
+        harness="claude-sdk",
+        auth=ProviderAuth(name="claude-subscription") if selection == "named" else None,
+    )
+
+    env = _build_claude_sdk_spawn_env(spec, workdir=None)
+
+    assert env["HARNESS_CLAUDE_SDK_SUBSCRIPTION_ONLY"] == "true"
+    assert "HARNESS_CLAUDE_SDK_GATEWAY" not in env
+    assert "HARNESS_CLAUDE_SDK_API_KEY_HELPER" not in env
+    assert os.environ["ANTHROPIC_API_KEY"] == "unselected-key"
+
+
 @pytest.mark.parametrize("configured_subscription", [True, False])
 @pytest.mark.parametrize("credential", ["helper", "gateway"])
 def test_claude_sdk_managed_credential_beats_unselected_saved_key(
@@ -607,6 +638,7 @@ def test_claude_sdk_managed_credential_beats_unselected_saved_key(
     assert not any(key.startswith("HARNESS_CLAUDE_SDK_GATEWAY") for key in env)
     assert "HARNESS_CLAUDE_SDK_API_KEY_HELPER" not in env
     assert "HARNESS_CLAUDE_SDK_MODEL" not in env
+    assert env["HARNESS_CLAUDE_SDK_SUBSCRIPTION_ONLY"] == "false"
     for for_launch in (True, False):
         provider = _resolve_provider_for_build(
             spec, harness_type="claude-sdk", for_launch=for_launch
@@ -663,7 +695,10 @@ def test_claude_sdk_managed_fallback_does_not_change_native_resolution(
 
 @pytest.mark.parametrize("selection", ["named", "default"])
 def test_claude_sdk_explicit_provider_beats_managed_fallback(
-    config_home: Path, managed_claude_settings: Path, selection: str
+    config_home: Path,
+    managed_claude_settings: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    selection: str,
 ) -> None:
     """Managed CLI credentials do not override an intentional provider choice."""
     key_provider: dict[str, object] = {
@@ -672,6 +707,7 @@ def test_claude_sdk_explicit_provider_beats_managed_fallback(
     }
     if selection == "default":
         key_provider["default"] = ["anthropic"]
+    monkeypatch.setenv("HARNESS_CLAUDE_SDK_SUBSCRIPTION_ONLY", "true")
     _write_config(config_home, {"providers": {"selected": key_provider}})
     spec = _make_spec(
         harness="claude-sdk",
@@ -684,6 +720,7 @@ def test_claude_sdk_explicit_provider_beats_managed_fallback(
     assert env["HARNESS_CLAUDE_SDK_GATEWAY_BASE_URL"] == "https://selected.example.com"
     assert env["HARNESS_CLAUDE_SDK_GATEWAY_AUTH_COMMAND"] == "printf %s selected-key"
     assert env["HARNESS_CLAUDE_SDK_MODEL"] == "selected-model"
+    assert env["HARNESS_CLAUDE_SDK_SUBSCRIPTION_ONLY"] == "false"
 
 
 def test_claude_sdk_managed_url_without_credentials_keeps_saved_key_fallback(

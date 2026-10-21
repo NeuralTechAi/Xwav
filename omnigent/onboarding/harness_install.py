@@ -35,6 +35,7 @@ when the credentials file is absent — see ``ambient._claude_login_detected``.)
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -51,12 +52,20 @@ from packaging.version import InvalidVersion, Version
 from omnigent._platform import resolve_cli_binary
 from omnigent.acp_cli_harnesses import ACP_CLI_HARNESSES
 from omnigent.cli_invocation import cli_invocation
+from omnigent.errors import OmnigentError
 from omnigent.harness_install_spec import HarnessInstallSpec, SetupStep
 from omnigent.harnesses.opencode_native.client import (
     OPENCODE_MAX_VERSION_EXCLUSIVE,
     OPENCODE_MIN_VERSION,
 )
 from omnigent.onboarding.provider_config import ANTHROPIC_FAMILY, GEMINI_FAMILY, OPENAI_FAMILY
+from omnigent.util.env_credentials import env_names_with_omnigent_prefix
+
+CLAUDE_SUBSCRIPTION_ENV_UNSET: tuple[str, ...] = tuple(
+    name
+    for credential in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
+    for name in env_names_with_omnigent_prefix(credential)
+)
 
 # Pi is not a configure-menu family (the menu is Claude + Codex), but the
 # first-run ``run`` flow falls back to it, so it has install metadata too.
@@ -809,7 +818,7 @@ READINESS_CLI_PROBE_TIMEOUT_S = 10.0
 # after a short TTL — a cached "not logged in" would blind the setup
 # wizard's confirmation right after a successful login.
 _VERSION_PROBE_CACHE: dict[tuple[str, int, int], str] = {}
-_LOGIN_PROBE_CACHE: dict[tuple[str, str], float] = {}
+_LOGIN_PROBE_CACHE: dict[tuple[str, str, bool, str], float] = {}
 _PROBE_CACHE_LOCK = threading.Lock()
 _LOGIN_PROBE_CACHE_TTL_S = 120.0
 _PROBE_CACHE_MAX_ENTRIES = 64
@@ -1170,7 +1179,16 @@ def install_harness_cli(key: str) -> bool:
     return try_install_harness_cli(key).installed
 
 
-def harness_cli_logged_in(key: str, timeout: float = _DEFAULT_CLI_PROBE_TIMEOUT_S) -> bool:
+class ClaudeLoginProbeError(OmnigentError):
+    """Claude's subscription login status could not be determined."""
+
+
+def harness_cli_logged_in(
+    key: str,
+    timeout: float = _DEFAULT_CLI_PROBE_TIMEOUT_S,
+    *,
+    subscription_only: bool = False,
+) -> bool:
     """Return whether the harness CLI itself reports a usable login.
 
     Asks the CLI's own status command (``claude auth status`` /
@@ -1189,33 +1207,53 @@ def harness_cli_logged_in(key: str, timeout: float = _DEFAULT_CLI_PROBE_TIMEOUT_
     (``0`` only when logged in) and stdout is never parsed.
 
     Positive verdicts are cached for :data:`_LOGIN_PROBE_CACHE_TTL_S`
-    seconds per ``(key, binary)`` so readiness refreshes don't exec the
-    vendor CLI on every pass; negative verdicts are never cached, and
+    seconds per harness, binary, probe mode and child environment so readiness
+    refreshes don't exec the vendor CLI on every pass. Negatives are never cached, and
     :func:`harness_logout` invalidates the key's entries.
 
     :param key: A harness family, e.g. ``"anthropic"`` (Claude),
         ``"openai"`` (Codex), or ``"gemini"`` (Antigravity, via ``agy models``).
     :param timeout: Seconds to wait for the status subprocess, e.g. ``10.0`` on
         the readiness path where a hung CLI must not stall the refresh.
+    :param subscription_only: Claude-only check for ``claude.ai`` / ``oauth_token``
+        auth, with competing API key/bearer variables removed from the child env.
+        Managed settings still apply; callers must credit managed gateways separately.
     :returns: ``True`` when the CLI reports a usable login; ``False`` when the
         key has no status command, the CLI binary is missing, the status
         process failed to spawn, or the CLI reports no login.
+    :raises ClaudeLoginProbeError: A subscription-only probe could not run or
+        returned an invalid status, rather than reporting missing authentication.
+    :raises ValueError: Subscription-only mode was requested for another harness.
     """
+    if subscription_only and key != ANTHROPIC_FAMILY:
+        raise ValueError("subscription_only is supported only for Claude")
     spec = harness_install_spec(key)
     if spec is None or spec.status_args is None:
         return False
-    binary = resolve_cli_binary(spec.binary) if key == GEMINI_FAMILY else shutil.which(spec.binary)
+    binary = (
+        resolve_cli_binary(spec.binary)
+        if key == GEMINI_FAMILY or subscription_only
+        else shutil.which(spec.binary)
+    )
     if binary is None:
+        if subscription_only:
+            raise ClaudeLoginProbeError("Claude subscription auth status could not find the CLI.")
         return False
+    probe_env = dict(os.environ)
+    if subscription_only:
+        for name in CLAUDE_SUBSCRIPTION_ENV_UNSET:
+            probe_env.pop(name, None)
     # Positive verdicts are TTL-cached (see the cache block above): logins
     # are sticky, and the readiness loop re-probing a logged-in CLI every
     # refresh is the ambient storm. Negatives always re-probe so a login
     # made a moment ago is seen immediately.
-    cache_key = (key, binary)
+    # ponytail: unrelated environment changes can cause an extra probe, not a stale login.
+    env_signature = hashlib.sha256(json.dumps(probe_env, sort_keys=True).encode()).hexdigest()
+    cache_key = (key, binary, subscription_only, env_signature)
     with _PROBE_CACHE_LOCK:
         if time.monotonic() < _LOGIN_PROBE_CACHE.get(cache_key, 0.0):
             return True
-    argv_binary = binary if key == GEMINI_FAMILY else spec.binary
+    argv_binary = binary if key == GEMINI_FAMILY or subscription_only else spec.binary
     try:
         result = subprocess.run(
             [argv_binary, *spec.status_args],
@@ -1225,8 +1263,14 @@ def harness_cli_logged_in(key: str, timeout: float = _DEFAULT_CLI_PROBE_TIMEOUT_
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
+            env=probe_env,
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        if subscription_only:
+            reason = (
+                "timed out" if isinstance(exc, subprocess.TimeoutExpired) else "could not start"
+            )
+            raise ClaudeLoginProbeError(f"Claude subscription auth status {reason}.") from None
         return False
     # Dispatch is explicit per spec: a harness that publishes a JSON status
     # object names its boolean field in ``login_status_key`` (Claude
@@ -1241,7 +1285,24 @@ def harness_cli_logged_in(key: str, timeout: float = _DEFAULT_CLI_PROBE_TIMEOUT_
             payload = json.loads(result.stdout)
         except (json.JSONDecodeError, ValueError):
             payload = None
-        if isinstance(payload, dict) and status_key in payload:
+        if subscription_only:
+            if (
+                not isinstance(payload, dict)
+                or not isinstance(payload.get(status_key), bool)
+                or not isinstance(payload.get("authMethod"), str)
+            ):
+                raise ClaudeLoginProbeError(
+                    "Claude subscription auth status returned invalid JSON."
+                )
+            if result.returncode not in (0, 1) or (result.returncode and payload[status_key]):
+                raise ClaudeLoginProbeError(
+                    "Claude subscription auth status exited unsuccessfully."
+                )
+            logged_in = payload[status_key] and payload["authMethod"] in (
+                "claude.ai",
+                "oauth_token",
+            )
+        elif isinstance(payload, dict) and status_key in payload:
             logged_in = bool(payload[status_key])
     if logged_in:
         with _PROBE_CACHE_LOCK:
