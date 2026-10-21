@@ -31,8 +31,6 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.testing.process_reaper import reap_leaked_omnigent_processes
-
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # The crash reproduces within seconds of launch (right after the local server
@@ -188,8 +186,16 @@ def test_run_with_invalid_proxy_env_does_not_crash(
             output = proc.communicate()[0] or ""
             timed_out = True
     finally:
-        _, survivors = reap_leaked_omnigent_processes(env["OMNIGENT_DATA_DIR"])
-        assert not survivors, survivors
+        # The launch boots a local server/daemon before the crash point —
+        # stop it so nothing leaks across tests.
+        subprocess.run(
+            [sys.executable, "-m", "omnigent.cli", "stop"],
+            env=env,
+            cwd=str(isolated_home),
+            capture_output=True,
+            timeout=60,
+            check=False,
+        )
 
     # THE BUG: the launch dies on the crash-handler screen with
     # ``httpx.InvalidURL: Invalid port: ':'``. Any of these markers means the

@@ -44,6 +44,7 @@ from omnigent.server._elicitation_registry import (
     _harness_pre_resolved_elicitations,
     _PreResolvedHarnessElicitation,
 )
+from omnigent.server.auth import LEVEL_EDIT, LEVEL_READ
 from omnigent.server.routes import sessions as sessions_route
 from tests.server.helpers import create_session_for_agent as _create_session
 from tests.server.helpers import create_test_agent, start_session_stream_collector
@@ -3966,7 +3967,10 @@ async def test_harness_hook_repark_after_disconnect_keeps_card_pending(
         json=payload,
     )
     assert first.status_code == 200, first.text
-    assert first.content == b"", f"severed poll should fail-ask, got {first.content!r}"
+    if harness == "codex":
+        assert first.content == b"", f"severed poll should fail-ask, got {first.content!r}"
+    else:
+        assert first.json() == {"type": "extension_ui_response", "id": "", "confirmed": False}
     deferred_tasks = set(sessions_route._deferred_elicitation_clear_tasks)
     assert len(deferred_tasks) == 1
 
@@ -4356,17 +4360,20 @@ async def test_antigravity_elicitation_hook_rejects_non_dict_body(
         ("confirm", "decline", None, {"confirmed": False}),
         ("select", "accept", {"0": "Allow"}, {"value": "Allow"}),
         ("editor", "accept", {"0": "Keep as-is"}, {"value": "original note"}),
+        ("input", None, None, {"cancelled": True}),
     ],
 )
 async def test_pi_extension_ui_hook_round_trip(
     client: httpx.AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
     method: str,
-    action: str,
+    action: str | None,
     content: dict | None,
     expected: dict,
 ) -> None:
     forwarded = AsyncMock()
+    if action is None:
+        monkeypatch.setattr(sessions_route, "_PI_EXTENSION_UI_HOOK_TIMEOUT_S", 0.1)
     monkeypatch.setattr(
         "omnigent.server.routes.sessions.routes_hooks._forward_session_change_to_runner",
         forwarded,
@@ -4391,16 +4398,49 @@ async def test_pi_extension_ui_hook_round_trip(
     event = await drain_task
     assert event["elicitation_id"] == payload["elicitation_id"]
     assert event["params"]["phase"] == "pi_extension_ui"
-    verdict = await _post_approval(client, session_id, event["elicitation_id"], action, content)
-    assert verdict.status_code == 202, verdict.text
+    if action is not None:
+        verdict = await _post_approval(
+            client, session_id, event["elicitation_id"], action, content
+        )
+        assert verdict.status_code == 202, verdict.text
     response = await hook_task
     assert response.status_code == 200, response.text
     assert response.json() == {"type": "extension_ui_response", "id": "dialog", **expected}
     forwarded.assert_not_awaited()
 
 
+@pytest.mark.parametrize("level", [LEVEL_READ, LEVEL_EDIT])
+async def test_pi_extension_ui_hook_requires_edit_access(
+    auth_client: httpx.AsyncClient, db_uri: str, monkeypatch: pytest.MonkeyPatch, level: int
+) -> None:
+    from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+    from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+
+    session = SqlAlchemyConversationStore(db_uri).create_conversation()
+    permissions = SqlAlchemyPermissionStore(db_uri)
+    user = "collaborator@example.test"
+    permissions.ensure_user(user)
+    permissions.grant(user, session.id, level)
+    publish = AsyncMock(return_value=None)
+    monkeypatch.setattr(
+        "omnigent.server.routes.sessions.routes_hooks._publish_and_wait_for_harness_elicitation",
+        publish,
+    )
+    response = await auth_client.post(
+        f"/v1/sessions/{session.id}/hooks/pi-extension-ui",
+        headers={"X-Forwarded-Email": user},
+        json={"elicitation_id": "elicit_pi_readonly", "request": {"method": "confirm"}},
+    )
+    assert response.status_code == (403 if level == LEVEL_READ else 200), response.text
+    if level == LEVEL_READ:
+        publish.assert_not_awaited()
+    else:
+        publish.assert_awaited_once()
+
+
 async def test_pi_extension_ui_hook_malformed_body_400(
     client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Missing elicitation_id / request / unknown method are 400s."""
     agent = await create_test_agent(client, "test-pi-extension-ui-400")
@@ -4421,3 +4461,13 @@ async def test_pi_extension_ui_hook_malformed_body_400(
         },
     )
     assert unknown.status_code == 400, unknown.text
+
+    for elicitation_id in ["elicit_codex_x", "elicit_pi_other_session"]:
+        monkeypatch.setitem(
+            sessions_route._harness_elicitation_owners, elicitation_id, "another_session"
+        )
+        response = await client.post(
+            url, json={"elicitation_id": elicitation_id, "request": {"method": "confirm"}}
+        )
+        assert response.status_code == 400, response.text
+        assert sessions_route._harness_elicitation_owners[elicitation_id] == "another_session"

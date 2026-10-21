@@ -456,22 +456,16 @@ Cross-harness journeys:
 - **`approvals`, Pi extension dialogs:**
   `tests/e2e/test_pi_extension_ui_round_trip.py::test_real_pi_dialog_answers_and_continues`
   runs real SDK and native Pi through an isolated server/runner with a scripted
-  provider. Browser coverage retains multiline editor submission and binary
-  confirmation layout; select options/submission stay in component tests.
-  Single-line input rendering/submission is covered by ApprovalCard component
-  tests; real-process coverage checks all four methods over SDK/native transport.
-  Confirm rejection, select, input and editor answers reach Pi; a
-  later turn retains history. Native caller cancellation also releases the
-  pending card after the shared reconnect grace period. This is API/process
-  evidence, with sandbox disabled; it does not cover browser rendering.
-  `tests/e2e_ui/approvals/test_pi_extension_ui.py` drives Chat cards through the
-  real server using injected hooks. Inbox/mobile rendering and SDK interruption
-  during an active dialog need separate evidence. Native cancellation clears
-  API/card state after the grace period; a historical browser capture still
-  showed sidebar “Needs response” at 45 seconds, so sidebar settlement remains
-  a gap. SDK/native share answer conversion; native dialog and policy HTTP
-  waits share transport and relay forwarding. Run the scoped standardized
-  checks below; these scenarios own their isolated environments:
+  provider, sandbox disabled: four dialog answers, decline, later-turn history
+  and native cancellation/card cleanup after the reconnect grace period.
+  `tests/e2e_ui/approvals/test_pi_extension_ui.py` checks confirmation layout
+  and multiline editor submission through Chat using injected hooks; select
+  and input matrices stay in component tests. Older servers use native TUI
+  dialogs on 404/405; read-only callers cannot publish cards, and cancelled
+  server waits stop re-parking (server/JS regression tests).
+  Known gaps: stale sidebar “Needs response” after native cancellation,
+  Inbox/mobile, active SDK interruption, sandbox and Managed acceptance.
+  These scenarios own their isolated environments:
 
   ```sh
   uv run --no-sync pytest tests/e2e/test_pi_extension_ui_round_trip.py --reruns 0 -q

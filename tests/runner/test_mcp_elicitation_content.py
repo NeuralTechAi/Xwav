@@ -290,7 +290,7 @@ async def test_a_declined_elicitation_sends_no_content() -> None:
 
 @pytest.mark.parametrize("runner_owned", [True, False])
 @pytest.mark.parametrize("action", ["accept", "decline", "cancel"])
-async def test_the_runner_events_endpoint_carries_the_content(
+async def test_runner_approval_content_and_decline_interrupt_ownership(
     runner_owned: bool, action: str
 ) -> None:
     """The regression boundary, exercised through the real HTTP handler.

@@ -481,10 +481,15 @@ async function uiSession(mode = "tui") {
     confirm: true, select: "Allow", input: "typed", editor: "edited",
     notify: undefined, setStatus: undefined, setTitle: undefined,
   })) {
-    ui[method] = () => { originalCalls.push(method); return result; };
+    ui[method] = function (...args) {
+      assert(`${method}: fallback retains UI receiver`, this === ui);
+      originalCalls.push({ method, args });
+      return result;
+    };
   }
   const ctx = { mode, ui };
   await h.handlers.session_start({}, ctx);
+  originalCalls.length = 0;
   return { ...h, ctx, originalCalls };
 }
 
@@ -506,10 +511,45 @@ async function testTuiWrapParksConfirmWithoutCallingOriginal() {
     return dialogResponse({ confirmed: true });
   });
   assert("confirm returns the server answer", await ctx.ui.confirm("Clear?", "Lost.") === true);
-  assert("original TUI dialog is bypassed", !originalCalls.includes("confirm"));
+  assert("original TUI dialog is bypassed", !originalCalls.some((call) => call.method === "confirm"));
   ctx.ui.notify("hello");
   ctx.ui.setStatus("test", "ready");
-  assert("notifications remain local", originalCalls.includes("notify") && originalCalls.includes("setStatus"));
+  assert("notifications remain local", originalCalls.some((call) => call.method === "notify") && originalCalls.some((call) => call.method === "setStatus"));
+}
+
+async function testUnsupportedDialogsFallBackToTui() {
+  for (const status of [404, 405, 403]) {
+    const { ctx, originalCalls } = await uiSession();
+    dialogFetch(() => ({ ok: false, status }));
+    const opts = { timeout: 2000 };
+    for (const [method, args, expected] of [
+      ["confirm", ["Continue?", "Details", opts], true],
+      ["select", ["Choice?", ["Allow", "Block"], opts], "Allow"],
+      ["input", ["Name?", "placeholder", opts], "typed"],
+      ["editor", ["Notes", "prefill", opts], "edited"],
+    ]) {
+      const actual = await ctx.ui[method](...args);
+      assert(`${status}: ${method} result`, actual === (status === 403 ? (method === "confirm" ? false : undefined) : expected));
+      if (status !== 403) {
+        const call = originalCalls.at(-1);
+        assert(`${method}: preserves arguments`, call.method === method && call.args.every((arg, index) => arg === args[index]));
+      }
+    }
+    assert(`${status}: only unsupported endpoints use TUI`, originalCalls.length === (status === 403 ? 0 : 4));
+  }
+}
+
+async function testDialogCancellationDoesNotRepark() {
+  for (const [response, expectedCalls] of [
+    [dialogResponse({ cancelled: true }), 1],
+    [{ ok: true, status: 200, text: async () => "" }, 3],
+  ]) {
+    const { ctx } = await uiSession();
+    let calls = 0;
+    dialogFetch(() => { calls += 1; return response; });
+    assert("unanswered input returns undefined", await ctx.ui.input("Name?", "", { timeout: 6000 }) === undefined);
+    assert("cancel stops and empty responses are bounded", calls === expectedCalls);
+  }
 }
 
 async function testTuiWrapReparksSameElicitationId() {
@@ -583,7 +623,7 @@ async function testActiveDialogCancellation() {
 
 async function testRpcModeDoesNotWrapUi() {
   const { ctx, originalCalls } = await uiSession("rpc");
-  assert("RPC mode keeps its original UI", await ctx.ui.confirm("Clear?", "Lost.") === true && originalCalls.includes("confirm"));
+  assert("RPC mode keeps its original UI", await ctx.ui.confirm("Clear?", "Lost.") === true && originalCalls.some((call) => call.method === "confirm"));
 }
 
 async function testSessionStartupDoesNotCompleteATurn() {
@@ -687,6 +727,8 @@ async function testQueuedPromptDuringStartupStaysRunningUntilAgentEnd() {
     await testMidTurnInterruptFallbackNoIsIdle();
     await testAgentStartClearsStaleWindow();
     await testTuiWrapParksConfirmWithoutCallingOriginal();
+    await testUnsupportedDialogsFallBackToTui();
+    await testDialogCancellationDoesNotRepark();
     await testTuiWrapReparksSameElicitationId();
     await testEditorHonoursOpts();
     await testActiveDialogCancellation();

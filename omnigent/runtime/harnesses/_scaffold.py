@@ -624,10 +624,7 @@ class TurnContext:
         resolves the parked Future when upstream sends the reply.
         See §Elicitation in the design doc.
 
-        On every exit path (verdict, timeout, cancellation) emit
-        ``response.elicitation_resolved`` so the session stream can
-        drop the pending card. Idempotent when approval dispatch
-        already published the same id.
+        Always emits ``response.elicitation_resolved`` on exit; idempotent.
 
         :param elicitation_id: Unique correlation id for this
             elicitation, e.g. ``"elicit_abc123"``. Must appear

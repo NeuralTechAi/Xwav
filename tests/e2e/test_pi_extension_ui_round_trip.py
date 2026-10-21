@@ -20,10 +20,14 @@ from omnigent._wrapper_labels import (
 from omnigent.harnesses.pi_native.main import _materialize_pi_agent_spec
 from tests._helpers.polling import poll_until
 from tests._helpers.server_runner import server_runner
-from tests._helpers.session import bind_session_runner, bundle_files, post_session_bundle
+from tests._helpers.session import (
+    bind_session_runner,
+    bundle_files,
+    post_session_bundle,
+    send_user_text,
+)
 from tests.e2e._harness_probes import skip_if_harness_cli_missing
 from tests.e2e.conftest import configure_mock_llm, get_mock_requests
-from tests.e2e.test_host_codex_native_e2e import _send_user_text
 
 _REPO = Path(__file__).resolve().parents[2]
 _MODEL = "claude-sonnet-4-5"
@@ -162,7 +166,7 @@ module.exports = pi => {
             ],
             key=_MODEL,
         )
-        _send_user_text(client, session_id=session_id, text="PI_DIALOG_START")
+        send_user_text(client, session_id=session_id, text="PI_DIALOG_START")
         previous_id = None
         for title, action, content in [
             ("Confirm choice", "decline", None),
@@ -195,7 +199,7 @@ module.exports = pi => {
         assert json.loads(result.read_text()) == [False, "Blue", "Ada", "two\nlines"]
         poll_until(lambda: replied("DIALOGS_ANSWERED"), timeout_s=60, interval_s=0.1)
         poll_until(lambda: not pending(), timeout_s=60, interval_s=0.1)
-        _send_user_text(client, session_id=session_id, text="PI_DIALOG_FOLLOWUP")
+        send_user_text(client, session_id=session_id, text="PI_DIALOG_FOLLOWUP")
         poll_until(lambda: replied("FOLLOWUP_WORKED"), timeout_s=60, interval_s=0.1)
         requests = get_mock_requests(mock_llm_server_url)
         last = next(
@@ -203,7 +207,7 @@ module.exports = pi => {
         )
         assert "DIALOGS_ANSWERED" in json.dumps(last["messages"])
         if transport == "native":
-            _send_user_text(client, session_id=session_id, text="PI_DIALOG_ABORT")
+            send_user_text(client, session_id=session_id, text="PI_DIALOG_ABORT")
             poll_until(cancelled.exists, timeout_s=60, interval_s=0.1)
             outcome = json.loads(cancelled.read_text())
             assert outcome["value"] is False and outcome["elapsedMs"] < 1500, outcome

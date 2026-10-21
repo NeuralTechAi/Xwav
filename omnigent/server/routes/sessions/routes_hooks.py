@@ -1561,7 +1561,7 @@ def register_hooks_routes(
         """Pi-native extension UI hook (TUI wrap → web elicitation)."""
         user_id = _get_user_id(request, auth_provider)
         await _require_access(
-            user_id, session_id, LEVEL_READ, permission_store, conversation_store
+            user_id, session_id, LEVEL_EDIT, permission_store, conversation_store
         )
         try:
             payload = await request.json()
@@ -1576,9 +1576,15 @@ def register_hooks_routes(
                 code=ErrorCode.INVALID_INPUT,
             )
         elicitation_id = payload.get("elicitation_id")
-        if not isinstance(elicitation_id, str) or not elicitation_id:
+        if not isinstance(elicitation_id, str) or not elicitation_id.startswith("elicit_pi_"):
             raise OmnigentError(
-                "Pi extension UI hook body must include 'elicitation_id'.",
+                "Pi extension UI hook 'elicitation_id' must start with 'elicit_pi_'.",
+                code=ErrorCode.INVALID_INPUT,
+            )
+        owner = _harness_elicitation_owners.get(elicitation_id)
+        if owner is not None and owner != session_id:
+            raise OmnigentError(
+                "Pi extension UI elicitation belongs to another session.",
                 code=ErrorCode.INVALID_INPUT,
             )
         raw_request = payload.get("request")
@@ -1605,8 +1611,6 @@ def register_hooks_routes(
             elicitation_id=elicitation_id,
             tool_name="Pi(extension_ui)",
         )
-        if result is None:
-            return Response(status_code=status.HTTP_200_OK)
         return Response(
             content=json.dumps(to_ui_response(raw_request, result)),
             media_type="application/json",

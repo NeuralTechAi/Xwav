@@ -185,6 +185,8 @@ function mintPiUiElicitationId() {
   return `elicit_pi_${crypto.randomBytes(16).toString("hex")}`;
 }
 
+const _UNSUPPORTED_ENDPOINT = Symbol("unsupported endpoint");
+
 // Shared long-poll transport for policy verdicts and extension dialogs.
 async function postParkedJson(config, relayPath, serverPath, payload, {
   parkDeadline, signal, retryEmpty = false,
@@ -200,6 +202,7 @@ async function postParkedJson(config, relayPath, serverPath, payload, {
 
   let transientDeadline = Date.now() + _TRANSIENT_RETRY_BUDGET_MS;
   let transientBackoff = _TRANSIENT_RETRY_INITIAL_BACKOFF_MS;
+  let emptyResponses = 0;
 
   while (true) {
     if (signal && signal.aborted) return null;
@@ -258,6 +261,7 @@ async function postParkedJson(config, relayPath, serverPath, payload, {
     if (callerSignal && callerSignal.aborted) return null;
 
     if (!resp.ok) {
+      if (resp.status === 404 || resp.status === 405) return _UNSUPPORTED_ENDPOINT;
       if (resp.status >= 500) {
         if (Date.now() + transientBackoff >= transientDeadline) return null;
         await sleep(transientBackoff, signal);
@@ -271,8 +275,8 @@ async function postParkedJson(config, relayPath, serverPath, payload, {
     }
 
     if (!text && retryEmpty) {
-      // Empty 200: timeout/disconnect. Re-attach with the same id.
-      if (Date.now() >= parkDeadline) return null;
+      // Bound empty proxy responses; explicit server cancellation never re-parks.
+      if (++emptyResponses >= 3 || Date.now() >= parkDeadline) return null;
       transientDeadline = Date.now() + _TRANSIENT_RETRY_BUDGET_MS;
       transientBackoff = _TRANSIENT_RETRY_INITIAL_BACKOFF_MS;
       // A server that answers immediately (consumed tombstone, a proxy that
@@ -317,10 +321,14 @@ function wrapExtensionUi(ctx, config) {
   }
   const ui = ctx.ui;
   ui.__omnigentUiWrapped = true;
+  const original = Object.fromEntries(
+    ["confirm", "select", "input", "editor"].map((method) => [method, ui[method].bind(ui)]),
+  );
 
   ui.confirm = async (title, message, opts) => {
     const request = { method: "confirm", title, message };
     const verdict = await parkPiExtensionUiHttp(config, request, opts);
+    if (verdict === _UNSUPPORTED_ENDPOINT) return original.confirm(title, message, opts);
     return !!(verdict && verdict.confirmed === true);
   };
   ui.select = async (title, options, opts) => {
@@ -330,16 +338,19 @@ function wrapExtensionUi(ctx, config) {
       options: Array.isArray(options) ? options : [],
     };
     const verdict = await parkPiExtensionUiHttp(config, request, opts);
+    if (verdict === _UNSUPPORTED_ENDPOINT) return original.select(title, options, opts);
     return extensionUiValue(verdict);
   };
   ui.input = async (title, placeholder, opts) => {
     const request = { method: "input", title, placeholder };
     const verdict = await parkPiExtensionUiHttp(config, request, opts);
+    if (verdict === _UNSUPPORTED_ENDPOINT) return original.input(title, placeholder, opts);
     return extensionUiValue(verdict);
   };
   ui.editor = async (title, prefill, opts) => {
     const request = { method: "editor", title, prefill };
     const verdict = await parkPiExtensionUiHttp(config, request, opts);
+    if (verdict === _UNSUPPORTED_ENDPOINT) return original.editor(title, prefill, opts);
     return extensionUiValue(verdict);
   };
 }
@@ -363,7 +374,7 @@ async function evalNativePolicyHttp(config, toolName, args) {
     const json = await postParkedJson(config, "/policies/evaluate", "/policies/evaluate", payload, {
       parkDeadline,
     });
-    if (!json) return failClosedVerdict();
+    if (!json || json === _UNSUPPORTED_ENDPOINT) return failClosedVerdict();
     if (json.result === "POLICY_ACTION_DENY") {
       return { block: true, reason: json.reason || "blocked by Omnigent policy" };
     }
