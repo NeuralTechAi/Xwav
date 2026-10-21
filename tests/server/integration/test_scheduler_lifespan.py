@@ -19,6 +19,7 @@ from fastapi import FastAPI
 from omnigent.db.db_models import workspace_scope
 from omnigent.runtime.agent_cache import AgentCache
 from omnigent.server.app import create_app
+from omnigent.server.scheduled.config import ScheduledTaskSchedulerConfig
 from omnigent.server.scheduled.dispatch_scheduler import (
     PersistentTaskScheduler,
     ScheduledTaskDispatchHooks,
@@ -47,6 +48,8 @@ def _build_app(
     *,
     scheduled_task_store: SqlAlchemyScheduledTaskStore | None,
     dispatch: ScheduledTaskDispatchHooks | None = None,
+    scheduler_config: ScheduledTaskSchedulerConfig | None = None,
+    server_config: dict | None = None,
 ) -> FastAPI:
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     return create_app(
@@ -60,6 +63,8 @@ def _build_app(
         ),
         scheduled_task_store=scheduled_task_store,
         scheduled_task_dispatch=dispatch,
+        scheduled_task_scheduler_config=scheduler_config,
+        server_config=server_config,
     )
 
 
@@ -174,8 +179,13 @@ async def test_lifespan_skips_paused_task(
         assert app.state.scheduled_task_scheduler.job_count == 0
 
 
+@pytest.mark.parametrize("config_source", ["defaults", "yaml", "injected"])
 async def test_lifespan_database_switch_dispatches_claim_and_drains(
-    runtime_init: None, db_uri: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    runtime_init: None,
+    db_uri: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    config_source: str,
 ) -> None:
     # Create a task whose persisted occurrence is already due at server startup.
     import time
@@ -192,12 +202,41 @@ async def test_lifespan_database_switch_dispatches_claim_and_drains(
         _uid("dispatch"), "dispatch", "prompt", "FREQ=HOURLY", None, _uid("agent"), "UTC"
     )
     store.configure_dispatch(False)
+    settings = ScheduledTaskSchedulerConfig()
+    injected_config = None
+    if config_source != "defaults":
+        config_path = tmp_path / "server.yaml"
+        config_path.write_text(
+            "scheduled_task_scheduler:\n"
+            "  poll_seconds: 5\n"
+            "  renewal_seconds: 10\n"
+            "  lease_seconds: 240\n"
+            "  batch_size: 7\n"
+            "  max_startups: 3\n"
+            "  recovery_seconds: 15\n"
+        )
+        monkeypatch.setenv("OMNIGENT_CONFIG", str(config_path))
+        settings = ScheduledTaskSchedulerConfig(
+            poll_seconds=5,
+            renewal_seconds=10,
+            lease_seconds=240,
+            batch_size=7,
+            max_startups=3,
+            recovery_seconds=15,
+        )
+        if config_source == "injected":
+            # Explicit deployment settings take precedence over the YAML section.
+            config_path.write_text("scheduled_task_scheduler: invalid\n")
+            injected_config = settings
     started = asyncio.Event()
     stopped = asyncio.Event()
 
     async def fire(snapshot: ScheduledTask, lease: StartupLease) -> None:
         assert snapshot.id == uuid.UUID(task.id).hex
         assert lease.run.status == "starting"
+        assert lease.run.lease_expires_at == pytest.approx(
+            time.time() + settings.lease_seconds, abs=10
+        )
         started.set()
         try:
             await asyncio.Event().wait()
@@ -209,10 +248,13 @@ async def test_lifespan_database_switch_dispatches_claim_and_drains(
         tmp_path,
         scheduled_task_store=store,
         dispatch=ScheduledTaskDispatchHooks(fire, AsyncMock(return_value=None)),
+        scheduler_config=injected_config,
     )
     async with app.router.lifespan_context(app):
         scheduler = app.state.scheduled_task_scheduler
         assert isinstance(scheduler, PersistentTaskScheduler)
+        for name, value in settings.model_dump().items():
+            assert getattr(scheduler, f"_{name}") == value
         new_task = store.create(
             _uid("new-dispatch"), "new", "prompt", "FREQ=DAILY", None, _uid("agent"), "UTC"
         )
@@ -259,6 +301,7 @@ async def test_automations_v2_flag_off_keeps_timers_even_with_hooks(
         tmp_path,
         scheduled_task_store=store,
         dispatch=ScheduledTaskDispatchHooks(fire, recover),
+        server_config={"scheduled_task_scheduler": {"lease_seconds": -1}},
     )
     async with app.router.lifespan_context(app):
         assert isinstance(app.state.scheduled_task_scheduler, ScheduledTaskScheduler)
@@ -297,4 +340,18 @@ async def test_automations_v2_flag_requires_dispatch_dependencies(
             tmp_path,
             scheduled_task_store=SqlAlchemyScheduledTaskStore(db_uri) if has_store else None,
             dispatch=ScheduledTaskDispatchHooks(AsyncMock(), AsyncMock()) if has_hooks else None,
+        )
+
+
+async def test_automations_v2_rejects_invalid_scheduler_config_at_app_creation(
+    runtime_init: None, db_uri: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OMNIGENT_FEATURES", "automations_v2")
+    with pytest.raises(ValueError, match="renewal_seconds must be shorter"):
+        _build_app(
+            db_uri,
+            tmp_path,
+            scheduled_task_store=SqlAlchemyScheduledTaskStore(db_uri),
+            dispatch=ScheduledTaskDispatchHooks(AsyncMock(), AsyncMock()),
+            server_config={"scheduled_task_scheduler": {"lease_seconds": 30}},
         )

@@ -17,6 +17,7 @@ from typing import Literal
 
 from omnigent.db.db_models import workspace_scope
 from omnigent.entities import ScheduledTask, ScheduledTaskRun
+from omnigent.server.scheduled.config import DEFAULT_SCHEDULER_CONFIG, ScheduledTaskSchedulerConfig
 from omnigent.server.scheduled.rrule import RRuleSearchError, RRuleValidationError, validate_rrule
 from omnigent.server.scheduled.schedule import (
     next_scheduled_time,
@@ -159,19 +160,21 @@ class PersistentTaskScheduler:
         *,
         owns_host: OwnsHost = _owns_every_host,
         now: Callable[[], float] = time.time,
-        poll_seconds: float = 30,
-        renewal_seconds: float = 30,
-        lease_seconds: int = 120,
-        batch_size: int = 100,
-        max_startups: int = 100,
-        recovery_seconds: float = 30,
+        poll_seconds: float = DEFAULT_SCHEDULER_CONFIG.poll_seconds,
+        renewal_seconds: float = DEFAULT_SCHEDULER_CONFIG.renewal_seconds,
+        lease_seconds: int = DEFAULT_SCHEDULER_CONFIG.lease_seconds,
+        batch_size: int = DEFAULT_SCHEDULER_CONFIG.batch_size,
+        max_startups: int = DEFAULT_SCHEDULER_CONFIG.max_startups,
+        recovery_seconds: float = DEFAULT_SCHEDULER_CONFIG.recovery_seconds,
     ) -> None:
-        if not 0 < renewal_seconds < lease_seconds or poll_seconds <= 0:
-            raise ValueError("poll must be positive; renewal must be shorter than the lease")
-        if batch_size < 1 or max_startups < 1:
-            raise ValueError("batch_size and max_startups must be positive")
-        if recovery_seconds <= 0:
-            raise ValueError("recovery_seconds must be positive")
+        config = ScheduledTaskSchedulerConfig(
+            poll_seconds=poll_seconds,
+            renewal_seconds=renewal_seconds,
+            lease_seconds=lease_seconds,
+            batch_size=batch_size,
+            max_startups=max_startups,
+            recovery_seconds=recovery_seconds,
+        )
         store.check_dispatch_support()
         store.configure_dispatch(True)
         self._store = store
@@ -179,12 +182,12 @@ class PersistentTaskScheduler:
         self._on_expired = on_expired
         self._owns_host = owns_host
         self._now = now
-        self._poll_seconds = poll_seconds
-        self._renewal_seconds = renewal_seconds
-        self._lease_seconds = lease_seconds
-        self._batch_size = batch_size
-        self._max_startups = max_startups
-        self._recovery_seconds = recovery_seconds
+        self._poll_seconds = config.poll_seconds
+        self._renewal_seconds = config.renewal_seconds
+        self._lease_seconds = config.lease_seconds
+        self._batch_size = config.batch_size
+        self._max_startups = config.max_startups
+        self._recovery_seconds = config.recovery_seconds
         self._loop: asyncio.Task[None] | None = None
         self._recovery: asyncio.Task[None] | None = None
         self._startups: dict[tuple[int, str], asyncio.Task[None]] = {}

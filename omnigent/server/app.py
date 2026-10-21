@@ -133,6 +133,7 @@ from omnigent.server.runner_session_init import (
     runner_response_error_body,
 )
 from omnigent.server.scheduled import ScheduledTaskScheduler
+from omnigent.server.scheduled.config import ScheduledTaskSchedulerConfig
 from omnigent.server.scheduled.dispatch_scheduler import (
     PersistentTaskScheduler,
     ScheduledTaskDispatchHooks,
@@ -1361,6 +1362,7 @@ def create_app(
     base_path: str | None = None,
     host_sharded: bool = False,
     scheduled_task_dispatch: ScheduledTaskDispatchHooks | None = None,
+    scheduled_task_scheduler_config: ScheduledTaskSchedulerConfig | None = None,
 ) -> FastAPI:
     """
     Build and return the FastAPI application with all routes mounted.
@@ -1397,6 +1399,9 @@ def create_app(
     :param scheduled_task_dispatch: Claimed-run fire/recovery hooks required when
         the automations_v2 feature is enabled. Supplying hooks alone does
         not enable database dispatch; the flag defaults off and keeps legacy timers.
+    :param scheduled_task_scheduler_config: Startup settings for persistent scheduling.
+        Overrides the server config's scheduled_task_scheduler section. Ignored
+        when automations_v2 is off; changes require restarting the app.
     :param project_store: Store for first-class projects (owner-private
         containers that group sessions). ``None`` disables the
         ``/v1/projects`` CRUD endpoints.
@@ -1532,6 +1537,7 @@ def create_app(
     title_instructions = session_title_instructions(resolved_server_config)
     resolved_feature_flags = feature_flags or resolve_feature_flags()
     automations_v2_enabled = resolved_feature_flags.enabled(Feature.AUTOMATIONS_V2)
+    dispatch_config = None
     if automations_v2_enabled:
         if scheduled_task_store is None or scheduled_task_dispatch is None:
             raise ValueError(
@@ -1539,6 +1545,13 @@ def create_app(
             )
         if not isinstance(scheduled_task_store, ScheduledTaskDispatchStore):
             raise TypeError("Scheduled task store does not support database dispatch")
+        dispatch_config = (
+            scheduled_task_scheduler_config
+            if scheduled_task_scheduler_config is not None
+            else ScheduledTaskSchedulerConfig.model_validate(
+                resolved_server_config.get("scheduled_task_scheduler", {})
+            )
+        )
         scheduled_task_store.check_dispatch_support()
     if isinstance(scheduled_task_store, ScheduledTaskDispatchStore):
         scheduled_task_store.configure_dispatch(automations_v2_enabled)
@@ -1807,12 +1820,19 @@ def create_app(
                 )
             else:
                 assert scheduled_task_dispatch is not None
+                assert dispatch_config is not None
                 assert isinstance(scheduled_task_store, ScheduledTaskDispatchStore)
                 scheduled_task_scheduler = PersistentTaskScheduler(
                     store=scheduled_task_store,
                     on_fire=scheduled_task_dispatch.on_fire,
                     on_expired=scheduled_task_dispatch.on_expired,
                     owns_host=scheduled_task_dispatch.owns_host,
+                    poll_seconds=dispatch_config.poll_seconds,
+                    renewal_seconds=dispatch_config.renewal_seconds,
+                    lease_seconds=dispatch_config.lease_seconds,
+                    batch_size=dispatch_config.batch_size,
+                    max_startups=dispatch_config.max_startups,
+                    recovery_seconds=dispatch_config.recovery_seconds,
                 )
             app_inst.state.scheduled_task_scheduler = scheduled_task_scheduler
             # Scheduled tasks are a non-critical subsystem: a failure loading the

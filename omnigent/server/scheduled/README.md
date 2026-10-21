@@ -48,19 +48,36 @@ tasks. Each server runs one poll and one recovery sweep at a time. Unresolved
 cleanup is retried. Shutdown cancels and waits for local work, leaving unfinished
 startups to expire. A new host owner does not renew the old startup automatically.
 
-The constructor lets callers change these defaults:
-
-| Setting | Default |
-| --- | --- |
-| Poll interval | 30 seconds |
-| Lease renewal interval | 30 seconds |
-| Startup lease duration | 120 seconds |
-| Timeout for one recovery attempt | 30 seconds |
-| Concurrent startups per server | 100 |
-
 Deleting a task hides it and prevents new scheduled runs. Unfinished claimed runs
 and their task details remain for completion or cleanup; the last one to finish
 removes the retained task. Old runs without a trigger key are deleted immediately.
+
+## Configure timing and capacity
+
+Add a `scheduled_task_scheduler` section to the server YAML config. These are the
+defaults; omit any setting to keep its default:
+
+```yaml
+scheduled_task_scheduler:
+  poll_seconds: 30       # Time between polls for due tasks and expired leases
+  renewal_seconds: 30   # Time between startup lease renewals
+  lease_seconds: 120    # How long a startup lease remains valid without renewal
+  recovery_seconds: 30 # Timeout for one recovery attempt
+  batch_size: 100       # Maximum rows fetched per database page
+  max_startups: 100     # Maximum concurrent startups on each server
+```
+
+`create_app()` uses the existing server config loader, including `OMNIGENT_CONFIG`
+for an explicit YAML path, unless the caller passes `server_config` directly.
+Deployment wrappers can instead pass a `ScheduledTaskSchedulerConfig` from
+[config.py](config.py) as `create_app(..., scheduled_task_scheduler_config=...)`.
+That object overrides the entire YAML section; omitted fields use code defaults.
+
+Settings are fixed when the app is created; restart to apply changes. All values
+must be positive and finite, lease duration and capacities must be whole numbers,
+and renewal must be shorter than the lease. Invalid or unknown scheduler settings
+fail startup when `automations_v2` is enabled. With the flag off, the section is
+ignored. Supplying settings does not enable the feature or supply execution hooks.
 
 ## Connect the execution callbacks
 
