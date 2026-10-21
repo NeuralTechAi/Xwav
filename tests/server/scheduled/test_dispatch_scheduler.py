@@ -100,7 +100,7 @@ async def test_unfinished_fire_return_warns_and_leaves_run_for_recovery(store, c
     await _drain(scheduler)
     run = store.list_runs(task.id)[0][0]
     assert run.status == "starting"
-    assert "without finishing startup" in caplog.text
+    assert "no final startup outcome was recorded" in caplog.text
     clock.advance(120)
     await scheduler.poll_once()
     await _drain(scheduler)

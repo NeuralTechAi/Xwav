@@ -20,7 +20,11 @@ class ScheduledTaskSchedulerConfig(BaseModel):
     @model_validator(mode="after")
     def check_renewal_interval(self) -> Self:
         if self.renewal_seconds >= self.lease_seconds:
-            raise ValueError("renewal_seconds must be shorter than lease_seconds")
+            raise ValueError(
+                "renewal_seconds must be shorter than lease_seconds so startup leases "
+                "are renewed before they expire "
+                f"(received {self.renewal_seconds:g}s and {self.lease_seconds}s)."
+            )
         return self
 
 

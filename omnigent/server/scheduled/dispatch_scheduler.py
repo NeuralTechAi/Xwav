@@ -74,7 +74,11 @@ class StartupLease:
                 or run.lease_expires_at is None
                 or run.lease_expires_at <= self._now()
             ):
-                raise StartupLeaseLost(self.run.id)
+                raise StartupLeaseLost(
+                    f"Cannot continue startup for run {self.run.id}: its startup lease "
+                    "could not be renewed. Stop further startup actions and let recovery "
+                    "check the run."
+                )
             self.run = run
 
     async def attach_session(self, conversation_id: str) -> None:
@@ -91,7 +95,11 @@ class StartupLease:
     ) -> None:
         """Record prompt delivery or a known startup failure, with a live lease."""
         if status not in {"running", "failed", "skipped"}:
-            raise ValueError("finish requires running, failed or skipped")
+            raise ValueError(
+                f"Cannot finish startup with status {status!r}. "
+                "Use 'running' after sending the prompt, 'failed' for a known failure, "
+                "or 'skipped' when execution is intentionally skipped."
+            )
         await self._transition(
             status, conversation_id=conversation_id, error=error, error_code=error_code
         )
@@ -116,7 +124,11 @@ class StartupLease:
                     error_code=error_code,
                 )
             if run is None:
-                raise StartupLeaseLost(self.run.id)
+                raise StartupLeaseLost(
+                    f"Cannot update startup for run {self.run.id}: the run or its lease "
+                    "has changed or expired. Stop further startup actions and let recovery "
+                    "check the run."
+                )
             self.run = run
 
 
@@ -228,7 +240,9 @@ class PersistentTaskScheduler:
             try:
                 await self.poll_once()
             except Exception:
-                _logger.exception("Scheduled-task poll failed; retrying next poll")
+                _logger.exception(
+                    "Could not check scheduled tasks for work; will check again on the next poll"
+                )
             await asyncio.sleep(self._poll_seconds)
 
     async def poll_once(self) -> None:
@@ -255,7 +269,11 @@ class PersistentTaskScheduler:
                     continue
                 next_run = await asyncio.to_thread(next_scheduled_time, task, int(self._now()))
             except RRuleSearchError:
-                _logger.exception("Could not initialize schedule %s; retrying next poll", task.id)
+                _logger.exception(
+                    "Could not calculate the next run time for task %s; "
+                    "will try again on the next poll",
+                    task.id,
+                )
                 complete = False
                 continue
             if next_run is not None:
@@ -284,7 +302,10 @@ class PersistentTaskScheduler:
         try:
             await self._reconcile()
         except Exception:
-            _logger.exception("Startup recovery sweep failed; retrying next poll")
+            _logger.exception(
+                "Could not check runs with expired startup leases; "
+                "recovery will try again on the next poll"
+            )
 
     async def _reconcile(self) -> None:
         cutoff = int(self._now())
@@ -317,7 +338,8 @@ class PersistentTaskScheduler:
                                         now=self._now,
                                         status=status,
                                         expired=True,
-                                        error="Startup lease expired"
+                                        error="Run startup did not complete before its lease "
+                                        "expired; recovery marked the run as failed."
                                         if status == "failed"
                                         else None,
                                         error_code="startup_expired"
@@ -325,7 +347,11 @@ class PersistentTaskScheduler:
                                         else None,
                                     )
                 except Exception:
-                    _logger.exception("Could not reconcile startup %s", run.id)
+                    _logger.exception(
+                        "Could not finish recovery for run %s after its startup lease expired; "
+                        "will check the run again on a later poll",
+                        run.id,
+                    )
 
     async def _claim_due(self) -> None:
         cutoff = int(self._now())
@@ -364,7 +390,11 @@ class PersistentTaskScheduler:
                         self._startups[key] = startup
                         startup.add_done_callback(lambda _, key=key: self._startups.pop(key, None))
                 except Exception:
-                    _logger.exception("Could not claim task %s", task.id)
+                    _logger.exception(
+                        "Could not prepare a scheduled run for task %s; "
+                        "will check the task again on a later poll",
+                        task.id,
+                    )
 
     async def _execute(self, task: ScheduledTask, run: ScheduledTaskRun) -> None:
         lease = StartupLease(self._store, run, now=self._now, lease_seconds=self._lease_seconds)
@@ -382,7 +412,11 @@ class PersistentTaskScheduler:
             except Exception:
                 # Outcome may be ambiguous (e.g. prompt accepted before a DB
                 # error). Stop renewals and let the fire-path reconciler inspect it.
-                _logger.exception("Startup interrupted for run %s", run.id)
+                _logger.exception(
+                    "Startup interrupted for run %s; stopping local startup work and lease "
+                    "renewals. Recovery will check any unfinished startup after its lease expires",
+                    run.id,
+                )
             finally:
                 fire.cancel()
                 heartbeat.cancel()
@@ -393,8 +427,9 @@ class PersistentTaskScheduler:
         await self._on_fire(task, lease)
         if lease.run.status == "starting":
             _logger.warning(
-                "Fire callback returned without finishing startup for run %s; "
-                "leaving for recovery",
+                "on_fire returned while run %s still has status 'starting'; "
+                "no final startup outcome was recorded. "
+                "Recovery will check this run after its lease expires",
                 lease.run.id,
             )
 

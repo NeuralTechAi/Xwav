@@ -1539,12 +1539,24 @@ def create_app(
     automations_v2_enabled = resolved_feature_flags.enabled(Feature.AUTOMATIONS_V2)
     dispatch_config = None
     if automations_v2_enabled:
-        if scheduled_task_store is None or scheduled_task_dispatch is None:
+        if scheduled_task_store is None:
             raise ValueError(
-                "automations_v2 requires a scheduled_task_store and scheduled_task_dispatch hooks"
+                "automations_v2 requires a scheduled task store. Pass scheduled_task_store "
+                "to create_app(), or leave automations_v2 disabled until scheduling is configured."
+            )
+        if scheduled_task_dispatch is None:
+            raise ValueError(
+                "automations_v2 requires callbacks to start runs and recover interrupted "
+                "startups. Pass scheduled_task_dispatch to create_app(), or disable "
+                "automations_v2 to use the existing scheduler."
             )
         if not isinstance(scheduled_task_store, ScheduledTaskDispatchStore):
-            raise TypeError("Scheduled task store does not support database dispatch")
+            raise TypeError(
+                "The configured scheduled task store does not implement the operations needed "
+                "to claim runs and manage startup leases. Use a store that implements "
+                "ScheduledTaskDispatchStore, or disable automations_v2 to use the "
+                "existing scheduler."
+            )
         dispatch_config = (
             scheduled_task_scheduler_config
             if scheduled_task_scheduler_config is not None
