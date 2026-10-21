@@ -15,8 +15,9 @@ import type * as FileViewerContextModule from "@/shell/FileViewerContext";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef, StrictMode, type ComponentRef, type ReactElement } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { setSessionHost } from "@/lib/sessionHost";
 import { SideChatPane } from "@/components/chat/SideChatPane";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
@@ -3015,7 +3016,7 @@ describe("Composer MCP status command", () => {
     expect(panel).not.toHaveTextContent("wrong-server");
     expect(within(panel).getByRole("link", { name: "Go to Settings" })).toHaveAttribute(
       "href",
-      "/settings",
+      "/settings/harnesses",
     );
 
     fireEvent.keyDown(textarea(), { key: "ArrowDown" });
@@ -3048,7 +3049,17 @@ describe("Composer MCP status command", () => {
     expect(screen.queryByTestId("slash-menu-item-mcp")).toBeNull();
   });
 
-  it("shows only the active native harness MCPs from the bound host", () => {
+  it("shows native MCPs and navigates to their harness settings without blurring", async () => {
+    const user = userEvent.setup();
+    function Location() {
+      const location = useLocation();
+      return (
+        <output data-testid="location">
+          {location.pathname}
+          {location.search}
+        </output>
+      );
+    }
     composerSessionSnapshot.hostId = "host_native";
     setComposerState({ boundAgentId: "agent_native", sessionHarness: "codex-native" });
     hostMcpQueryMock.mockReturnValue({
@@ -3078,6 +3089,7 @@ describe("Composer MCP status command", () => {
     });
     render(
       <MemoryRouter>
+        <Location />
         <Composer
           {...composerProps({
             agents: [
@@ -3105,47 +3117,107 @@ describe("Composer MCP status command", () => {
     expect(panel).toHaveTextContent("agent-only");
     expect(panel).not.toHaveTextContent("github");
     expect(hostMcpQueryMock).toHaveBeenCalledWith("host_native", true);
-  });
-
-  it("distinguishes host loading and errors without hiding known agent MCPs", () => {
-    composerSessionSnapshot.hostId = "host_native";
-    setComposerState({ boundAgentId: "agent_native", sessionHarness: "codex-native" });
-    hostMcpQueryMock.mockReturnValue({ data: undefined, isLoading: true, isError: false });
-    const props = composerProps({
-      agents: [{ id: "agent_native", name: "Native agent", mcp_servers: [] }],
-    });
-    const { unmount } = render(
-      <MemoryRouter>
-        <Composer {...props} />
-      </MemoryRouter>,
-    );
-    fireEvent.change(textarea(), { target: { value: "/mcp" } });
-    expect(screen.getByRole("status")).toHaveTextContent("Loading MCP servers…");
-    unmount();
-
-    hostMcpQueryMock.mockReturnValue({ data: undefined, isLoading: false, isError: true });
-    render(
-      <MemoryRouter>
-        <Composer
-          {...composerProps({
-            agents: [
-              {
-                id: "agent_native",
-                name: "Native agent",
-                mcp_servers: [{ name: "known-agent-server", transport: "stdio" }],
-              },
-            ],
-          })}
-        />
-      </MemoryRouter>,
-    );
-    fireEvent.change(textarea(), { target: { value: "/mcp" } });
-    const panel = screen.getByTestId("mcp-server-menu");
-    expect(panel).toHaveTextContent("known-agent-server");
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Couldn’t load MCP servers from this session’s host.",
+    await user.click(textarea());
+    await user.pointer({ target: panel, keys: "[MouseLeft>]" });
+    expect(textarea()).toHaveFocus();
+    await user.pointer({ keys: "[/MouseLeft]" });
+    await user.click(within(panel).getByRole("link", { name: "Go to Settings" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/settings/harnesses/codex-native?host=host_native",
     );
   });
+
+  it.each([false, true])(
+    "distinguishes host loading and errors without hiding agent MCPs: %j",
+    (hasAgentServers) => {
+      const mcpServers = hasAgentServers
+        ? [{ name: "known-agent-server", transport: "stdio" as const }]
+        : [];
+      composerSessionSnapshot.hostId = "host_native";
+      setComposerState({ boundAgentId: "agent_native", sessionHarness: "codex-native" });
+      hostMcpQueryMock.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+      const props = composerProps({
+        agents: [{ id: "agent_native", name: "Native agent", mcp_servers: mcpServers }],
+      });
+      const { unmount } = render(
+        <MemoryRouter>
+          <Composer {...props} />
+        </MemoryRouter>,
+      );
+      fireEvent.change(textarea(), { target: { value: "/mcp" } });
+      expect(screen.getByRole("status")).toHaveTextContent("Loading MCP servers…");
+      if (mcpServers.length)
+        expect(screen.getByTestId("mcp-server-menu")).toHaveTextContent("known-agent-server");
+      unmount();
+
+      hostMcpQueryMock.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+      render(
+        <MemoryRouter>
+          <Composer
+            {...composerProps({
+              agents: [
+                {
+                  id: "agent_native",
+                  name: "Native agent",
+                  mcp_servers: [{ name: "known-agent-server", transport: "stdio" }],
+                },
+              ],
+            })}
+          />
+        </MemoryRouter>,
+      );
+      fireEvent.change(textarea(), { target: { value: "/mcp" } });
+      const panel = screen.getByTestId("mcp-server-menu");
+      expect(panel).toHaveTextContent("known-agent-server");
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Couldn’t load MCP servers from this session’s host.",
+      );
+    },
+  );
+
+  it.each(["claude-native", "codex-native", "cursor-native"] as const)(
+    "keeps host status unknown until a routing host is available for %s",
+    (harness) => {
+      setComposerState({ boundAgentId: "agent_native", sessionHarness: harness });
+      hostMcpQueryMock.mockReturnValue({ data: undefined, isLoading: false, isError: false });
+      const { rerender } = render(
+        <MemoryRouter>
+          <Composer
+            {...composerProps({
+              agents: [
+                {
+                  id: "agent_native",
+                  name: "Native agent",
+                  mcp_servers: [{ name: "known-agent-server", transport: "stdio" }],
+                },
+              ],
+            })}
+          />
+        </MemoryRouter>,
+      );
+      fireEvent.change(textarea(), { target: { value: "/mcp" } });
+      const panel = screen.getByTestId("mcp-server-menu");
+      expect(panel).toHaveTextContent("known-agent-server");
+      expect(panel).toHaveTextContent("Host MCP servers unavailable");
+      expect(panel).not.toHaveTextContent("No MCP servers enabled");
+      expect(hostMcpQueryMock).toHaveBeenLastCalledWith(null, true);
+      rerender(
+        <MemoryRouter>
+          <Composer {...composerProps({ agents: [] })} />
+        </MemoryRouter>,
+      );
+      expect(panel).not.toHaveTextContent("known-agent-server");
+      expect(panel).toHaveTextContent("Host MCP servers unavailable");
+      expect(panel).not.toHaveTextContent("No MCP servers enabled");
+
+      hostMcpQueryMock.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+      act(() => setSessionHost("conv_mcp", "late-host"));
+      expect(hostMcpQueryMock).toHaveBeenLastCalledWith("late-host", true);
+      expect(panel).toHaveTextContent("Loading MCP servers…");
+      expect(panel).not.toHaveTextContent("Host MCP servers unavailable");
+      act(() => setSessionHost("conv_mcp", null));
+    },
+  );
 
   it("shows usage feedback for unsupported arguments", () => {
     render(

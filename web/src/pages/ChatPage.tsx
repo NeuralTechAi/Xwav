@@ -23,6 +23,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { BotIcon, WandSparklesIcon, FileTextIcon, Loader2Icon, XIcon } from "lucide-react";
 import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -200,7 +201,11 @@ import { useFileDropTarget } from "@/hooks/useFileDropTarget";
 import { useComposerAttachments } from "@/hooks/useComposerAttachments";
 import { useSlashCompletion } from "@/hooks/useSlashCompletion";
 import { useHostMcpServers } from "@/hooks/useHarnessInventory";
-import { getSessionHost, sessionRoutingHostId } from "@/lib/sessionHost";
+import {
+  getSessionHost,
+  sessionRoutingHostId,
+  subscribeSessionHostChanges,
+} from "@/lib/sessionHost";
 import { HostBadge } from "@/components/HostBadge";
 import {
   BUILTIN_SLASH_COMMANDS,
@@ -2461,13 +2466,28 @@ function ComposerImpl(
     nativeMcpHarness === "claude" || nativeMcpHarness === "codex" || nativeMcpHarness === "cursor"
       ? nativeMcpHarness
       : null;
+  const inheritedHostId = useSyncExternalStore(subscribeSessionHostChanges, () =>
+    composerSessionId === null ? null : getSessionHost(composerSessionId),
+  );
+  const hostMcpRoutingId =
+    sessionRoutingHostId(composerSession?.hostId, composerSession?.labels) ?? inheritedHostId;
   const hostMcpQuery = useHostMcpServers(
-    composerSessionId === null
-      ? null
-      : (sessionRoutingHostId(composerSession?.hostId, composerSession?.labels) ??
-          getSessionHost(composerSessionId)),
+    hostMcpRoutingId,
     mcpPanelRequested && hostMcpHarness !== null,
   );
+  const mcpServersStatus =
+    hostMcpHarness === null
+      ? undefined
+      : hostMcpRoutingId === null
+        ? "Host MCP servers unavailable: this session has no known host."
+        : hostMcpQuery.isLoading
+          ? "Loading MCP servers…"
+          : hostMcpQuery.isError
+            ? "Couldn’t load MCP servers from this session’s host."
+            : undefined;
+  const mcpSettingsHref =
+    `/settings/harnesses${nativeMcpHarness ? `/${sessionHarness}` : ""}` +
+    (hostMcpRoutingId ? `?host=${encodeURIComponent(hostMcpRoutingId)}` : "");
   const composerBranch = useChatStore((s) => s.gitBranch);
   const claudePermissionMode = useChatStore((s) => s.claudePermissionMode);
   const codexApprovalMode = useChatStore((s) => s.codexApprovalMode);
@@ -3128,12 +3148,6 @@ function ComposerImpl(
   const skillLabels = useMemo(() => skillDisplayNames(skills, skillPrefix), [skills, skillPrefix]);
   const selectedAgent = agents?.find((agent) => agent.id === boundAgentId);
   const mcpServers = useMemo(() => {
-    if (
-      hostMcpHarness !== null &&
-      hostMcpQuery.isLoading &&
-      (selectedAgent?.mcp_servers?.length ?? 0) === 0
-    )
-      return undefined;
     const byName = new Map(
       (hostMcpQuery.data ?? [])
         .filter((server) => server.harness === hostMcpHarness)
@@ -3152,7 +3166,7 @@ function ComposerImpl(
       byName.set(server.name, { name: server.name, description: server.description ?? undefined });
     }
     return [...byName.values()];
-  }, [hostMcpHarness, hostMcpQuery.data, hostMcpQuery.isLoading, selectedAgent?.mcp_servers]);
+  }, [hostMcpHarness, hostMcpQuery.data, selectedAgent?.mcp_servers]);
 
   const slashCompletionCommands = mcpPanelRequested
     ? { "/mcp": BUILTIN_SLASH_COMMANDS["/mcp"]! }
@@ -3771,7 +3785,8 @@ function ComposerImpl(
                   onRetrySkills={() => void refreshSkills()}
                   showMcpServers={showMcpServers}
                   mcpServers={mcpServers}
-                  mcpServersError={hostMcpHarness !== null && hostMcpQuery.isError}
+                  mcpServersStatus={mcpServersStatus}
+                  mcpSettingsHref={mcpSettingsHref}
                 />
               )}
               {/* "@"-file-mention browser — native coding-agent sessions only.

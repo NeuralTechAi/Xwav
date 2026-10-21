@@ -49,7 +49,7 @@ and steers messages while the agent is busy.
   chat shows no menu and sends slash text to the vendor TUI.
 - `session-mcp-status`: selecting `/mcp` in a started session replaces the slash
   suggestions with a read-only list of MCP servers enabled for that session and
-  points to Settings for configuration. Host-native entries are limited to the
+  links to harness Settings with the session’s host preselected. Host-native entries are limited to the
   active harness, and a host lookup failure leaves known agent entries visible.
   It is absent before a session starts and from side chat.
 - `codex-plugin-skills`: typing `$` lists enabled Codex plugin skills in both
@@ -338,7 +338,10 @@ Other connection providers alone do not enable the managed MCP picker.
   **Enabled for this session**. Repeat with no MCPs and expect the empty state
   and Settings link; confirm `/mcp` is absent on the landing page and side chat.
   Native host entries must match the active harness; a host error is shown
-  without hiding MCPs declared by the bound session agent.
+  without hiding MCPs declared by the bound session agent. While the host loads,
+  its loading status stays visible alongside agent entries; a session without a
+  known host shows unavailable status rather than an empty inventory. Click
+  **Go to Settings** and confirm the session’s harness and host are selected.
 - **`codex-plugin-skills`, both composers:**
   `tests/e2e_ui/chat/test_codex_plugin_skills.py::test_plugin_skill_in_both_composers_after_inventory_failure`
   installs an enabled local plugin using the real Codex CLI, moves away its

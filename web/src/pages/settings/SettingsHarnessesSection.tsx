@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2Icon,
@@ -9,7 +9,7 @@ import {
   SettingsIcon,
   TriangleAlertIcon,
 } from "lucide-react";
-import { Link, useNavigate } from "@/lib/routing";
+import { Link, useNavigate, useSearchParams } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -99,7 +99,12 @@ export const SettingsHarnessesSection = () => {
   const info = useServerInfo();
   const queryClient = useQueryClient();
   const { data: hosts } = useHosts({ refetchOnFocus: true });
-  const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const requestedHostId = searchParams.get("host");
+  const [selectedHostId, setSelectedHostId] = useState<string | null>(requestedHostId);
+  useEffect(() => {
+    setSelectedHostId(requestedHostId);
+  }, [requestedHostId]);
   const [credentialKinds, setCredentialKinds] = useState<Record<string, HarnessCredentialKind>>({});
   const [readyNotice, setReadyNotice] = useState<{
     harness: string;
@@ -126,7 +131,7 @@ export const SettingsHarnessesSection = () => {
     [sortedHosts],
   );
   const selectedHost =
-    onlineHosts.find((h) => h.host_id === selectedHostId) ?? onlineHosts[0] ?? null;
+    sortedHosts.find((h) => h.host_id === selectedHostId) ?? onlineHosts[0] ?? null;
 
   // Capture the selected host when the fix opens so a later host change cannot
   // redirect an in-progress install or credential write to another machine.

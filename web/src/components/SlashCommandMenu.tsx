@@ -172,24 +172,18 @@ interface SlashCommandMenuProps {
   showMcpServers?: boolean;
   /** Effective MCP servers: agent-declared plus host-native for the active harness. */
   mcpServers?: readonly { name: string; description?: string | null }[];
-  mcpServersError?: boolean;
+  mcpServersStatus?: string;
+  mcpSettingsHref?: string;
 }
 
 function McpServerRows({
   servers,
-  error,
+  status,
 }: {
   servers?: readonly { name: string; description?: string | null }[];
-  error?: boolean;
+  status?: string;
 }) {
-  if (servers === undefined) {
-    return (
-      <div role="status" className="px-2 py-2 text-ui text-muted-foreground">
-        Loading MCP servers…
-      </div>
-    );
-  }
-  if (servers.length === 0 && !error) {
+  if (!servers?.length && !status) {
     return (
       <div role="status" className="px-2 py-2 text-ui text-muted-foreground">
         No MCP servers enabled for this session.
@@ -198,7 +192,7 @@ function McpServerRows({
   }
   return (
     <>
-      {servers.map((server) => (
+      {servers?.map((server) => (
         <div key={server.name} className="flex items-start gap-2 rounded-md px-2 py-1.5">
           <PlugIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
           <div className="min-w-0">
@@ -211,9 +205,9 @@ function McpServerRows({
           </div>
         </div>
       ))}
-      {error && (
+      {status && (
         <div role="status" className="px-2 py-2 text-ui text-muted-foreground">
-          Couldn’t load MCP servers from this session’s host.
+          {status}
         </div>
       )}
     </>
@@ -222,14 +216,17 @@ function McpServerRows({
 
 function McpServerMenu({
   servers,
-  error,
+  status,
+  settingsHref = "/settings/harnesses",
 }: {
   servers?: readonly { name: string; description?: string | null }[];
-  error?: boolean;
+  status?: string;
+  settingsHref?: string;
 }) {
   return (
     <div
       data-testid="mcp-server-menu"
+      onMouseDown={(event) => event.preventDefault()}
       className="absolute bottom-full left-0 z-10 mb-2 w-[28rem] max-w-[calc(100vw-24px)] overflow-hidden rounded-[16px] border border-border bg-popover p-2 shadow-menu dark:backdrop-blur-xl dark:backdrop-saturate-150"
     >
       <div className="px-2 py-1">
@@ -237,10 +234,10 @@ function McpServerMenu({
         <div className="text-xs leading-4 text-muted-foreground">Enabled for this session</div>
       </div>
       <div className="max-h-64 overflow-y-auto">
-        <McpServerRows servers={servers} error={error} />
+        <McpServerRows servers={servers} status={status} />
       </div>
       <div className="mt-1 border-border border-t px-2 pt-2 text-xs text-muted-foreground">
-        <Link className="underline hover:text-foreground" to="/settings">
+        <Link className="underline hover:text-foreground" to={settingsHref}>
           Go to Settings
         </Link>{" "}
         to configure MCP servers.
@@ -333,7 +330,8 @@ export function SlashCommandMenu({
   onRetrySkills,
   showMcpServers = false,
   mcpServers,
-  mcpServersError,
+  mcpServersStatus,
+  mcpSettingsHref,
 }: SlashCommandMenuProps) {
   const matchedNames = rankedSlashCommandNames(commands, query, builtinNames, labels);
   const listRef = useRef<HTMLDivElement>(null);
@@ -345,7 +343,14 @@ export function SlashCommandMenu({
     if (activeIndex < 0 || !listRef.current) return;
     listRef.current.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
-  if (showMcpServers) return <McpServerMenu servers={mcpServers} error={mcpServersError} />;
+  if (showMcpServers)
+    return (
+      <McpServerMenu
+        servers={mcpServers}
+        status={mcpServersStatus}
+        settingsHref={mcpSettingsHref}
+      />
+    );
   if (matchedNames.length === 0 && skillsStatus == null) return null;
 
   // The flat match order (from rankedSlashCommandNames) drives the caller's

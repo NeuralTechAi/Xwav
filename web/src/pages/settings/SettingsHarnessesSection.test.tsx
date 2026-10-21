@@ -199,12 +199,14 @@ vi.mock("./HarnessFixDialog", () => ({
   },
 }));
 
-function renderHarnesses(harness?: string) {
+function renderHarnesses(harness?: string, search = "") {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <MemoryRouter initialEntries={[`/settings/harnesses${harness ? `/${harness}` : ""}`]}>
+        <MemoryRouter
+          initialEntries={[`/settings/harnesses${harness ? `/${harness}` : ""}${search}`]}
+        >
           <SettingsHarnessesSection />
         </MemoryRouter>
       </TooltipProvider>
@@ -255,6 +257,22 @@ afterEach(() => {
 });
 
 describe("Harnesses grid", () => {
+  it.each(["online", "offline"] as const)(
+    "preselects the linked %s host instead of the first host",
+    (status) => {
+      hosts = [ONLINE, { ...ONLINE, host_id: "host & two", name: "session-host", status }];
+      renderHarnesses("claude-native", "?host=host%20%26%20two&tab=settings");
+      expect(screen.getByText("session-host")).toBeInTheDocument();
+      expect(startupCalls).toHaveBeenCalledWith("host & two", "claude-native");
+    },
+  );
+
+  it("falls back to an online host if the linked host is no longer listed", () => {
+    hosts = [ONLINE];
+    renderHarnesses("claude-native", "?host=removed&tab=settings");
+    expect(startupCalls).toHaveBeenCalledWith("h1", "claude-native");
+  });
+
   it("shows the configured credential and a reconfiguration warning with its reason", async () => {
     hosts = [ONLINE];
     renderHarnesses();
