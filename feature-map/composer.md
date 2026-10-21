@@ -10,7 +10,7 @@ and steers messages while the agent is busy.
 
 ## Sub-features
 
-- `prompt-link`: opening the new-session page with `?prompt=` (or `?task=`)
+- `prompt-link`: opening the new-session page with `?prompt=`
   fills an editable draft without starting a session. The consumed prompt is
   removed from the URL while other query parameters and the fragment remain.
   A new link replaces a parked draft; subsequent edits survive navigation.
@@ -141,7 +141,7 @@ and steers messages while the agent is busy.
 
 **New-session composer** (landing page, or New session):
 
-- Open `/?prompt=Explain%20this%20code` or the `?task=` form. Check that the
+- Open `/?prompt=Explain%20this%20code`. Check that the
   draft is filled and editable, no session starts until Send, and an embedded
   deployment stays under its mount path. Browser proof:
   `tests/browser_ui/chat/test_prompt_url.py`; router and draft edge cases:

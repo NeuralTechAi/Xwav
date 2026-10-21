@@ -1378,18 +1378,24 @@ function tooltipKeys(tooltip: HTMLElement): string[] {
 describe("prompt URL handoff", () => {
   beforeEach(setupLandingMocks);
 
-  it.each(["prompt", "task"])("prefills %s without starting a session", (parameter) => {
+  it("prefills prompt without starting a session", () => {
     const prompt = 'src/example.ts\nExplain a + b & fix "λ" <script> as plain text';
-    renderLanding({}, `/?${new URLSearchParams({ [parameter]: prompt, o: "123" })}#composer`);
+    renderLanding({}, `/?${new URLSearchParams({ prompt, o: "123" })}#composer`);
     expect(screen.getByTestId("new-chat-landing-input")).toHaveValue(prompt);
     expect(screen.getByTestId("landing-location")).toHaveTextContent("/?o=123#composer");
     expect(authenticatedFetchMock).not.toHaveBeenCalled();
   });
 
-  it("prefers prompt when both parameters are supplied", () => {
-    renderLanding({}, "/?prompt=Preferred&task=Legacy");
-    expect(screen.getByTestId("new-chat-landing-input")).toHaveValue("Preferred");
-    expect(screen.getByTestId("landing-location")).toHaveTextContent("/");
+  it("preserves unrelated query parameters while consuming prompt", () => {
+    renderLanding({}, "/?prompt=Linked&task=Unrelated");
+    expect(screen.getByTestId("new-chat-landing-input")).toHaveValue("Linked");
+    expect(screen.getByTestId("landing-location")).toHaveTextContent("/?task=Unrelated");
+  });
+
+  it("does not treat task as a prompt parameter", () => {
+    renderLanding({}, "/?task=Unrelated");
+    expect(screen.getByTestId("new-chat-landing-input")).toHaveValue("");
+    expect(screen.getByTestId("landing-location")).toHaveTextContent("/?task=Unrelated");
   });
 
   it("keeps edits when unrelated query parameters change", () => {
@@ -1409,7 +1415,7 @@ describe("prompt URL handoff", () => {
       target: { value: "Old draft" },
     });
     first.unmount();
-    const linked = renderLanding({}, "/?task=Linked+request", undefined, true);
+    const linked = renderLanding({}, "/?prompt=Linked+request", undefined, true);
     expect(screen.getByTestId("new-chat-landing-input")).toHaveValue("Linked request");
     fireEvent.change(screen.getByTestId("new-chat-landing-input"), {
       target: { value: "Revised link" },

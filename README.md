@@ -403,14 +403,13 @@ Check status with `omnigent server status`; stop everything with
 `omnigent stop`.
 
 Integrations can open the new-chat composer with text already filled in using
-`/?prompt=Explain%20this%20code`. The `task` parameter is also supported;
-`prompt` takes precedence when both are present. Build links with
+`/?prompt=Explain%20this%20code`. Build links with
 `URLSearchParams` to preserve newlines, Unicode, and characters such as `&` and
 `+`. For a deployment under `/tools/omnigent`, use
 `/tools/omnigent/?prompt=Explain%20this%20code`.
 
 The text is an editable draft: the user chooses a host and agent and presses
-Send to start the session. Prompt parameters are removed from the current URL
+Send to start the session. The prompt parameter is removed from the current URL
 after loading, while other query parameters and the fragment are retained.
 
 To suppress the automatic browser tab, use `omni host --no-open` or set

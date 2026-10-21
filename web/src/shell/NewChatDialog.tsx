@@ -2157,7 +2157,7 @@ export function NewChatLandingScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const linkedPrompt = searchParams.get("prompt") ?? searchParams.get("task");
+  const linkedPrompt = searchParams.get("prompt");
   const queryClient = useQueryClient();
   const isMobileViewport = useIsMobileViewport();
   const isCoarsePointer = useIsCoarsePointer();
@@ -2334,12 +2334,11 @@ export function NewChatLandingScreen() {
     linkedPrompt?.trim() ? linkedPrompt : (restoredDraft?.message ?? ""),
   );
   useEffect(() => {
-    if (!searchParams.has("prompt") && !searchParams.has("task")) return;
+    if (!searchParams.has("prompt")) return;
     if (linkedPrompt?.trim()) setMessage(linkedPrompt);
     // Consume the link once so returning to the composer preserves edits.
     const remaining = new URLSearchParams(searchParams);
     remaining.delete("prompt");
-    remaining.delete("task");
     navigate(
       { search: remaining.toString(), hash: location.hash },
       { replace: true, state: location.state },
