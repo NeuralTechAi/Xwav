@@ -19,7 +19,7 @@ from tests._helpers.live_server import isolated_local_server, isolated_process_e
 from tests._helpers.polling import poll_until
 
 
-def _check_host_readiness(root: Path, background: bool) -> None:
+def _check_host_readiness(root: Path, background: bool, subscription_login: bool = False) -> None:
     base_env = {
         name: os.environ[name]
         for name in ("PATH", "LANG", "OMNIGENT_HARNESS_TMP_PARENT")
@@ -30,11 +30,27 @@ def _check_host_readiness(root: Path, background: bool) -> None:
     home.mkdir(parents=True)
     overrides = {
         "CLAUDE_CONFIG_DIR": str(home / ".claude"),
-        "ANTHROPIC_API_KEY": "synthetic-not-a-real-key",
         "DISABLE_TELEMETRY": "1",
         "DISABLE_AUTOUPDATER": "1",
         "DISABLE_ERROR_REPORTING": "1",
     }
+    if subscription_login:
+        credential = home / ".claude" / ".credentials.json"
+        credential.parent.mkdir()
+        credential.write_text(
+            json.dumps(
+                {
+                    "claudeAiOauth": {
+                        "accessToken": "synthetic-subscription-access-token",
+                        "expiresAt": 99999999999999,
+                        "scopes": ["user:inference", "user:profile"],
+                        "subscriptionType": "max",
+                    }
+                }
+            )
+        )
+    else:
+        overrides["ANTHROPIC_API_KEY"] = "synthetic-not-a-real-key"
     env = isolated_process_env(
         home, {**overrides, "OMNIGENT_CONFIG_HOME": str(home / ".omnigent")}, base_env
     )
@@ -53,7 +69,8 @@ def _check_host_readiness(root: Path, background: bool) -> None:
     (root / "claude-auth.json").write_text(
         json.dumps({"version": version.stdout.strip(), "status": auth}, indent=2)
     )
-    assert auth["loggedIn"] is True and auth["authMethod"] == "api_key", auth
+    expected_auth = "claude.ai" if subscription_login else "api_key"
+    assert auth["loggedIn"] is True and auth["authMethod"] == expected_auth, auth
     config = {
         "providers": {"selected": {"kind": "subscription", "cli": "claude", "default": True}}
     }
@@ -95,7 +112,9 @@ def _check_host_readiness(root: Path, background: bool) -> None:
                 advertisement = online()
                 assert advertisement is not None
                 (root / "host-advertisement.json").write_text(json.dumps(advertisement, indent=2))
-                assert advertisement["configured_harnesses"]["claude-native"] == "needs-auth"
+                expected_readiness = True if subscription_login else "needs-auth"
+                for harness in ("claude-native", "claude-sdk"):
+                    assert advertisement["configured_harnesses"][harness] == expected_readiness
             finally:
                 stop = subprocess.run(
                     [*prefix, "host", "stop", "--server", base_url, "--force"],
@@ -115,8 +134,11 @@ def _check_host_readiness(root: Path, background: bool) -> None:
     reason="Requires bubblewrap network, PID, and managed-settings isolation",
 )
 @pytest.mark.parametrize("background", [False, True], ids=["foreground", "background"])
+@pytest.mark.parametrize("subscription_login", [False, True], ids=["api-only", "stored-login"])
 @pytest.mark.timeout(210)
-def test_selected_subscription_rejects_api_only_host(tmp_path: Path, background: bool) -> None:
+def test_selected_subscription_host_readiness(
+    tmp_path: Path, background: bool, subscription_login: bool
+) -> None:
     if resolve_cli_binary("claude") is None:
         pytest.skip("Requires installed Claude CLI")
     base_env = {name: os.environ[name] for name in ("PATH", "LANG") if name in os.environ}
@@ -145,7 +167,8 @@ def test_selected_subscription_rejects_api_only_host(tmp_path: Path, background:
             "-c",
             "from pathlib import Path; "
             "from tests.e2e.test_claude_subscription_readiness import _check_host_readiness; "
-            f"_check_host_readiness(Path({str(tmp_path)!r}), {background!r})",
+            f"_check_host_readiness(Path({str(tmp_path)!r}), "
+            f"{background!r}, {subscription_login!r})",
         ],
         env=env,
         cwd=tmp_path,

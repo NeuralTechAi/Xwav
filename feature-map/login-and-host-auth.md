@@ -176,10 +176,12 @@ Never run these commands against the real `~/.omnigent` or `~/.databrickscfg`.
   hosts, not existing-daemon environment refresh, `start`, or an installed
   launchd/systemd service; those entry points need separate verification.
 - **`selected-claude-auth` (own environment, Linux, installed Claude CLI and bubblewrap):**
-  `tests/e2e/test_claude_subscription_readiness.py::test_selected_subscription_rejects_api_only_host`
+  `tests/e2e/test_claude_subscription_readiness.py::test_selected_subscription_host_readiness`
   selects a subscription with a synthetic API key and no login, then reads
   real host advertisements from foreground and background CLI launches. Both
-  must report `needs-auth`. Network/PID namespaces and hidden managed settings
+  must report `needs-auth`. With a stored subscription login and no API key,
+  both modes must report `true` for Claude Native and Claude SDK.
+  Network/PID namespaces and hidden managed settings
   keep the test independent of the developer's account. Credential combinations,
   managed gateways, probe errors and SDK file/Keychain detection are covered in
   `tests/onboarding/test_harness_readiness.py`, `test_harness_install.py` and
