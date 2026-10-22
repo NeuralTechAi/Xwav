@@ -1,10 +1,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
-import { BridgeSetupApp } from "./server-selector-v2";
+import { BridgeSetupApp, SetupApp } from "./server-selector-v2";
 
 afterEach(() => {
   cleanup();
+  localStorage.removeItem("web-theme");
+  document.documentElement.classList.remove("dark", "light");
+  vi.restoreAllMocks();
   delete (window as { omnigentSetup?: unknown }).omnigentSetup;
 });
 
@@ -159,4 +162,81 @@ it("shows source-install instructions in a browser without the desktop bridge", 
   );
   expect(screen.getByRole("button", { name: "Check again" })).toBeDisabled();
   expect(screen.queryByText("The desktop shell is unavailable.")).not.toBeInTheDocument();
+});
+
+it.each(["light", "dark"] as const)(
+  "persists browser onboarding %s mode across reloads",
+  async (mode) => {
+    const view = render(<SetupApp />);
+    fireEvent.pointerDown(await screen.findByRole("button", { name: "Server selector settings" }), {
+      button: 0,
+    });
+    fireEvent.click(
+      screen.getByRole("menuitemradio", { name: mode === "dark" ? "Dark" : "Light" }),
+    );
+    await waitFor(() => expect(document.documentElement).toHaveClass(mode));
+    expect(localStorage.getItem("web-theme")).toBe(mode);
+    view.unmount();
+    document.documentElement.classList.remove(mode);
+    render(<SetupApp />);
+    await waitFor(() => expect(document.documentElement).toHaveClass(mode));
+    fireEvent.pointerDown(await screen.findByRole("button", { name: "Server selector settings" }), {
+      button: 0,
+    });
+    expect(
+      screen.getByRole("menuitemradio", { name: mode === "dark" ? "Dark" : "Light" }),
+    ).toHaveAttribute("aria-checked", "true");
+  },
+);
+
+it("follows live OS appearance changes in browser System mode", async () => {
+  let onChange: (event: MediaQueryListEvent) => void = () => {};
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  vi.spyOn(window, "matchMedia").mockReturnValue({
+    ...media,
+    matches: true,
+    addListener: (listener) => {
+      onChange = listener ?? (() => {});
+    },
+  });
+  render(<SetupApp />);
+  await waitFor(() => expect(document.documentElement).toHaveClass("dark"));
+  fireEvent.pointerDown(await screen.findByRole("button", { name: "Server selector settings" }), {
+    button: 0,
+  });
+  expect(screen.getByRole("menuitemradio", { name: "System (default)" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  Object.defineProperty(window.matchMedia("(prefers-color-scheme: dark)"), "matches", {
+    value: false,
+  });
+  act(() => onChange({ matches: false } as MediaQueryListEvent));
+  await waitFor(() => expect(document.documentElement).toHaveClass("light"));
+});
+
+it("retains desktop appearance controls and native theme ownership", async () => {
+  const setColorScheme = vi.fn();
+  let onChange: (theme: "light" | "dark") => void = () => {};
+  stubBridge({
+    setColorScheme,
+    getColorScheme: async () => ({ source: "dark", effective: "dark" }),
+    onColorScheme: (listener: typeof onChange) => {
+      onChange = listener ?? (() => {});
+      return () => {};
+    },
+  });
+  render(<SetupApp />);
+  fireEvent.pointerDown(await screen.findByRole("button", { name: "Server selector settings" }), {
+    button: 0,
+  });
+  expect(screen.getByRole("menuitemradio", { name: "Dark" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  fireEvent.click(screen.getByRole("menuitemradio", { name: "Light" }));
+  expect(setColorScheme).toHaveBeenCalledWith("light");
+  act(() => onChange("light"));
+  expect(document.documentElement).not.toHaveClass("dark");
+  expect(localStorage.getItem("web-theme")).toBeNull();
 });

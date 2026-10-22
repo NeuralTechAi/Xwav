@@ -3,10 +3,13 @@
 // Loaded from a file:// window (see electron/src/main.js `setupPagePath`).
 // Renders the ServerSelectorV2, wiring it
 // to the shell's `omnigentSetup` preload bridge (server URL, recent / managed
-// servers, connect, start-local). Theme follows the OS via index.css.
+// servers, connect, start-local). Browser previews share the app theme provider.
 
 import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { useTheme } from "next-themes";
+import { ThemeProvider } from "./components/theme/ThemeProvider";
+import { normalizeThemeMode, type ThemeMode } from "./components/theme/themeMode";
 import { Spinner } from "./components/ui/spinner";
 import type { Runner } from "./pages/onboarding/RunnerStep";
 import { ServerSelectorV2, type ServerSelectorV2Setup } from "./pages/onboarding/ServerSelectorV2";
@@ -55,15 +58,32 @@ function setupBridge(): OmnigentSetup | undefined {
 // Mock-or-real router: with `?mock=1` render the URL-param mock (dev only, see
 // mockSetup.ts), otherwise the real bridge-wired flow. Split so each branch's
 // hooks run unconditionally (rules of hooks).
-function SetupApp() {
+export function SetupApp() {
   const mock = maybeMockSetup(new URLSearchParams(window.location.search));
   if (mock) {
     return <ServerSelectorV2 setup={mock} />;
   }
-  return <BridgeSetupApp />;
+  if (setupBridge()?.setColorScheme) return <BridgeSetupApp />;
+  return (
+    <ThemeProvider>
+      <BrowserSetupApp />
+    </ThemeProvider>
+  );
 }
 
-export function BridgeSetupApp() {
+function BrowserSetupApp() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <BridgeSetupApp browserAppearance={{ mode: normalizeThemeMode(theme), setMode: setTheme }} />
+  );
+}
+
+export function BridgeSetupApp({
+  browserAppearance,
+}: {
+  browserAppearance?: { mode: ThemeMode; setMode: (mode: ThemeMode) => void };
+} = {}) {
+  const browserThemed = browserAppearance !== undefined;
   const params = new URLSearchParams(window.location.search);
   const failedUrl = params.get("url");
   const error = params.get("error") ?? undefined;
@@ -149,28 +169,30 @@ export function BridgeSetupApp() {
       : Promise.resolve();
     // Seed the radio + `.dark` class from the shell's live theme so returning to
     // setup after the app set Dark shows Dark, not the "system" default.
-    const theme = bridge.getColorScheme
-      ? bridge.getColorScheme().then((s) => {
-          if (!s) return;
-          setColorScheme(s.source === "light" || s.source === "dark" ? s.source : "system");
-          document.documentElement.classList.toggle("dark", s.effective === "dark");
-        })
-      : Promise.resolve();
+    const theme =
+      !browserThemed && bridge.getColorScheme
+        ? bridge.getColorScheme().then((s) => {
+            if (!s) return;
+            setColorScheme(s.source === "light" || s.source === "dark" ? s.source : "system");
+            document.documentElement.classList.toggle("dark", s.effective === "dark");
+          })
+        : Promise.resolve();
     Promise.allSettled([savedUrl, recents, managed, cli, caps, theme]).then(() => {
       // A failed CLI probe means "not installed" rather than unknown.
       setInstalled((prev) => prev ?? false);
       setReady(true);
     });
-  }, [failedUrl, isEphemeral, refreshCliStatus]);
+  }, [failedUrl, isEphemeral, refreshCliStatus, browserThemed]);
 
   // Sync the wizard's `.dark` class with the shell's effective theme: the dark
   // styles key off the class (index.css), not the OS media query. The shell
   // pushes on scheme change and on OS changes (so "System" tracks live).
   useEffect(() => {
+    if (browserThemed) return;
     return setupBridge()?.onColorScheme?.((theme) =>
       document.documentElement.classList.toggle("dark", theme === "dark"),
     );
-  }, []);
+  }, [browserThemed]);
 
   const setup: ServerSelectorV2Setup = {
     initialUrl,
@@ -334,11 +356,11 @@ export function BridgeSetupApp() {
         ?.catch(() => {});
     },
     switchToLegacyDisabled: v2Forced,
-    // Live color-scheme override; only offered when the shell exposes it.
+    // Desktop owns native chrome; browsers share the main app's persisted mode.
     onSetColorScheme: setupBridge()?.setColorScheme
       ? (scheme) => setupBridge()?.setColorScheme?.(scheme)
-      : undefined,
-    initialColorScheme: colorScheme,
+      : browserAppearance?.setMode,
+    initialColorScheme: browserAppearance?.mode ?? colorScheme,
   };
 
   return (
