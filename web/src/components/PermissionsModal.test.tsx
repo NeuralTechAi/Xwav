@@ -654,7 +654,7 @@ describe("PermissionsModal", () => {
       });
 
       expect(
-        await screen.findByText("Sharing has been disabled for this Omnigent server."),
+        await screen.findByText("Sharing has been disabled for this Xvaw server."),
       ).toBeInTheDocument();
       // Off short-circuits before the grant-list query and hides all controls.
       expect(listMock).not.toHaveBeenCalled();
@@ -676,7 +676,7 @@ describe("PermissionsModal", () => {
       ).toBeInTheDocument();
       expect(screen.queryByText(/Please be careful when sharing/)).not.toBeInTheDocument();
       expect(
-        screen.queryByText("Sharing has been disabled for this Omnigent server."),
+        screen.queryByText("Sharing has been disabled for this Xvaw server."),
       ).not.toBeInTheDocument();
     });
 

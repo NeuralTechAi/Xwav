@@ -192,6 +192,6 @@ describe("terminal clipboard preference", () => {
     expect(readTerminalClipboardPreference()).toBe("ask");
     await expect(
       readSettingsFile(new File([JSON.stringify(imported)], "settings.json")),
-    ).rejects.toThrow("valid Omnigent settings");
+    ).rejects.toThrow("valid Xvaw settings");
   });
 });

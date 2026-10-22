@@ -771,7 +771,7 @@ function ColorThemeControl() {
       : selectedPalette!;
   const paletteDescription =
     selection === "custom"
-      ? `Based on ${PALETTES.find((palette) => palette.id === customTheme.basePalette)?.label ?? "Omnigent"}`
+      ? `Based on ${PALETTES.find((palette) => palette.id === customTheme.basePalette)?.label ?? "Xvaw"}`
       : selectedPalette?.blurb;
 
   return (
@@ -1028,7 +1028,7 @@ function AppearanceSection() {
   return (
     <Section
       title="Appearance"
-      description="Choose how Omnigent looks on this device."
+      description="Choose how Xvaw looks on this device."
       descriptionClassName="text-sm"
     >
       <div className="flex flex-col gap-6">
@@ -1190,7 +1190,7 @@ function AppearanceSection() {
           <DialogHeader>
             <DialogTitle>Import settings</DialogTitle>
             <DialogDescription>
-              Choose an exported Omnigent settings file to apply. This will overwrite your current
+              Choose an exported Xvaw settings file to apply. This will overwrite your current
               appearance and preference settings.
             </DialogDescription>
           </DialogHeader>
@@ -1225,7 +1225,7 @@ function GitSection() {
   const info = useServerInfo();
   const archiveWorktreeCleanup = info !== "loading" && info.archive_worktree_cleanup === true;
   return (
-    <Section title="Git" description="Configure how Omnigent works with Git.">
+    <Section title="Git" description="Configure how Xvaw works with Git.">
       <SettingsGroup title="Worktrees" testId="settings-group-worktrees">
         <AlwaysUseWorktreeControl />
         <div className="mt-4 border-t border-border pt-4">
@@ -1821,7 +1821,7 @@ function TerminalClipboardControl() {
 /** App-wide behavior settings. */
 function GeneralSection() {
   return (
-    <Section title="General" description="Configure general Omnigent behavior.">
+    <Section title="General" description="Configure general Xvaw behavior.">
       <div className="flex flex-col gap-6">
         <SettingsGroup title="Composer" testId="settings-group-composer">
           <ComposerSendShortcutControl />
@@ -2296,7 +2296,7 @@ function ShortcutsSection() {
 }
 
 /**
- * Desktop-only: shows which Omnigent CLI binary the shell resolved
+ * Desktop-only: shows which Xvaw CLI binary the shell resolved
  * (auto-detected or a custom override). Read-only — setting a custom path is
  * done on the connect/setup screen (the trusted surface that allows free-text
  * entry); the SPA exposes no path setter. A safe "reset to auto-detected" stays
@@ -2330,7 +2330,7 @@ function LocalCliSection() {
   return (
     <Section
       title="Local CLI"
-      description="The Omnigent command-line tool this app uses to run a local server and connect this machine as a runner."
+      description="The Xvaw command-line tool this app uses to run a local server and connect this machine as a runner."
     >
       <SettingsGroup title="CLI status">
         {status === null ? (
@@ -2364,8 +2364,7 @@ function LocalCliSection() {
             ) : (
               <div className="flex flex-col gap-2">
                 <p className="text-ui text-muted-foreground">
-                  The Omnigent CLI wasn't found. Install it, then set its path from the connect
-                  screen:
+                  The Xvaw CLI wasn't found. Install it, then set its path from the connect screen:
                 </p>
                 {status.installCommand && (
                   <code className="block overflow-x-auto rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
@@ -2410,7 +2409,7 @@ function LocalCliSection() {
 
 const UPDATE_MODE_LABELS: Record<UpdateMode, string> = {
   default: "Automatic (check periodically, ask before installing)",
-  start: "Check when Omnigent starts",
+  start: "Check when Xvaw starts",
   manual: "Manual only",
   none: "Off",
 };
@@ -2496,7 +2495,7 @@ function UpdatesSection() {
   return (
     <Section
       title="Updates"
-      description="Desktop app update preferences for this installed Omnigent shell."
+      description="Desktop app update preferences for this installed Xvaw shell."
     >
       {config === null ? (
         <SettingsGroup title="Preferences">
@@ -2836,7 +2835,7 @@ function ImportSection() {
   return (
     <Section
       title="Import sessions"
-      description="Pull local chats from a machine you're running into Omnigent. Sessions already imported are skipped."
+      description="Pull local chats from a machine you're running into Xvaw. Sessions already imported are skipped."
     >
       <div className="flex flex-col gap-3">
         <h2 className="text-ui font-medium">Import from a machine</h2>

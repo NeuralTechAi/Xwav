@@ -94,8 +94,8 @@ export function maybeMockSetup(params: URLSearchParams): ServerSelectorV2Setup |
       // stream finishes — so the warm-up beat shows an empty terminal first.
       return new Promise<{ ok: boolean; error?: string }>((resolve) => {
         const lines = [
-          "Installing uv (required by the Omnigent installer)…",
-          "Installing the Omnigent CLI…",
+          "Installing uv (required by the Xvaw installer)…",
+          "Installing the Xvaw CLI…",
           "uv tool install --force --python 3.12 omnigent",
           "Installed omnigent",
         ];

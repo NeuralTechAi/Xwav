@@ -1414,7 +1414,7 @@ describe("Arca auto-connect wiring", () => {
 describe("Databricks auth mode wiring", () => {
   const workspace = "https://workspace.cloud.databricks.com/omnigent";
 
-  it("connects a pasted HTTP workspace URL using HTTPS auth and the Omnigent mount", async (t) => {
+  it("connects a pasted HTTP workspace URL using HTTPS auth and the Xvaw mount", async (t) => {
     const target = "https://workspace.cloud.databricks.com/omnigent?o=123";
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async () => ({ headers: new Headers({ server: "databricks" }) });
@@ -2917,7 +2917,7 @@ describe("workspace chrome injection wiring (src/main.js)", () => {
         "call (it was removed or commented out). That call wires the did-finish-load",
         "listener that injects WORKSPACE_CHROME_HIDE_CSS to hide the Databricks workspace",
         "top-nav/switcher in the desktop window. Without it the switcher reappears and users",
-        "can navigate out of Omnigent into other workspace apps. Re-add the call (the wiring",
+        "can navigate out of Xvaw into other workspace apps. Re-add the call (the wiring",
         "is defined in src/workspace-chrome.js); do not delete this test.",
       ].join(" "),
     );
@@ -4747,7 +4747,7 @@ it("keeps native feedback through cold authentication and the server document lo
   assert.equal(h.calls.loadURL.length, 0);
   finishAuth(new URL(target).origin);
   await tick();
-  assert.equal(h.calls.loading.at(-1).label, "Opening Omnigent…");
+  assert.equal(h.calls.loading.at(-1).label, "Opening Xvaw…");
   assert.equal(h.calls.loadURL.length, 1);
   const attempt = h.calls.loading.at(-1).attempt;
   finishLoad();
@@ -4764,7 +4764,7 @@ it("dismisses native loading feedback when the server document fails", async (t)
   t.after(h.cleanup);
   await assert.rejects(h.api.loadServerUrl(h.win, "https://example.com/"), /connection lost/);
   const shown = h.calls.loading.find((call) => call.action === "show");
-  assert.equal(shown.label, "Opening Omnigent…");
+  assert.equal(shown.label, "Opening Xvaw…");
   assert.deepEqual(h.calls.loading.at(-1), { action: "hide", attempt: shown.attempt });
 });
 

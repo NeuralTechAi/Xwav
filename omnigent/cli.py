@@ -2079,7 +2079,7 @@ def _extract_global_logging_flags(argv: list[str]) -> tuple[list[str], bool, boo
     help="Show the version and exit.",
 )
 def cli() -> None:
-    """Omnigent CLI."""
+    """Xvaw CLI — your agents, one workspace."""
 
 
 # Names of every subcommand the click group owns. Used by

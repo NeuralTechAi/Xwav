@@ -17,7 +17,7 @@ export function JoinTeamStep({
       <div className="flex flex-col items-center gap-1 text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Join your team</h1>
         <p className="text-ui text-muted-foreground">
-          Connect to their Omnigent server to start collaborating.
+          Connect to their Xvaw server to start collaborating.
         </p>
         {serverUrl && (
           <p className="text-ui font-medium text-foreground">

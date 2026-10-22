@@ -5,32 +5,19 @@
 import GithubMono from "@lobehub/icons/es/Github/components/Mono";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { AndroidGlyph, AppleGlyph, DiscordGlyph } from "@/pages/onboarding/brandGlyphs";
 
 const LINKS: { key: string; label: string; icon: ReactNode; href: string }[] = [
-  {
-    key: "ios",
-    label: "iOS App",
-    icon: <AppleGlyph />,
-    href: "https://apps.apple.com/us/app/omnigent/id6783102694",
-  },
-  {
-    key: "android",
-    label: "Android App",
-    icon: <AndroidGlyph />,
-    href: "https://omnigent.ai/docs/interact/mobile#android-app",
-  },
   {
     key: "github",
     label: "GitHub",
     icon: <GithubMono size={16} />,
-    href: "https://github.com/omnigent-ai/omnigent",
+    href: "https://github.com/NeuralTechAi/Xvaw",
   },
   {
-    key: "discord",
-    label: "Join Discord",
-    icon: <DiscordGlyph />,
-    href: "https://discord.gg/omnigent",
+    key: "docs",
+    label: "Documentation",
+    icon: <GithubMono size={16} />,
+    href: "https://github.com/NeuralTechAi/Xvaw#readme",
   },
 ];
 
@@ -53,7 +40,7 @@ export function LandingFooter() {
         •
       </span>
       <span className="whitespace-nowrap px-2 text-base text-muted-foreground">
-        Maintained by Databricks and the Omnigent community
+        Xvaw · Built on the open-source Omnigent framework
       </span>
     </div>
   );

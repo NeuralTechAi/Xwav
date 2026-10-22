@@ -20,7 +20,7 @@ export function canRememberTerminalClipboardPreference(): boolean {
   return storageKey() !== null;
 }
 
-/** Clipboard trust stays local to this browser/app and Omnigent server. */
+/** Clipboard trust stays local to this browser/app and Xvaw server. */
 export function readTerminalClipboardPreference(): TerminalClipboardPreference {
   const key = storageKey();
   if (key === null) return "ask";

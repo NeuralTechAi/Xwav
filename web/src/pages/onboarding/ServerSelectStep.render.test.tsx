@@ -23,7 +23,7 @@ describe("ServerSelectStep", () => {
         onConnect={onConnect}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: /open omnigent/i }));
+    fireEvent.click(screen.getByRole("button", { name: /open xvaw/i }));
     expect(onConnect).toHaveBeenCalledWith("https://team.example.com/");
   });
 
@@ -75,7 +75,7 @@ describe("ServerSelectStep", () => {
       />,
     );
     // List mode: a recent is pre-selected → Open enabled, no URL input yet.
-    expect(screen.getByRole("button", { name: /open omnigent/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /open xvaw/i })).toBeEnabled();
     expect(screen.queryByLabelText("Server URL")).not.toBeInTheDocument();
     // "Add server" switches to the add view: input appears, action becomes Join.
     fireEvent.click(screen.getByRole("button", { name: /add server/i }));
@@ -95,9 +95,9 @@ describe("ServerSelectStep", () => {
     // Added + selected → Join enabled, connects to the normalized URL.
     const normalized = "https://my-server.example.com/";
     expect(onCheckServer).toHaveBeenCalledWith(normalized);
-    expect(screen.getByRole("button", { name: /open omnigent/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /open xvaw/i })).toBeEnabled();
     // The probe result surfaces on the card.
-    await waitFor(() => expect(screen.getByText("Omnigent server")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Xvaw server")).toBeInTheDocument());
   });
 
   it("Add shows an error for an invalid URL and adds nothing", () => {
@@ -120,7 +120,7 @@ describe("ServerSelectStep", () => {
         onConnect={onConnect}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: /open omnigent/i }));
+    fireEvent.click(screen.getByRole("button", { name: /open xvaw/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "That server rejected the connection.",
     );

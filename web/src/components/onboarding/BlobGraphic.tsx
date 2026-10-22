@@ -9,7 +9,7 @@ import "./BlobGraphic.css";
 // the three blobs read as data rather than three near-identical CSS rules.
 const BLOBS = [
   {
-    color: "224, 68, 199", // pink
+    color: "110, 231, 210", // mint
     gradientAt: "36% 32%",
     left: "34%",
     top: "68%",
@@ -18,7 +18,7 @@ const BLOBS = [
     animation: "9.6s cubic-bezier(0.45, 0, 0.55, 1) -2.8s infinite blob-float-pink",
   },
   {
-    color: "249, 115, 22", // orange
+    color: "137, 169, 255", // periwinkle
     gradientAt: "62% 38%",
     left: "50%",
     top: "18%",
@@ -27,7 +27,7 @@ const BLOBS = [
     animation: "12.2s cubic-bezier(0.45, 0, 0.55, 1) -7.2s infinite blob-float-orange",
   },
   {
-    color: "32, 158, 214", // blue
+    color: "32, 158, 174", // teal
     gradientAt: "42% 64%",
     left: "66%",
     top: "68%",

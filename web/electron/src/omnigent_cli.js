@@ -86,7 +86,7 @@ function sameLoopbackServer(a, b) {
 }
 
 /**
- * The Omnigent local runtime data dir — `$OMNIGENT_DATA_DIR` (with `~`
+ * The Xvaw local runtime data dir — `$OMNIGENT_DATA_DIR` (with `~`
  * expanded) or `~/.omnigent`. Mirrors `_local_data_dir()` in
  * omnigent/host/local_server.py. The local-server pidfile lives here.
  *
@@ -102,7 +102,7 @@ function localDataDir() {
 }
 
 /**
- * The Omnigent config dir — `$OMNIGENT_CONFIG_HOME` (with `~` expanded) or
+ * The Xvaw config dir — `$OMNIGENT_CONFIG_HOME` (with `~` expanded) or
  * `~/.omnigent`. config.yaml (machine identity) lives here; it can differ from
  * the data dir under test env overrides, but is the same by default.
  *
@@ -118,7 +118,7 @@ function localConfigDir() {
 }
 
 /**
- * The shared Omnigent state dir, ALWAYS `~/.omnigent` — it ignores
+ * The shared Xvaw state dir, ALWAYS `~/.omnigent` — it ignores
  * `$OMNIGENT_DATA_DIR`, mirroring `state_dir()` in
  * sdks/ui/omnigent_ui_sdk/terminal/_config.py and `_HOST_PID_PATH` in
  * omnigent/cli.py (both hardcode `Path.home()/".omnigent"`). The auth-token
@@ -135,7 +135,7 @@ function stateDir() {
 let cachedHostId = null;
 
 /**
- * This machine's Omnigent host id (bare 32-char hex, e.g. "ab12…"), read from
+ * This machine's Xvaw host id (bare 32-char hex, e.g. "ab12…"), read from
  * the machine identity in `config.yaml` (`host: host_id:`, written by
  * omnigent/host/identity.py) — instant, no subprocess. Present once generated,
  * even before connecting to any server. Returns null when no id exists yet;
@@ -414,7 +414,7 @@ function cliCommandParts(command) {
 }
 
 /**
- * Run an Omnigent CLI subcommand and resolve with its captured output. Never
+ * Run an Xvaw CLI subcommand and resolve with its captured output. Never
  * rejects — a failure surfaces as a non-zero `code` plus stderr so callers can
  * decide. `execFile` (no shell) avoids quoting pitfalls.
  *
@@ -914,7 +914,7 @@ function readDaemonRecords() {
 }
 
 /**
- * The Omnigent server URL a daemon record talks to, mirroring
+ * The Xvaw server URL a daemon record talks to, mirroring
  * `_daemon_base_url()` (omnigent/cli.py): a local-mode daemon's URL lives in
  * `resolved_server_url` (falling back to a healthy local server's URL); a
  * server-mode daemon's is its `server_url`/`target`.

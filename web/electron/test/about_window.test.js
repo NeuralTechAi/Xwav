@@ -187,7 +187,7 @@ describe("resolveAppIconDataUrl", () => {
         createFromPath: () => fakeImage("fallback"),
       },
       platform: "darwin",
-      executablePath: "/Applications/Omnigent.app/Contents/MacOS/Omnigent",
+      executablePath: "/Applications/Xvaw.app/Contents/MacOS/Xvaw",
       fallbackIconPath: "/app/icons/icon.png",
     });
 
@@ -203,7 +203,7 @@ describe("resolveAppIconDataUrl", () => {
         createFromPath: () => fakeImage("fallback"),
       },
       platform: "darwin",
-      executablePath: "/Applications/Omnigent.app/Contents/MacOS/Omnigent",
+      executablePath: "/Applications/Xvaw.app/Contents/MacOS/Xvaw",
       fallbackIconPath: "/app/icons/icon.png",
     });
 
@@ -247,7 +247,7 @@ describe("About window", () => {
     assert.match(html, /Run <code>omni update<\/code> to update\./);
     assert.match(html, /id="close"[^>]*>Close<\/button>/);
     assert.match(script, /info\.appIconDataUrl\.startsWith\("data:image\/"\)/);
-    assert.match(script, /desktopHeading\.textContent = `Omnigent \$\{platformName\} app`/);
+    assert.match(script, /desktopHeading\.textContent = `Xvaw \$\{platformName\} app`/);
     assert.match(script, /event\.key !== "Escape"/);
     assert.match(script, /api\?\.close\(\)/);
     assert.match(preload, /downloadDesktopUpdate:[\s\S]*about-download-desktop-update/);

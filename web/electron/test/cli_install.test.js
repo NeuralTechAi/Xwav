@@ -66,7 +66,12 @@ describe("installCli", () => {
     });
     assert.equal(res.ok, true);
     assert.equal(calls[0].command, "sh");
-    assert.deepEqual(calls[0].args, ["/res/install_oss.sh", "--non-interactive"]);
+    assert.deepEqual(calls[0].args, [
+      "/res/install_oss.sh",
+      "--non-interactive",
+      "--repo",
+      "https://github.com/NeuralTechAi/Xvaw.git",
+    ]);
   });
 
   it("stops when uv can't be ensured", async () => {

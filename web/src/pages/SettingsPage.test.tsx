@@ -336,7 +336,7 @@ describe("SettingsPage", () => {
   it("groups General settings into titled outlined cards and hides its description on mobile", () => {
     renderPage("/settings/general");
 
-    expect(screen.getByText("Configure general Omnigent behavior.")).toHaveClass("max-md:hidden");
+    expect(screen.getByText("Configure general Xvaw behavior.")).toHaveClass("max-md:hidden");
 
     for (const testId of [
       "settings-group-composer",
@@ -489,9 +489,7 @@ describe("SettingsPage", () => {
     expect(
       screen.getByText("Set text across the interface. Icons and spacing stay fixed."),
     ).toHaveClass("max-md:hidden");
-    expect(screen.getByText("Choose how Omnigent looks on this device.")).toHaveClass(
-      "max-md:hidden",
-    );
+    expect(screen.getByText("Choose how Xvaw looks on this device.")).toHaveClass("max-md:hidden");
     for (const testId of [
       "settings-group-theme",
       "settings-group-chat",
@@ -715,12 +713,12 @@ describe("SettingsPage", () => {
     });
   });
 
-  it("renders the color theme dropdown, defaults to Omnigent, and applies a palette on change", () => {
+  it("renders the color theme dropdown, defaults to Xvaw, and applies a palette on change", () => {
     localStorage.clear();
     renderPage("/settings/appearance");
 
     const select = screen.getByTestId("color-theme-select") as HTMLSelectElement;
-    // Nothing stored → the default (Omnigent) palette is selected and no
+    // Nothing stored → the default (Xvaw) palette is selected and no
     // data-theme override is applied to the document.
     expect(select.value).toBe("omni");
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();
@@ -956,7 +954,7 @@ describe("SettingsPage", () => {
     expect(localStorage.getItem("omnigent:code-font-size")).toBeNull();
     expect(localStorage.getItem("omnigent:code-font-weight")).toBeNull();
 
-    // Color theme is back to Omnigent.
+    // Color theme is back to Xvaw.
     expect((screen.getByTestId("color-theme-select") as HTMLSelectElement).value).toBe("omni");
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();
 

@@ -45,7 +45,7 @@ import { ownServerName } from "@/lib/serverNames";
 import "../../../electron/src/url.js";
 
 const DEFAULT_LOCAL = "http://localhost:6767";
-const CREATE_SERVER_URL = "https://omnigent.ai/";
+const CREATE_SERVER_URL = "https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally";
 // A URL pointing at the loopback interface is a local install.
 const LOCAL_HOST_RE = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i;
 
@@ -64,7 +64,7 @@ function isLocal(url: string): boolean {
 const LOCAL_SERVER_PORT = "6767";
 
 /** The CLI-managed local install (plain-HTTP loopback root on its port), which
- *  "Start Omnigent" boots. Any other loopback URL is an exact destination. */
+ *  "Start Xvaw" boots. Any other loopback URL is an exact destination. */
 export function isLocalInstall(url: string): boolean {
   if (!isLocal(url)) return false;
   const u = new URL(url);
@@ -151,7 +151,7 @@ export function ServerSelectStep({
   managedServerNames?: Record<string, string>;
   /** Names servers gave themselves, origin → name. */
   serverNames?: Record<string, string>;
-  /** CLI status for local setup; remote servers always offer "Open Omnigent". */
+  /** CLI status for local setup; remote servers always offer "Open Xvaw". */
   installed?: boolean;
   /** Reports whether the URL-input ("add") view is showing, so the parent can
    *  swap the panel band (hero icons) for it. */
@@ -345,7 +345,7 @@ export function ServerSelectStep({
                     {check === "checking"
                       ? "Checking…"
                       : check === "ok"
-                        ? "Omnigent server"
+                        ? "Xvaw server"
                         : check === "reachable"
                           ? "Reachable"
                           : isLocalInstall(url)
@@ -438,7 +438,7 @@ export function ServerSelectStep({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") addServer();
                 }}
-                placeholder="Enter Omnigent server URL"
+                placeholder="Enter Xvaw server URL"
                 className="border-0 px-0 shadow-none focus-visible:ring-0"
                 aria-label="Server URL"
               />

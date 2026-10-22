@@ -61,7 +61,7 @@
      * (launching/idle/done) — distinct from the shared amber --warning (still
      * used by the "Needs response" badge). */
   --color-session-active: var(--session-active);
-  /* Brand pink — reserved for brand moments, not status. */
+  /* Brand accent — reserved for brand moments, not status. */
   --color-brand-accent: var(--brand-accent);
   /* Pink tag surface (translucent) — generates `bg-tag-pink`. */
   --color-tag-pink: var(--tag-pink);
@@ -241,7 +241,7 @@
   --border-weak: #ececee;
   --button-icon-hover-color: #27272a;
   /* Pink tag surface — a translucent wash, so it tints whatever it sits on. */
-  --tag-pink: rgba(240, 1, 150, 0.06);
+  --tag-pink: rgba(8, 127, 112, 0.06);
   /* Named status hues. success/warning/info above mirror green/yellow/blue. */
   --status-blue: #3b8ff5;
   --status-green: #2ea65c;
@@ -282,7 +282,7 @@
   --session-active: #5ca4f5;
   /* Pink tag surface — a heavier wash than light, since 6% all but vanishes
      * against the dark canvas. */
-  --tag-pink: rgba(240, 1, 150, 0.15);
+  --tag-pink: rgba(110, 231, 210, 0.15);
   --status-blue: #3b8ff5;
   --status-green: #2ea65c;
   --status-yellow: #d4972a;
@@ -1156,14 +1156,14 @@ html[data-electron-mac] .breadcrumb-folder {
   }
 }
 
-/* Share button — glassy pink effect (both modes). The vertical
+/* Share button — glassy teal effect (both modes). The vertical
  * gradient alone does the embossed work (lighter top = light catch,
  * darker bottom = shadow, simulating a convex surface lit from above);
  * no border or inset shine. Light mode: gentler gradient, no shadow —
  * the full emboss + dark depth shadow reads too heavy on the light
  * canvas. Dark mode: stronger emboss plus the grounding shadow. */
 .share-button-glassy {
-  background: linear-gradient(to bottom, #fa3d99 0%, #f22286 40%, #d51d74 100%);
+  background: linear-gradient(to bottom, #138a7b 0%, #087f70 40%, #06685c 100%);
   border: none;
   box-shadow: none;
   color: #ffffff;
@@ -1171,11 +1171,11 @@ html[data-electron-mac] .breadcrumb-folder {
 
 .share-button-glassy:hover {
   /* Darken the gradient slightly on hover */
-  background: linear-gradient(to bottom, #ec3790 0%, #e51b7d 40%, #c41a6b 100%);
+  background: linear-gradient(to bottom, #10796b 0%, #076f62 40%, #05594f 100%);
 }
 
 .dark .share-button-glassy {
-  background: linear-gradient(150deg, #ff4da6 0%, #f22286 40%, #b8185f 100%);
+  background: linear-gradient(150deg, #138a7b 0%, #087f70 40%, #05594f 100%);
   border: none;
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.5),
@@ -1184,7 +1184,7 @@ html[data-electron-mac] .breadcrumb-folder {
 }
 
 .dark .share-button-glassy:hover {
-  background: linear-gradient(150deg, #f0408f 0%, #e51b7d 40%, #a51455 100%);
+  background: linear-gradient(150deg, #10796b 0%, #076f62 40%, #044c43 100%);
 }
 
 @layer base {

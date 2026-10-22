@@ -1,4 +1,4 @@
-// Process lifecycle for desktop-managed Omnigent servers and host connections.
+// Process lifecycle for desktop-managed Xvaw servers and host connections.
 //
 // This is the only place the desktop spawns long-lived processes. It owns:
 //   - hostChildren: the foreground `omnigent host --server <url>` processes this

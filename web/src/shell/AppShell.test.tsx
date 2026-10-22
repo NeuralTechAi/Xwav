@@ -3661,7 +3661,7 @@ describe("Right workspace card visibility", () => {
 
 describe("Embedded REPL terminal rail inventory", () => {
   it("shows no Terminals tab when the REPL is a terminal-first SDK session's only terminal", () => {
-    // The runner auto-creates terminal_tui_main (the embedded Omnigent
+    // The runner auto-creates terminal_tui_main (the embedded Xvaw
     // REPL) for every runner-hosted SDK session. It backs the pill's
     // Terminal view; a rail entry for it reads as a phantom "main"
     // terminal on agents (Debby/Polly) that don't run a TUI. The pill
@@ -4082,7 +4082,7 @@ describe("Mobile session menu", () => {
   });
 
   it("keeps the Terminals entry in terminal-first SDK sessions (no native wrapper)", () => {
-    // Terminal-first SDK sessions (embedded Omnigent REPL, `omnigent.ui:
+    // Terminal-first SDK sessions (embedded Xvaw REPL, `omnigent.ui:
     // terminal` without a wrapper label) keep the rail/menu Shells entry
     // for user shells: the pill is quick access to the REPL, while the
     // rail lists the shell inventory (sans the agent's own terminal).
@@ -4966,7 +4966,7 @@ describe("AppShell share action", () => {
       expect(shareButton).toBeDisabled();
       expect(shareButton).toHaveAttribute(
         "title",
-        "Sharing has been disabled for this Omnigent server.",
+        "Sharing has been disabled for this Xvaw server.",
       );
     });
   });

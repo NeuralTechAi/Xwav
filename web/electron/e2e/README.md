@@ -106,7 +106,7 @@ The same picker and fixtures run in headless Chromium in the regular UI CI suite
 ```bash
 # From the repository root after installing dependencies:
 pnpm --filter web run build
-pnpm --filter omnigent-desktop-electron run build:overlay
+pnpm --filter xvaw-desktop-electron run build:overlay
 OMNIGENT_PYTHON="$PWD/.venv/bin/python" \
   node --test --test-concurrency=1 web/electron/e2e/desktop_design_prompt.e2e.js
 ```

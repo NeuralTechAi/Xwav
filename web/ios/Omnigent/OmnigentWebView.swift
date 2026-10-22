@@ -1423,9 +1423,9 @@ struct OmnigentWebView: UIViewRepresentable {
       {
         rootBounces = 0
       }
-      // Databricks workspace-hosted Omnigent renders inside the workspace's
+      // Databricks workspace-hosted Xvaw renders inside the workspace's
       // top-nav chrome (the SPA is a workspace page). Hide it by overlaying
-      // Omnigent's own root — see WorkspaceChromeScript, which also explains why
+      // Xvaw's own root — see WorkspaceChromeScript, which also explains why
       // this is keyed on the pinned origin and never on the URL's path.
       // Re-applied on every full load (a server switch is a fresh document); the
       // SPA's client-side routing keeps the same document, so the injected

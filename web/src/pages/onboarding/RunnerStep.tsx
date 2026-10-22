@@ -28,7 +28,7 @@ export function RunnerStep({
 }: {
   /** Offer the remote environment, and pick it by default. */
   remoteAvailable: boolean;
-  /** Returning user (CLI installed) → "Open Omnigent"; new → "Install Omnigent". */
+  /** Returning user (CLI installed) → "Open Xvaw"; new → "Install Xvaw". */
   installed?: boolean;
   /** A connect error to show above the actions. */
   error?: string;

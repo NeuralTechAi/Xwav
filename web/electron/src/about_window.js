@@ -122,7 +122,7 @@ function createAboutWindow({
     about = new BrowserWindow({
       ...(parent ? { parent } : {}),
       modal: Boolean(parent),
-      title: "About Omnigent",
+      title: "About Xvaw",
       width: ABOUT_WIDTH,
       height: ABOUT_HEIGHT,
       minWidth: 640,

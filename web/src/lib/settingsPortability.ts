@@ -109,7 +109,7 @@ export function readSettingsFile(file: File): Promise<ExportedSettings> {
       try {
         const parsed: unknown = JSON.parse(reader.result as string);
         if (!isExportedSettings(parsed)) {
-          reject(new Error("The file doesn't contain valid Omnigent settings."));
+          reject(new Error("The file doesn't contain valid Xvaw settings."));
           return;
         }
         resolve(parsed);

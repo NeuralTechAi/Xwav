@@ -432,15 +432,15 @@ async function runInteractiveLogin(origin, { signal } = {}) {
     pages: {
       received: [
         "Databricks sign-in received",
-        "Return to Omnigent to finish connecting, then close this tab.",
+        "Return to Xvaw to finish connecting, then close this tab.",
       ],
       failed: [
         "Databricks sign-in was not completed",
-        "Close this tab and try connecting again in Omnigent.",
+        "Close this tab and try connecting again in Xvaw.",
       ],
       incomplete: [
         "Databricks sign-in could not be completed",
-        "Close this tab and try connecting again in Omnigent.",
+        "Close this tab and try connecting again in Xvaw.",
       ],
     },
     signal,

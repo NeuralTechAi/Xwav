@@ -668,7 +668,7 @@ export function WorkspacePicker({
   }
 
   // Nothing re-polls the host while the picker stays open, so a folder or
-  // worktree created outside Omnigent (e.g. `git worktree add` in a terminal)
+  // worktree created outside Xvaw (e.g. `git worktree add` in a terminal)
   // would not appear until the user navigated away and back.
   function refreshListing() {
     if (hostId === null) return;

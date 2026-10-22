@@ -1,3 +1,3 @@
 provider: generic
-url: https://omnigent.ai/_desktop/updates/
-updaterCacheDirName: omnigent-desktop-electron-updater-dev
+url: https://github.com/NeuralTechAi/Xvaw/releases/download/
+updaterCacheDirName: xvaw-desktop-updater-dev

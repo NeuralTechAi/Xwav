@@ -696,7 +696,7 @@ describe("index.css sidebar canvas", () => {
     /:root:not\(\.dark\):not\(\[data-theme\]\) \.conversations-sidebar\.is-peek,[\s\S]*?\.dark\[data-theme\] \.conversations-sidebar\.is-peek \{[^}]*\}/,
   )?.[0];
 
-  it("uses the specified left-to-right gradient for Omnigent light", () => {
+  it("uses the specified left-to-right gradient for Xvaw light", () => {
     expect(omniLightRule).toContain("background: linear-gradient(90deg, #fffefe, #fcf6fa)");
   });
 

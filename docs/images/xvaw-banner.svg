@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440">
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#101923"/><stop offset="1" stop-color="#182E39"/></linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#6EE7D2" stroke-opacity=".06"/></pattern>
+  </defs>
+  <rect width="1280" height="440" rx="28" fill="url(#bg)"/>
+  <rect width="1280" height="440" rx="28" fill="url(#grid)"/>
+  <g transform="translate(72 64) scale(.65)">
+    <rect width="128" height="128" rx="32" fill="#101923" stroke="#6EE7D2" stroke-opacity=".2"/>
+    <path d="M32 39C44 29 55 29 68 36C81 43 92 43 104 33V47C92 57 81 57 68 50C55 43 44 43 32 53Z" fill="#6EE7D2"/><path d="M24 61C36 51 47 51 60 58C73 65 84 65 96 55V69C84 79 73 79 60 72C47 65 36 65 24 75Z" fill="#E8FFF9"/><path d="M32 83C44 73 55 73 68 80C81 87 92 87 104 77V91C92 101 81 101 68 94C55 87 44 87 32 97Z" fill="#89A9FF"/>
+  </g>
+  <g font-family="DejaVu Sans,Arial,sans-serif">
+    <text x="177" y="123" fill="#F0F8FF" font-size="54" font-weight="700" letter-spacing="-2">Xvaw</text>
+    <text x="72" y="235" fill="#F0F8FF" font-size="48" font-weight="700" letter-spacing="-2">Your agents.</text>
+    <text x="72" y="296" fill="#6EE7D2" font-size="48" font-weight="700" letter-spacing="-2">One workspace.</text>
+    <text x="74" y="361" fill="#A5BBC7" font-size="19">Build. Orchestrate. Collaborate.</text>
+    <text x="907" y="368" fill="#A5BBC7" font-size="12" letter-spacing="3">OPEN SOURCE / CONNECTED</text>
+  </g>
+  <g fill="none" stroke-width="2">
+    <path d="M840 104L958 208L1110 92M840 104L781 280L958 208L1114 294L1110 92M781 280L1114 294" stroke="#6EE7D2" stroke-opacity=".25"/>
+    <path d="M840 104L1114 294M781 280L1110 92" stroke="#89A9FF" stroke-opacity=".3"/>
+  </g>
+  <g fill="#182E39" stroke="#6EE7D2" stroke-width="2"><circle cx="840" cy="104" r="18"/><circle cx="781" cy="280" r="14"/><circle cx="1110" cy="92" r="14"/><circle cx="1114" cy="294" r="18"/></g>
+  <rect x="912" y="162" width="92" height="92" rx="24" fill="#101923" stroke="#89A9FF" stroke-opacity=".5"/>
+  <g transform="translate(912 162) scale(.71875)"><path d="M32 39C44 29 55 29 68 36C81 43 92 43 104 33V47C92 57 81 57 68 50C55 43 44 43 32 53Z" fill="#6EE7D2"/><path d="M24 61C36 51 47 51 60 58C73 65 84 65 96 55V69C84 79 73 79 60 72C47 65 36 65 24 75Z" fill="#E8FFF9"/><path d="M32 83C44 73 55 73 68 80C81 87 92 87 104 77V91C92 101 81 101 68 94C55 87 44 87 32 97Z" fill="#89A9FF"/></g>
+</svg>

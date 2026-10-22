@@ -1142,7 +1142,7 @@ function SidebarImpl({
                 ) : (
                   <img
                     src={omnigentWordmark}
-                    alt="Omnigent"
+                    alt="Xvaw"
                     data-testid="sidebar-wordmark"
                     className="h-[15px] w-auto shrink-0 translate-y-px dark:invert"
                   />
@@ -4086,7 +4086,7 @@ function ConversationMenuItems({
                 reason when both apply. */}
             <TooltipContent side="left">
               {sharingOff
-                ? "Sharing has been disabled for this Omnigent server."
+                ? "Sharing has been disabled for this Xvaw server."
                 : "Only the session owner can share this session"}
             </TooltipContent>
           </Tooltip>

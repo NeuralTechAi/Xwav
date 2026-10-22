@@ -1,4 +1,4 @@
-// Recording harness for the Omnigent desktop shell (Electron).
+// Recording harness for the Xvaw desktop shell (Electron).
 //
 // Every OTHER e2e recording lane is a pytest-playwright test under
 // tests/e2e_ui/, because the bug lives in the SPA and pytest-playwright's
@@ -380,7 +380,7 @@ async function launchDesktop(opts) {
   fs.mkdirSync(userDataDir, { recursive: true });
   if (opts.serverUrl) {
     // Seed both profile locations, matching main.js's development userData path.
-    for (const profile of [userDataDir, path.join(userDataDir, "Omnigent Dev")]) {
+    for (const profile of [userDataDir, path.join(userDataDir, "Xvaw Dev")]) {
       fs.mkdirSync(profile, { recursive: true });
       fs.writeFileSync(
         path.join(profile, "settings.json"),

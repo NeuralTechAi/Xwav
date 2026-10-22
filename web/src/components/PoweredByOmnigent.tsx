@@ -1,8 +1,8 @@
-import { OttoEyes } from "@/components/OttoEyes";
+import { XvawIcon } from "@/components/icons/XvawIcon";
 
 /**
- * Understated "Powered by Omnigent" mark for the landing footer. Always uses
- * the real Otto mascot (not the operator's logo), since it credits the product.
+ * Understated "Powered by Xvaw" mark for the landing footer. Always uses
+ * the built-in Xvaw mark (not the operator's logo), since it credits the product.
  */
 export function PoweredByOmnigent() {
   return (
@@ -11,8 +11,8 @@ export function PoweredByOmnigent() {
       data-testid="powered-by-omnigent"
     >
       <span>Powered by</span>
-      <OttoEyes className="h-3.5 w-auto opacity-60 transition-opacity duration-300 ease-out group-hover:opacity-100" />
-      <span>Omnigent</span>
+      <XvawIcon className="h-3.5 w-auto opacity-60 transition-opacity duration-300 ease-out group-hover:opacity-100" />
+      <span>Xvaw</span>
     </div>
   );
 }

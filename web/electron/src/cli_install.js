@@ -1,10 +1,10 @@
 "use strict";
 
 /**
- * In-app Omnigent CLI installation (macOS).
+ * In-app Xvaw CLI installation (macOS).
  *
  * Runs the repo's bundled `install_oss.sh --non-interactive`, which resolves to
- * `uv tool install --force --python 3.12 omnigent` and drops the `omnigent` /
+ * a source install of NeuralTechAi/Xvaw via the existing --repo option and drops the `omnigent` /
  * `omni` binaries in ~/.local/bin. Streams the installer's live output so the
  * setup page can show it in a terminal pane, mirroring the local-server and
  * Arca-connect flows.
@@ -162,7 +162,7 @@ async function ensureUv(deps = {}) {
   const env = deps.env ?? process.env;
   const hasUv = deps.hasUv || ((e) => commandExists("uv", e));
   if (hasUv(env)) return { ok: true, env };
-  onOutput("Installing uv (required by the Omnigent installer)…\n");
+  onOutput("Installing uv (required by the Xvaw installer)…\n");
   const run = await runStreaming("sh", ["-c", UV_INSTALLER], {
     spawn: deps.spawn,
     onOutput,
@@ -177,7 +177,7 @@ async function ensureUv(deps = {}) {
     return {
       ok: false,
       error:
-        "Couldn't install uv, which the Omnigent installer requires. " +
+        "Couldn't install uv, which the Xvaw installer requires. " +
         "Install it from https://docs.astral.sh/uv/getting-started/installation/ and try again.",
     };
   }
@@ -221,7 +221,7 @@ function commandExists(name, env = process.env) {
 }
 
 /**
- * Install the Omnigent CLI. Ensures uv, then runs the bundled installer,
+ * Install the Xvaw CLI. Ensures uv, then runs the bundled installer,
  * streaming output. Never rejects — resolves `{ ok, error? }`. macOS only; a
  * non-darwin platform resolves an actionable error.
  *
@@ -241,7 +241,8 @@ async function installCli(deps = {}) {
   if (platform !== "darwin") {
     return {
       ok: false,
-      error: "In-app install is macOS-only for now. Install the CLI from https://omnigent.ai/.",
+      error:
+        "In-app install is macOS-only for now. Install Xvaw from https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally.",
     };
   }
   const script = (deps.resolveInstallScript || resolveInstallScript)();
@@ -255,16 +256,20 @@ async function installCli(deps = {}) {
   const uv = await (deps.ensureUv || ensureUv)({ spawn: deps.spawn, onOutput });
   if (!uv.ok) return uv;
 
-  onOutput("Installing the Omnigent CLI…\n");
-  const run = await runStreaming("sh", [scriptArg, "--non-interactive"], {
-    spawn: deps.spawn,
-    onOutput,
-    // Run under the (possibly PATH-augmented) env ensureUv resolved, so a
-    // freshly-installed uv is found by the installer.
-    env: uv.env,
-    timeoutMs: deps.timeoutMs,
-    killGraceMs: deps.killGraceMs,
-  });
+  onOutput("Installing the Xvaw CLI…\n");
+  const run = await runStreaming(
+    "sh",
+    [scriptArg, "--non-interactive", "--repo", "https://github.com/NeuralTechAi/Xvaw.git"],
+    {
+      spawn: deps.spawn,
+      onOutput,
+      // Run under the (possibly PATH-augmented) env ensureUv resolved, so a
+      // freshly-installed uv is found by the installer.
+      env: uv.env,
+      timeoutMs: deps.timeoutMs,
+      killGraceMs: deps.killGraceMs,
+    },
+  );
   if (run.timedOut) {
     return { ok: false, error: "The installer timed out. Check your connection and try again." };
   }

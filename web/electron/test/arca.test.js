@@ -153,7 +153,7 @@ describe("dbcert refresh", () => {
     resolveDbcertPath: () => "/bin/dbcert",
   });
 
-  it("renews for Omnigent without updating kubeconfig", async () => {
+  it("renews for Xvaw without updating kubeconfig", async () => {
     const deps = dbcertDeps([{ stdout: "All credentials successfully written" }]);
     assert.deepEqual(await runDbcertRefresh(deps), { ok: true });
     assert.deepEqual(deps.calls, [

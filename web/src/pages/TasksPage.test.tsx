@@ -298,7 +298,7 @@ describe("New automation button", () => {
     expect(screen.getByTestId("manual-dialog-open")).toBeInTheDocument();
   });
 
-  it("does not offer a 'Create with Omnigent' entry point", () => {
+  it("does not offer a 'Create with Xvaw' entry point", () => {
     setTasks([]);
     renderPage();
     // No dropdown and no deferred create option: the manual dialog is the only

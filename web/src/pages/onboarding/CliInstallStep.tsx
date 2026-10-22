@@ -18,10 +18,10 @@ export function CliInstallStep({
     setError(undefined);
     try {
       if (!(await onRecheck?.())) {
-        setError("Omnigent CLI not found. Make sure omnigent is on your PATH, then check again.");
+        setError("Xvaw CLI not found. Make sure omnigent is on your PATH, then check again.");
       }
     } catch {
-      setError("Could not check for the Omnigent CLI. Please try again.");
+      setError("Could not check for the Xvaw CLI. Please try again.");
     } finally {
       setChecking(false);
     }
@@ -29,14 +29,14 @@ export function CliInstallStep({
 
   return (
     <div className="flex h-full flex-col gap-4 px-2 pb-1 pt-8">
-      <OnboardingHeading>Install the Omnigent CLI</OnboardingHeading>
+      <OnboardingHeading>Install the Xvaw CLI</OnboardingHeading>
       <p className="text-base text-muted-foreground">
         Automatic installation is unavailable on this platform. Follow the installation instructions
         for your operating system, then return here and check again.
       </p>
       <Button asChild variant="outline">
         <a
-          href="https://omnigent.ai/quickstart/install#install-omnigent"
+          href="https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally"
           target="_blank"
           rel="noreferrer"
         >

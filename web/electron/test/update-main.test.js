@@ -20,6 +20,7 @@ function loadMainHarness({
   platform = process.platform,
   developerMode = false,
   desktopVersionOverride,
+  enableUpdatesForTest = true,
 } = {}) {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), "omnigent-update-test-"));
   fs.writeFileSync(path.join(userData, "settings.json"), JSON.stringify(settings), "utf8");
@@ -258,6 +259,17 @@ function loadMainHarness({
     require: (specifier) => {
       if (specifier === "electron") return electron;
       if (specifier === "electron-updater") return { autoUpdater };
+      if (specifier === "./desktop_updater") {
+        const real = mainRequire(specifier);
+        return {
+          ...real,
+          createDesktopUpdater: (options) =>
+            real.createDesktopUpdater({
+              ...options,
+              ...(enableUpdatesForTest ? { updatesEnabled: true } : {}),
+            }),
+        };
+      }
       if (specifier in localRequires) return localRequires[specifier];
       return mainRequire(specifier);
     },
@@ -399,7 +411,7 @@ describe("About menu wiring", () => {
     const checkItem = findMenuItem(menu, "check_for_updates");
     aboutItem.click();
 
-    assert.equal(aboutItem.label, "About Omnigent");
+    assert.equal(aboutItem.label, "About Xvaw");
     assert.equal(harness.calls.aboutOpens.length, 1);
 
     checkItem.click();
@@ -417,7 +429,7 @@ describe("About menu wiring", () => {
     const aboutItem = findMenuItem(menu, "open_about");
     aboutItem.click();
 
-    assert.equal(aboutItem.label, "About Omnigent");
+    assert.equal(aboutItem.label, "About Xvaw");
     assert.equal(harness.calls.aboutOpens.length, 1);
   });
 });
@@ -587,7 +599,7 @@ describe("auto-update main-process wiring", () => {
       {
         channel: "omnigent:update-download",
         args: [],
-        message: "Download an Omnigent update?",
+        message: "Download an Xvaw update?",
         prepare: () => {},
         assertRan: (harness) => {
           assert.equal(harness.calls.downloadUpdate, 1);
@@ -596,7 +608,7 @@ describe("auto-update main-process wiring", () => {
       {
         channel: "omnigent:update-install",
         args: [],
-        message: "Restart Omnigent to install an update?",
+        message: "Restart Xvaw to install an update?",
         prepare: (harness) => {
           harness.autoUpdater.emit("update-downloaded", { version: "0.4.0" });
         },
@@ -608,7 +620,7 @@ describe("auto-update main-process wiring", () => {
       {
         channel: "omnigent:set-update-config",
         args: [{ mode: "manual" }],
-        message: "Change Omnigent update settings?",
+        message: "Change Xvaw update settings?",
         prepare: () => {},
         assertRan: (harness) => {
           assert.equal(harness.readSettings().update_mode, "manual");
@@ -632,7 +644,7 @@ describe("auto-update main-process wiring", () => {
 
       assert.equal(harness.calls.showMessageBox.length, 1, item.channel);
       assert.equal(harness.calls.showMessageBox[0].win, harness.api.windows.keys().next().value);
-      assert.equal(harness.calls.showMessageBox[0].options.title, "Omnigent");
+      assert.equal(harness.calls.showMessageBox[0].options.title, "Xvaw");
       assert.equal(harness.calls.showMessageBox[0].options.message, item.message);
       assert.deepEqual(plain(harness.calls.showMessageBox[0].options.buttons), [
         "Don't Allow",
@@ -1027,5 +1039,24 @@ describe("auto-update main-process wiring", () => {
         },
       },
     ]);
+  });
+});
+
+describe("Xvaw release-feed isolation", () => {
+  it("keeps packaged Xvaw builds from checking upstream for updates", async (t) => {
+    const harness = loadMainHarness({
+      isPackaged: true,
+      enableUpdatesForTest: false,
+      settings: { update_mode: "default" },
+    });
+    t.after(harness.cleanup);
+    harness.api.updater.init();
+    harness.api.registerIpc();
+    await assert.rejects(
+      harness.ipcHandlers.get("omnigent:update-check")(harness.events.pinned),
+      /Xvaw publishes a release feed/,
+    );
+    assert.equal(harness.calls.checkForUpdates, 0);
+    assert.equal(harness.calls.downloadUpdate, 0);
   });
 });

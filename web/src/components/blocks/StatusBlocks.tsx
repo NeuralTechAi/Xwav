@@ -143,7 +143,7 @@ interface ParsedErrorMessage {
 const DIAGNOSTICS_HEADING = /^(?:terminal|lifecycle) diagnostics:\s*$/i;
 const LAST_OUTPUT_HEADING = /^last captured (?:terminal )?output:\s*(.*)$/i;
 const UNAVAILABLE_OUTPUT =
-  /^unavailable(?:[.!]|\. The process exited before Omnigent captured a pane snapshot\.)?$/i;
+  /^unavailable(?:[.!]|\. The process exited before (?:Omnigent|Xvaw) captured a pane snapshot\.)?$/i;
 const EMPTY_RELATED_ERRORS: RelatedRenderError[] = [];
 
 function errorHeadline(error: RenderErrorDetails): string {

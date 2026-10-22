@@ -60,7 +60,7 @@ function nextReconnectDelay(failedAttempts: number): number {
  *
  * Delegates to the host seam (`resolveWebSocketUrl`), exactly like the
  * terminal-attach socket: standalone builds the URL from the page origin
- * (whether served by the Omnigent server directly or through the Vite dev proxy),
+ * (whether served by the Xvaw server directly or through the Vite dev proxy),
  * and an embedding host rebases it onto its proxied WS surface.
  *
  * When host routing is enabled, append `?omnigent_slice_key=<frozen modal

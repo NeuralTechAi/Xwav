@@ -215,16 +215,16 @@ export interface PaletteMeta {
 export const PALETTES: readonly PaletteMeta[] = [
   {
     id: "omni",
-    label: "Omnigent",
-    blurb: "The signature pink brand look.",
+    label: "Xvaw",
+    blurb: "Navy, mint, and periwinkle. The Xvaw signature.",
     light: {
-      bg: "#fdf7fb",
+      bg: "#f2fbf8",
       card: "#ffffff",
-      accent: "#df3c85",
+      accent: "#087F70",
       border: "#e8ecf0",
       text: "#11171c",
     },
-    dark: { bg: "#160e24", card: "#28223a", accent: "#df3c85", border: "#2a2440", text: "#f4f5f7" },
+    dark: { bg: "#101923", card: "#182731", accent: "#087F70", border: "#2B3C49", text: "#f4f5f7" },
     tokens: {
       light: paletteTokens({
         background: "#ffffff",
@@ -237,8 +237,8 @@ export const PALETTES: readonly PaletteMeta[] = [
         primaryForeground: "#ffffff",
         // Selection is the brand tint that also marks the sidebar's active
         // row, not an opaque primary block (near-black on this palette).
-        selectionBackground: "rgba(240, 1, 150, 0.1)",
-        selectionForeground: "#651249",
+        selectionBackground: "rgba(8, 127, 112, 0.12)",
+        selectionForeground: "#075E53",
         secondary: "#eceef1",
         muted: "#0000000f",
         mutedForeground: "#71717a",
@@ -249,13 +249,13 @@ export const PALETTES: readonly PaletteMeta[] = [
         borderStrong: "#a1a1aa",
         buttonBorder: "#d6d6d6",
         ring: "#11171c",
-        brandAccent: "#df3c85",
-        sidebar: "#fdfafa",
+        brandAccent: "#087F70",
+        sidebar: "#f7fbfa",
         sidebarPrimary: "#2272b4",
         sidebarRing: "#2272b4",
-        sidebarActive: "rgba(240, 1, 150, 0.1)",
-        sidebarActiveForeground: "#651249",
-        sidebarBackground: "linear-gradient(90deg, #fffefe, #fcf6fa)",
+        sidebarActive: "rgba(8, 127, 112, 0.12)",
+        sidebarActiveForeground: "#075E53",
+        sidebarBackground: "linear-gradient(90deg, #f8fcfb, #eff8f5)",
         shellBackground: "var(--background)",
       }),
       dark: paletteTokens({
@@ -267,10 +267,11 @@ export const PALETTES: readonly PaletteMeta[] = [
         primary: "#e8ecf0",
         link: "#72b7f5",
         primaryForeground: "#11171c",
-        // pink-300 rather than the sidebar's pink-400 so selected text stays
+        // A lighter mint than the sidebar accent keeps selected text legible.
+        // Selected text stays
         // >= 4.5:1 over the tinted code and muted surfaces.
-        selectionBackground: "rgba(240, 1, 150, 0.15)",
-        selectionForeground: "#f9a8d4",
+        selectionBackground: "rgba(110, 231, 210, 0.15)",
+        selectionForeground: "#B2F5E8",
         secondary: "#1f272d",
         secondaryForeground: "#e8ecf0",
         muted: "color-mix(in srgb, #92a4b3 15%, #262f36)",
@@ -283,7 +284,7 @@ export const PALETTES: readonly PaletteMeta[] = [
         buttonBorder: "#d6d6d6",
         input: "oklch(0.28 0.005 240)",
         ring: "#e8ecf0",
-        brandAccent: "#df3c85",
+        brandAccent: "#6EE7D2",
         sidebar: "rgba(17, 23, 28, 0.75)",
         sidebarPrimary: "oklch(0.64 0.22 254)",
         sidebarPrimaryForeground: "oklch(0.12 0.004 240)",
@@ -291,12 +292,12 @@ export const PALETTES: readonly PaletteMeta[] = [
         sidebarAccentForeground: "oklch(0.965 0.003 240)",
         sidebarBorder: "oklch(0.28 0.005 240)",
         sidebarRing: "oklch(0.92 0.003 240 / 0.4)",
-        sidebarActive: "rgba(240, 1, 150, 0.15)",
-        sidebarActiveForeground: "#f472b6",
+        sidebarActive: "rgba(110, 231, 210, 0.15)",
+        sidebarActiveForeground: "#6EE7D2",
         sidebarBackground:
-          "linear-gradient(transparent 35%, rgba(92, 48, 108, 0.2)), linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 60%)",
+          "linear-gradient(transparent 35%, rgba(48, 108, 99, 0.2)), linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 60%)",
         shellBackground:
-          "radial-gradient(rgba(100, 40, 180, 0.12), transparent 50%), radial-gradient(at 80% 20%, rgba(80, 30, 140, 0.08), transparent 45%), linear-gradient(145deg, #1a0e2d, #0e1418, #130e1b)",
+          "radial-gradient(rgba(110, 231, 210, 0.07), transparent 50%), radial-gradient(at 80% 20%, rgba(137, 169, 255, 0.08), transparent 45%), linear-gradient(145deg, #101f29, #0e1418, #101923)",
       }),
     },
   },

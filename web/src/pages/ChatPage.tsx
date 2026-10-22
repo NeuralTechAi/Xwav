@@ -814,7 +814,7 @@ export function ChatPage() {
   // background tabs signal parent activity without duplicating child-session
   // badges from the sidebar/Agents rail. An open-but-untitled session
   // (no synthesized title yet) reads as "New session" to match its
-  // sidebar row; the landing page (no active session) stays "Omnigent".
+  // sidebar row; the landing page (no active session) stays "Xvaw".
   // Sub-agent (child) sessions are absent from the sidebar list, so
   // ``activeConv`` is null and the title would otherwise read "New session";
   // name the tab after the sub-agent instead, mirroring the header.
@@ -1604,7 +1604,7 @@ const MainAgentSurface = memo(function MainAgentSurfaceImpl({
   // (the server has no slash_command path for native sessions). Undefined
   // → the composer falls through to the plaintext send for these. Keyed
   // on the wrapper label, NOT `isTerminalFirst` — a terminal-first SDK
-  // session (embedded Omnigent REPL terminal) runs an in-process harness
+  // session (embedded Xvaw REPL terminal) runs an in-process harness
   // with the full server-side slash_command path.
   const isTerminalFirst = terminalFirst?.isTerminalFirst === true;
   const isNativeWrapper = terminalFirst?.isNativeWrapper === true;
@@ -1935,7 +1935,7 @@ interface ComposerProps {
   /**
    * Native-CLI wrapper session (claude-native / codex-native). Drops the
    * `/model` slash command unless the session also has a model picker
-   * (`showModels`); terminal-first SDK sessions (embedded Omnigent REPL
+   * (`showModels`); terminal-first SDK sessions (embedded Xvaw REPL
    * terminal) keep it.
    */
   isNativeWrapper?: boolean;
@@ -2075,7 +2075,7 @@ export { formatStatusModelLabel, formatModelEffortStatusLabel };
  * A native sub-agent child (a Claude Code Task, a Codex collab thread) reads
  * as its vendor's product name ("Claude Code"), matching the Agents rail's
  * main row. Its ``sub_agent_name`` is the VENDOR's agent type — Claude's
- * ``subagent_type``, e.g. ``"general-purpose"`` — not an Omnigent agent, so
+ * ``subagent_type``, e.g. ``"general-purpose"`` — not an Xvaw agent, so
  * the wrapper label has to win over the name-based path below; the instance
  * itself is already named in the "Chatting with sub-agent …" tray.
  *
@@ -2401,7 +2401,7 @@ function ComposerImpl(
     // For a sub-agent (head) session, identify the head family being viewed
     // (e.g. the GPT head → "Gpt") rather than the bundle orchestrator
     // ("Debby") — the bundle is already named in the breadcrumb / Agents rail.
-    // A native sub-agent's name is vendor-side, not an Omnigent head, so the
+    // A native sub-agent's name is vendor-side, not an Xvaw head, so the
     // wrapper below outranks it.
     subAgentName ??
       agents?.find((a) => a.id === selectedAgentId)?.name ??

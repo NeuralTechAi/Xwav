@@ -35,7 +35,7 @@ describe("Settings native menu item", () => {
 
   it("opens the custom About window and keeps Settings in the macOS app menu", () => {
     let opened = 0;
-    const about = aboutMenuItem("Omnigent", () => {
+    const about = aboutMenuItem("Xvaw", () => {
       opened += 1;
     });
     const settings = settingsMenuItem(() => {});
@@ -44,7 +44,7 @@ describe("Settings native menu item", () => {
     assert.equal(menu.label, "Electron");
     assert.equal(menu.submenu[0], about);
     assert.equal(about.id, "open_about");
-    assert.equal(about.label, "About Omnigent");
+    assert.equal(about.label, "About Xvaw");
     about.click();
     assert.equal(opened, 1);
     assert.equal(menu.submenu[2], settings);

@@ -2252,7 +2252,7 @@ export function NewChatLandingScreen() {
   } = useHosts({ refetchOnFocus: true });
 
   // Offer an import affordance on the empty landing: a brand-new user with no
-  // Omnigent sessions can pull in their existing local CLI history. Same query
+  // Xvaw sessions can pull in their existing local CLI history. Same query
   // key ChatPage already holds, so this reuses the cache. Wait for data before
   // deciding so the button doesn't flash for returning users.
   const { data: conversationsData } = useLoadedConversations();
@@ -3357,7 +3357,7 @@ export function NewChatLandingScreen() {
     [availableCodexModels, sandboxSelected, sandboxCatalog],
   );
   // Devin model *families* (claude-opus-5, swe-2, …). Effort is a separate
-  // axis Omnigent carries as reasoning_effort and the runner recombines onto
+  // axis Xvaw carries as reasoning_effort and the runner recombines onto
   // the id at launch (resolve_devin_launch_model), so the list stays short
   // instead of enumerating every effort variant.
   const devinModelOptions = useMemo(

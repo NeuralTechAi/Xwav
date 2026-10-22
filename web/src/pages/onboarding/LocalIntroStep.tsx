@@ -38,16 +38,16 @@ export function LocalIntroStep({
   onBack,
   onInstall,
 }: {
-  /** CLI installed → "Start"/"Open Omnigent"; missing → "Install Omnigent". */
+  /** CLI installed → "Start"/"Open Xvaw"; missing → "Install Xvaw". */
   installed?: boolean;
-  /** The local server is stopped, so the action boots it ("Start Omnigent"). */
+  /** The local server is stopped, so the action boots it ("Start Xvaw"). */
   startsLocal?: boolean;
   onBack: () => void;
   onInstall: () => void;
 }) {
   return (
     <div className="flex h-full flex-col px-2 pb-1 pt-8">
-      <OnboardingHeading>Set up Omnigent locally</OnboardingHeading>
+      <OnboardingHeading>Set up Xvaw locally</OnboardingHeading>
 
       <p className="flex-1 text-base text-muted-foreground max-w-sm mx-auto text-center">
         Use Claude Code, Codex, Cursor, and other local harnesses from one UI. Keep history and

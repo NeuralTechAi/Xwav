@@ -12,8 +12,8 @@
   --primary: #11171c;
   --link: #1967b5;
   --primary-foreground: #ffffff;
-  --selection-background: rgba(240, 1, 150, 0.1);
-  --selection-foreground: #651249;
+  --selection-background: rgba(8, 127, 112, 0.12);
+  --selection-foreground: #075e53;
   --secondary: #eceef1;
   --secondary-foreground: #27272a;
   --muted: #0000000f;
@@ -26,8 +26,8 @@
   --button-border: #d6d6d6;
   --input: #e4e4e7;
   --ring: #11171c;
-  --brand-accent: #df3c85;
-  --sidebar: #fdfafa;
+  --brand-accent: #087f70;
+  --sidebar: #f7fbfa;
   --sidebar-foreground: #27272a;
   --sidebar-primary: #2272b4;
   --sidebar-primary-foreground: #ffffff;
@@ -35,8 +35,8 @@
   --sidebar-accent-foreground: #04355d;
   --sidebar-border: #e4e4e7;
   --sidebar-ring: #2272b4;
-  --sidebar-active: rgba(240, 1, 150, 0.1);
-  --sidebar-active-foreground: #651249;
+  --sidebar-active: rgba(8, 127, 112, 0.12);
+  --sidebar-active-foreground: #075e53;
 }
 
 :root:not(.dark):not([data-theme]) .app-shell {
@@ -44,7 +44,7 @@
 }
 
 :root:not(.dark):not([data-theme]) .conversations-sidebar {
-  background: linear-gradient(90deg, #fffefe, #fcf6fa);
+  background: linear-gradient(90deg, #f8fcfb, #eff8f5);
 }
 
 .dark:not([data-theme]) {
@@ -59,8 +59,8 @@
   --primary: #e8ecf0;
   --link: #72b7f5;
   --primary-foreground: #11171c;
-  --selection-background: rgba(240, 1, 150, 0.15);
-  --selection-foreground: #f9a8d4;
+  --selection-background: rgba(110, 231, 210, 0.15);
+  --selection-foreground: #b2f5e8;
   --secondary: #1f272d;
   --secondary-foreground: #e8ecf0;
   --muted: color-mix(in srgb, #92a4b3 15%, #262f36);
@@ -73,7 +73,7 @@
   --button-border: #d6d6d6;
   --input: oklch(0.28 0.005 240);
   --ring: #e8ecf0;
-  --brand-accent: #df3c85;
+  --brand-accent: #6ee7d2;
   --sidebar: rgba(17, 23, 28, 0.75);
   --sidebar-foreground: oklch(0.965 0.003 240);
   --sidebar-primary: oklch(0.64 0.22 254);
@@ -82,20 +82,20 @@
   --sidebar-accent-foreground: oklch(0.965 0.003 240);
   --sidebar-border: oklch(0.28 0.005 240);
   --sidebar-ring: oklch(0.92 0.003 240 / 0.4);
-  --sidebar-active: rgba(240, 1, 150, 0.15);
-  --sidebar-active-foreground: #f472b6;
+  --sidebar-active: rgba(110, 231, 210, 0.15);
+  --sidebar-active-foreground: #6ee7d2;
 }
 
 .dark:not([data-theme]) .app-shell {
   background:
-    radial-gradient(rgba(100, 40, 180, 0.12), transparent 50%),
-    radial-gradient(at 80% 20%, rgba(80, 30, 140, 0.08), transparent 45%),
-    linear-gradient(145deg, #1a0e2d, #0e1418, #130e1b);
+    radial-gradient(rgba(110, 231, 210, 0.07), transparent 50%),
+    radial-gradient(at 80% 20%, rgba(137, 169, 255, 0.08), transparent 45%),
+    linear-gradient(145deg, #101f29, #0e1418, #101923);
 }
 
 .dark:not([data-theme]) .conversations-sidebar {
   background:
-    linear-gradient(transparent 35%, rgba(92, 48, 108, 0.2)),
+    linear-gradient(transparent 35%, rgba(48, 108, 99, 0.2)),
     linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 60%);
 }
 

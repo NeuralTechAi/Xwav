@@ -174,7 +174,7 @@ describe("BlockRenderer dispatch", () => {
           "Required terminal exited unexpectedly; the session runtime is no longer available.",
           "Terminal diagnostics:",
           "terminal: required-runtime:main",
-          "Last captured terminal output: unavailable. The process exited before Omnigent captured a pane snapshot.",
+          "Last captured terminal output: unavailable. The process exited before Xvaw captured a pane snapshot.",
         ].join("\n"),
       },
     ];

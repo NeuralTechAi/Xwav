@@ -64,7 +64,7 @@ function renderDesktopUpdate(status) {
     desktopCheck.hidden = false;
     showResult(desktopResult, {
       state: "up-to-date",
-      message: "Omnigent Desktop is up to date.",
+      message: "Xvaw Desktop is up to date.",
     });
     return;
   }
@@ -125,7 +125,7 @@ async function loadInfo() {
     }
     const platformName = info?.platformName || "Desktop";
     productKind.textContent = platformName;
-    desktopHeading.textContent = `Omnigent ${platformName} app`;
+    desktopHeading.textContent = `Xvaw ${platformName} app`;
     desktopVersion.textContent = info?.desktopVersion || "Unavailable";
 
     const cli = info?.cli;

@@ -575,7 +575,7 @@ export interface SessionUsageEvent {
 /**
  * `session.model` — active-model switch from a claude-native session.
  *
- * Emitted by the Omnigent server when the claude-native forwarder observes a
+ * Emitted by the Xvaw server when the claude-native forwarder observes a
  * `/model` change made inside the Claude Code terminal (a typed command
  * or the in-TUI picker). Carries the tier alias (`"fable"` / `"opus"` /
  * `"sonnet"` / `"haiku"`) the session is now on so the model picker
@@ -590,7 +590,7 @@ export interface SessionModelEvent {
 /**
  * `session.title` — session rename from a claude-native session.
  *
- * Emitted by the Omnigent server when the claude-native forwarder observes a
+ * Emitted by the Xvaw server when the claude-native forwarder observes a
  * `/rename` typed inside the Claude Code terminal. Carries the operator's
  * new title so the session list stops showing the auto-generated one.
  */
@@ -604,7 +604,7 @@ export interface SessionTitleEvent {
  * `session.reasoning_effort` — active thinking-level switch from a native
  * session.
  *
- * Emitted by the Omnigent server after a native wrapper reports an effort
+ * Emitted by the Xvaw server after a native wrapper reports an effort
  * change observed outside the Web UI: Claude-native mirrors terminal/TUI
  * changes, and Codex-native mirrors Codex app-server/config state. Carries
  * `null` when the native runtime cleared back to its model default.
@@ -671,7 +671,7 @@ export interface SessionAgentChangedEvent {
 /**
  * `session.todos` — todo-list update from a claude-native session.
  *
- * Emitted by the Omnigent server when the claude-native forwarder receives
+ * Emitted by the Xvaw server when the claude-native forwarder receives
  * a `PostToolUse`/`TodoWrite` hook event from Claude Code. Clients
  * should replace their cached todo list entirely on each event (the
  * payload is the full current list, not a diff).

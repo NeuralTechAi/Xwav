@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { OttoEyes } from "@/components/OttoEyes";
-import { OttoIcon } from "@/components/icons/OttoIcon";
+import { XvawIcon } from "@/components/icons/XvawIcon";
 import { withBasePath } from "@/lib/basePath";
 import { useAppName, useLogoUrl } from "@/lib/branding";
 import { authenticatedFetch } from "@/lib/identity";
@@ -86,12 +85,8 @@ function acquireLogo(path: string, generation: number): BlobUrlHandle {
   };
 }
 
-function FallbackLogo({ className, variant }: { className?: string; variant: "eyes" | "icon" }) {
-  return variant === "eyes" ? (
-    <OttoEyes className={className} />
-  ) : (
-    <OttoIcon className={className} aria-hidden />
-  );
+function FallbackLogo({ className }: { className?: string; variant: "eyes" | "icon" }) {
+  return <XvawIcon className={className} />;
 }
 
 function EmbeddedBrandLogo({
@@ -158,8 +153,8 @@ function StandaloneBrandLogo({
 
 /**
  * The app's brand logo: the operator's custom logo when configured, else the
- * Otto mascot. `variant` picks the logo variant and matching fallback —
- * `"eyes"` (hero) → `main`/`OttoEyes`, `"icon"` (indicators) → `loading`/`OttoIcon`.
+ * Xvaw mark. `variant` picks the logo variant and matching fallback —
+ * `"eyes"` (hero) → `main`/`XvawIcon`, `"icon"` (indicators) → `loading`/`XvawIcon`.
  */
 export function BrandLogo({
   className,

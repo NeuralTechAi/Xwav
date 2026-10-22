@@ -112,7 +112,7 @@ export const ProviderAuthRequired: Story = {
       source="execution"
       code="PROVIDER_AUTH_REQUIRED"
       title="Sign in to continue"
-      cause="Omnigent could not obtain a model credential for this session."
+      cause="Xvaw could not obtain a model credential for this session."
       remediation="ucode configure"
     />
   ),

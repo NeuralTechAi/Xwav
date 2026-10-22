@@ -132,7 +132,7 @@ struct AppRootView: View {
       }
     #endif
     .alert(
-      "Open this Omnigent link?",
+      "Open this Xvaw link?",
       isPresented: $showDeepLinkConsent
     ) {
       Button("Cancel", role: .cancel) { consentDeepLink = nil }
@@ -141,7 +141,7 @@ struct AppRootView: View {
       if let consentDeepLink {
         Text(
           """
-          This link will connect Omnigent to \(consentDeepLink.origin.hostLabel) and open a conversation.
+          This link will connect Xvaw to \(consentDeepLink.origin.hostLabel) and open a conversation.
 
           Only open links from a server you trust.
           """

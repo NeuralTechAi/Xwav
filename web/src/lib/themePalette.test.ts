@@ -205,12 +205,12 @@ describe("themePalette", () => {
     expect(solarized.tokens.dark.muted).not.toBe(solarized.tokens.dark.popover);
   });
 
-  it("keeps Omnigent's text selection on the brand tint, not the neutral primary", () => {
+  it("keeps Xvaw's text selection on the brand tint, not the neutral primary", () => {
     const omni = PALETTES.find((palette) => palette.id === "omni")!;
-    expect(omni.tokens.light.selectionBackground).toBe("rgba(240, 1, 150, 0.1)");
-    expect(omni.tokens.light.selectionForeground).toBe("#651249");
-    expect(omni.tokens.dark.selectionBackground).toBe("rgba(240, 1, 150, 0.15)");
-    expect(omni.tokens.dark.selectionForeground).toBe("#f9a8d4");
+    expect(omni.tokens.light.selectionBackground).toBe("rgba(8, 127, 112, 0.12)");
+    expect(omni.tokens.light.selectionForeground).toBe("#075E53");
+    expect(omni.tokens.dark.selectionBackground).toBe("rgba(110, 231, 210, 0.15)");
+    expect(omni.tokens.dark.selectionForeground).toBe("#B2F5E8");
   });
 
   it.each(PALETTES)("keeps $label selected text readable and its highlight visible", (palette) => {

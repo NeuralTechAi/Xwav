@@ -1,10 +1,10 @@
 // Post-setup "Your setup is ready" modal: one tab per harness, showing the
-// credential Omnigent adopted and the MCP servers, skills, and plugins found
+// credential Xvaw adopted and the MCP servers, skills, and plugins found
 // there. Review only: sessions already load these, so nothing is selected.
 
 import type { ReactNode } from "react";
 import { ArrowRight, Check, XIcon } from "lucide-react";
-import omnigentLogo from "@/assets/omnigent-starfish-icon.png";
+import omnigentLogo from "@/assets/xvaw-icon.png";
 import BlobGraphic from "@/components/onboarding/BlobGraphic";
 import {
   BRAND_HARNESSES,
@@ -35,7 +35,7 @@ import { Link } from "@/lib/routing";
 export type ImportHarness = BrandHarness;
 export type ImportContext = HarnessInventoryContext;
 
-/** Harness icons → Omnigent starfish, over the onboarding blob graphic. */
+/** Harness icons → Xvaw starfish, over the onboarding blob graphic. */
 function ImportBand() {
   return (
     <div className="relative h-[200px] max-h-[25vh] shrink-0 overflow-hidden">

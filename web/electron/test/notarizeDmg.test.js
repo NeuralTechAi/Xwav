@@ -40,18 +40,18 @@ describe("DMG notarization", () => {
       return args[0] === "notarytool" ? JSON.stringify({ status: "Accepted" }) : undefined;
     };
 
-    notarizeDmg("dist/Omnigent.dmg", ["--key", "/tmp/key.p8"], run);
+    notarizeDmg("dist/Xvaw.dmg", ["--key", "/tmp/key.p8"], run);
 
     assert.deepEqual(calls, [
       {
-        args: ["codesign", "--verify", "--verbose=2", "dist/Omnigent.dmg"],
+        args: ["codesign", "--verify", "--verbose=2", "dist/Xvaw.dmg"],
         options: undefined,
       },
       {
         args: [
           "notarytool",
           "submit",
-          "dist/Omnigent.dmg",
+          "dist/Xvaw.dmg",
           "--key",
           "/tmp/key.p8",
           "--wait",
@@ -61,11 +61,11 @@ describe("DMG notarization", () => {
         options: { captureOutput: true },
       },
       {
-        args: ["stapler", "staple", "-v", "dist/Omnigent.dmg"],
+        args: ["stapler", "staple", "-v", "dist/Xvaw.dmg"],
         options: undefined,
       },
       {
-        args: ["stapler", "validate", "-v", "dist/Omnigent.dmg"],
+        args: ["stapler", "validate", "-v", "dist/Xvaw.dmg"],
         options: undefined,
       },
     ]);
@@ -75,6 +75,6 @@ describe("DMG notarization", () => {
     const run = (args) =>
       args[0] === "notarytool" ? JSON.stringify({ status: "Invalid" }) : undefined;
 
-    assert.throws(() => notarizeDmg("dist/Omnigent.dmg", [], run), /status: Invalid/);
+    assert.throws(() => notarizeDmg("dist/Xvaw.dmg", [], run), /status: Invalid/);
   });
 });

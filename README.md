@@ -1,29 +1,48 @@
 <div align="center">
 
-# <img src="https://raw.githubusercontent.com/omnigent-ai/omnigent/main/docs/images/omnigent-logo.svg" alt="" height="38" valign="middle" /> Omnigent
+<img src="docs/images/xvaw-logo.svg" alt="Xvaw" width="96" />
 
-### The open-source meta-harness for all your AI agents.
+# Xvaw
 
-Omnigent is an open-source **meta-harness** that gives you a common orchestration layer over Claude Code, Codex, Cursor, OpenCode, Hermes, Pi, and the agents you write yourself: swap or combine harnesses without rewriting, enforce policies and sandboxing, and collaborate in real time from any device — terminal, browser, phone, or the native desktop app.
+### Your agents. One workspace.
 
-[![PyPI version](https://img.shields.io/pypi/v/omnigent.svg)](https://pypi.org/project/omnigent/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/omnigent-ai/omnigent/blob/main/LICENSE)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/omnigent)
-![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
+An open-source workspace for orchestrating Claude Code, Codex, Cursor, Pi, and custom AI agents. Build, supervise, and collaborate from your terminal, browser, desktop, or phone.
 
-[omnigent.ai](https://omnigent.ai) · **[⬇️ Download the macOS desktop app](https://omnigent.ai/quickstart/install#install-the-desktop-app)**
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-6EE7D2)](LICENSE)
+[![Status: source fork](https://img.shields.io/badge/status-source_fork-89A9FF)](https://github.com/NeuralTechAi/Xvaw)
+
+[Source](https://github.com/NeuralTechAi/Xvaw) · [Brand assets](docs/BRANDING.md) · [Upstream](https://github.com/omnigent-ai/omnigent)
 
 </div>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/omnigent-ai/omnigent/main/docs/images/omnigent-desktop.png" alt="The Omnigent desktop app: starting a new session, with pinned and project-grouped sessions in the sidebar" width="720" />
-</p>
+![Xvaw — Your agents. One workspace.](docs/images/xvaw-banner.svg)
+
+## Run this fork locally
+
+Xvaw is a rebranded fork of [Omnigent](https://github.com/omnigent-ai/omnigent). The Python package, imports, `OMNIGENT_*` environment variables, configuration paths, protocol schemes, and SDK contracts keep their upstream names for compatibility. The additional `xvaw` command runs the same local CLI. Upstream installers and PyPI packages install **Omnigent**, not this fork; use this source checkout for Xvaw.
+
+```bash
+git clone https://github.com/NeuralTechAi/Xvaw.git
+cd Xvaw
+uv sync --extra all --group dev
+pnpm install --frozen-lockfile --filter web
+pnpm --dir web build
+uv run xvaw server
+# In another terminal, register the local execution host:
+uv run xvaw host --server http://localhost:6767
+```
+
+Open the server URL printed in the terminal (normally `http://localhost:6767`). For frontend development, run `pnpm --dir web dev` and open its printed URL. See [CONTRIBUTING.md](CONTRIBUTING.md) for prerequisites and platform setup.
+
+Xvaw has no published desktop/mobile binaries or update feed yet. Desktop auto-updates and upstream signing identities are disabled. Native source artwork is included; building iOS/macOS releases requires the corresponding Apple toolchain and your own signing configuration.
+
+The inherited reference below describes the upstream runtime. Commands and upstream installation links retain their upstream behavior; they are not Xvaw releases.
 
 ---
 
-## Why Omnigent?
+## Why Xvaw?
 
-Omnigent lets you:
+Xvaw lets you:
 
 - **📱 Work with agents from any device, including your phone.** Sessions
   follow you: start in your terminal, continue in the browser, pick it up on
@@ -64,14 +83,14 @@ Omnigent lets you:
 
 ### 1. Install
 
-One command installs Omnigent and everything it needs:
+One command installs Xvaw and everything it needs:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/omnigent-ai/omnigent/main/scripts/install_oss.sh | sh
 ```
 
 The installer includes Databricks support and installs the Databricks CLI
-alongside Omnigent, or reuses an existing CLI that supports workspace login.
+alongside Xvaw, or reuses an existing CLI that supports workspace login.
 Pass `--no-databricks` to omit them.
 
 <details>
@@ -99,7 +118,7 @@ Available user-facing extras include:
 <details>
 <summary>Prefer to install manually?</summary>
 
-Omnigent needs **Python 3.12+**. Install the `omnigent` package:
+Xvaw needs **Python 3.12+**. Install the `omnigent` package:
 
 ```bash
 uv tool install omnigent        # or: pip install "omnigent"
@@ -181,7 +200,7 @@ uv tool install -q --python 3.12 git+https://github.com/omnigent-ai/omnigent.git
 <details>
 <summary>Windows (native)</summary>
 
-Omnigent runs natively on Windows in a degraded mode. The `install_oss.sh`
+Xvaw runs natively on Windows in a degraded mode. The `install_oss.sh`
 bootstrap is POSIX-only, so install with `uv` directly:
 
 ```powershell
@@ -208,7 +227,7 @@ What is **not** available on Windows (use Linux/macOS, or WSL, for these):
 <details>
 <summary>Updating to a new release</summary>
 
-When a newer release is on PyPI, Omnigent shows a one-line notice (once per
+When a newer release is on PyPI, Xvaw shows a one-line notice (once per
 release) pointing here. To update:
 
 ```bash
@@ -229,7 +248,7 @@ mirrors work out of the box; override with `OMNIGENT_INDEX_URL` if needed.
 </details>
 
 <details>
-<summary>Uninstalling Omnigent</summary>
+<summary>Uninstalling Xvaw</summary>
 
 Preview the CLI/profile cleanup that would run by default:
 
@@ -244,7 +263,7 @@ history, credentials, and projects:
 omnigent uninstall --yes
 ```
 
-To also remove Omnigent state under `~/.omnigent`, pass `--purge`; Omnigent
+To also remove Xvaw state under `~/.omnigent`, pass `--purge`; Xvaw
 backs it up outside the target before deletion. Your `~/omnigent` workspace is
 kept unless you explicitly add `--purge-workspace`.
 
@@ -277,7 +296,7 @@ in a native window and adds OS notifications (with a configurable sound) and a d
 > the shorter `omni`. They're interchangeable.
 
 > [!TIP]
-> On first run, Omnigent picks up model credentials already in your
+> On first run, Xvaw picks up model credentials already in your
 > environment (an `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`, or a `claude` /
 > `codex` CLI you're logged into) and offers one as the default.
 
@@ -310,7 +329,7 @@ and choose the option matching your connection:
   Gemini requests and `x-goog-api-key` authentication. Supply its API root, such
   as `https://gateway.example/gemini`, without `/v1beta` or a model operation.
 - **Databricks — profile** for a Databricks workspace with native Gemini API
-  access. Omnigent manages profile authentication and model-name mapping; no
+  access. Xvaw manages profile authentication and model-name mapping; no
   workspace URL or token needs to be pasted into the gateway form.
 
 OpenAI Responses and Chat Completions endpoints are **not supported by native
@@ -346,7 +365,7 @@ omnigent run --harness devin
 ```
 
 Both speak the [Agent Client Protocol](https://agentclientprotocol.com) over
-stdio, and Omnigent stores no credential for either — each CLI reads back the
+stdio, and Xvaw stores no credential for either — each CLI reads back the
 login it wrote to disk. That also means `--model` is refused rather than
 silently dropped: both run their account-default model. To pin one, configure an
 `acp:` agent whose command passes the vendor's own model flag.
@@ -428,7 +447,7 @@ limited to 100 characters; custom title requirements may use up to 200.
 Default titles over 100 characters are rejected, leaving the first-message
 fallback title in place. Custom titles over 200 characters are truncated with
 a trailing ellipsis. Manually assigned titles are also limited to 200
-characters. The setting applies after the local Omnigent server restarts, both
+characters. The setting applies after the local Xvaw server restarts, both
 to new sessions and to later agent-initiated renames through `sys_session_rename`.
 Agent proposals are formatted using the same title requirements; if formatting
 fails, the existing title is preserved. Manual renames remain unchanged.
@@ -460,7 +479,7 @@ runs the session.
 omnigent setup
 ```
 
-Add a credential, set a default, or remove one, grouped by agent. Omnigent
+Add a credential, set a default, or remove one, grouped by agent. Xvaw
 works with four kinds of credentials:
 
 | | Kind | What it is |
@@ -493,7 +512,7 @@ the OpenAI-compatible `…/api/v1`.
 
 ### 4. Deploy a server (and use it from your phone📱)
 
-Run Omnigent on a server with a stable URL
+Run Xvaw on a server with a stable URL
 ([`deploy/README.md`](https://github.com/omnigent-ai/omnigent/blob/main/deploy/README.md) is the full guide) and your sessions
 become reachable from anywhere, including your phone. The web UI is built for
 mobile, so you get the same chat, sub-agents, terminals, and files, in sync
@@ -525,7 +544,7 @@ omnigent host  https://your-host    # new sessions can now run on this machine
 
 ### 5. Collaborate with your team
 
-Omnigent supports **multi-user accounts**, controlled by one environment
+Xvaw supports **multi-user accounts**, controlled by one environment
 variable:
 
 ```bash
@@ -635,7 +654,7 @@ OAuth. KMS limits serialized grants to 4096 bytes; use Vault for larger grants.
 An agent is a short YAML file: your prompt, your tools — local Python
 functions, MCP servers, and sub-agents a supervisor can delegate to. You don't
 have to write it by hand: agents can build agents, so describe the agent you
-want in any Omnigent chat and it authors the file for you.
+want in any Xvaw chat and it authors the file for you.
 
 ```yaml
 name: my_agent
@@ -679,9 +698,9 @@ Polly at [`examples/polly/`](https://github.com/omnigent-ai/omnigent/tree/main/e
 
 ## Telemetry
 
-Omnigent collects anonymized usage data (telemetry) by default. This data
+Xvaw collects anonymized usage data (telemetry) by default. This data
 contains no sensitive or personally identifiable information. If you're using
-Omnigent through a managed service or distribution, please consult your managed
+Xvaw through a managed service or distribution, please consult your managed
 service agreement to determine any data collection that may impact your use of
 the service. To opt out, follow our instructions in
 [Usage Telemetry](https://omnigent.ai/docs/deploy/telemetry).
