@@ -86,7 +86,7 @@ def render_kimi_hooks_toml(*, bridge_dir: Path, python_executable: str | None = 
     # to answer the card — after which kimi's own TUI prompt stands.
     return (
         "\n"
-        "# --- Omnigent native hooks (auto-generated; do not edit) ---\n"
+        "# --- Xvaw native hooks (auto-generated; do not edit) ---\n"
         "[[hooks]]\n"
         'event = "PreToolUse"\n'
         f'command = "{pre}"\n'

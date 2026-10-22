@@ -247,7 +247,7 @@ def test_pytest_run_leaves_no_omnigent_processes(tmp_path: Path) -> None:
 
         leaked = "\n".join(f"  pid {pid}: {cmd}" for pid, cmd in survivors)
         assert not survivors, (
-            "pytest exited but left Omnigent processes from its run alive "
+            "pytest exited but left Xvaw processes from its run alive "
             "(session teardown never reaped spawned children — they squat "
             "port 6767 and keep serving after their temp data dir is "
             f"deleted):\n{leaked}"

@@ -57,7 +57,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "ai.omnigent.android"
+        applicationId = "ai.neuraltech.xvaw.android"
         minSdk = 28
         targetSdk = 36
         versionCode = appVersionCode

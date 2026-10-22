@@ -106,7 +106,7 @@ async def test_theme_light_updates_host_and_formatter(
     assert "light" in rendered
     assert "mode (saved)" in rendered
     assert (tmp_path / ".omnigent" / "config.yaml").read_text(encoding="utf-8") == (
-        "# Omnigent user configuration\ntui:\n  theme: light\n"
+        "# Xvaw user configuration\ntui:\n  theme: light\n"
     )
 
 
@@ -131,7 +131,7 @@ async def test_theme_dark_and_default_reset_to_default_theme(
     assert "light" in rendered
     assert "mode (saved)" in rendered
     assert (tmp_path / ".omnigent" / "config.yaml").read_text(encoding="utf-8") == (
-        "# Omnigent user configuration\n"
+        "# Xvaw user configuration\n"
     )
 
 

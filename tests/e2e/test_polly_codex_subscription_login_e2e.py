@@ -205,7 +205,7 @@ def test_polly_with_codex_subscription_does_not_fail_not_logged_in(
         # server + runner are up and the session is attached. The bug's error
         # can only surface after this point (it is a turn failure).
         launch_patterns = [
-            r"Omnigent session:",
+            r"Xvaw session:",
             "Not logged in",
             pexpect.EOF,
             pexpect.TIMEOUT,
@@ -220,7 +220,7 @@ def test_polly_with_codex_subscription_does_not_fail_not_logged_in(
             )
         if index in (2, 3):
             pytest.fail(
-                "`omni polly` did not reach a live session (no 'Omnigent "
+                "`omni polly` did not reach a live session (no 'Xvaw "
                 f"session:' URL within {_LAUNCH_TIMEOUT_S}s).\n"
                 f"Transcript:\n{''.join(transcript)[-4000:]}"
             )

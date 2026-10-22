@@ -6033,7 +6033,7 @@ def test_forwarder_logs_unsupported_codex_server_request(
         :param request: HTTP request sent by the forwarder.
         :returns: Never returns.
         """
-        raise AssertionError(f"unexpected Omnigent request: {request.method} {request.url}")
+        raise AssertionError(f"unexpected Xvaw request: {request.method} {request.url}")
 
     async def run() -> None:
         """
@@ -10815,7 +10815,7 @@ def test_forwarder_registers_subagent_activity_before_child_events(
     asyncio.run(run())
 
     registrations = _registration_posts(posted, "conv_parent")
-    assert registrations, "subAgentActivity(kind=started) must create an Omnigent child session"
+    assert registrations, "subAgentActivity(kind=started) must create an Xvaw child session"
     assert registrations[0]["data"]["thread_id"] == "thread_child"
     child_posts = _transcript_posts(posted, "conv_child")
     assert [post["data"]["item_data"]["content"][0]["text"] for post in child_posts] == [
@@ -12348,7 +12348,7 @@ async def test_ensure_local_codex_resume_rollout_rejects_unsafe_thread_id(
         :returns: Never returns.
         """
         del request
-        raise AssertionError("unsafe thread id should be rejected before Omnigent fetch")
+        raise AssertionError("unsafe thread id should be rejected before Xvaw fetch")
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:

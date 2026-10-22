@@ -134,14 +134,14 @@ class OmnigentAcpMcp:
             )
             self._acp_servers = _to_acp_mcp_servers(build_mcp_config(self._bridge_dir))
             logger.info(
-                "acp[%s] Omnigent MCP relay ready (%d builtin tools bridged)",
+                "acp[%s] Xvaw MCP relay ready (%d builtin tools bridged)",
                 self._label,
                 len(tools),
             )
             return self._acp_servers
         except Exception as exc:  # noqa: BLE001 — MCP is additive; never break a turn
             logger.warning(
-                "acp[%s] Omnigent MCP bridge setup failed; agent runs without Omnigent tools: %s",
+                "acp[%s] Xvaw MCP bridge setup failed; agent runs without Xvaw tools: %s",
                 self._label,
                 exc,
             )

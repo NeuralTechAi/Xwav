@@ -314,5 +314,5 @@ def test_unpinned_native_codex_session_launches_on_omnigent_default(
     )
     assert launched == CODEX_DEFAULT_MODEL, (
         f"unpinned native Codex session launched on {launched!r} instead of "
-        f"Omnigent's default {CODEX_DEFAULT_MODEL!r}; pane text:\n{pane_text}"
+        f"Xvaw's default {CODEX_DEFAULT_MODEL!r}; pane text:\n{pane_text}"
     )

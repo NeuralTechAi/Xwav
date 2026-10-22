@@ -225,7 +225,7 @@ def run_kiro_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Kiro requires a resolved Omnigent server URL. The CLI should call "
+            "Kiro requires a resolved Xvaw server URL. The CLI should call "
             "_ensure_backend before run_kiro_native."
         )
     with TemporaryDirectory(prefix="omnigent-kiro-native-") as tmpdir:

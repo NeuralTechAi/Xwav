@@ -490,7 +490,7 @@ def add_menu_options() -> list[AddOption]:
         ),
         _opt(
             "Pi — original auth",
-            "Use Pi's own auth (~/.pi/agent) as-is, without Omnigent managing the provider.",
+            "Use Pi's own auth (~/.pi/agent) as-is, without Xvaw managing the provider.",
             SUBSCRIPTION_KIND,
             cli="pi",
         ),

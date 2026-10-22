@@ -267,9 +267,9 @@ def test_stale_host_hint_recommends_generic_stop_command(
     hint = terminal_stderr.getvalue()
     assert "runner tunnel rejection (HTTP 401)" in hint
     assert "stale host processes" in hint
-    assert "`omnigent stop`" in hint
-    assert "existing Omnigent host instances" in hint
-    assert "omnigent setup" not in hint
+    assert "`xvaw stop`" in hint
+    assert "existing Xvaw host instances" in hint
+    assert "xvaw setup" not in hint
 
 
 def test_stale_host_hint_names_configured_wrapper(
@@ -285,7 +285,7 @@ def test_stale_host_hint_names_configured_wrapper(
     hint = terminal_stderr.getvalue()
     assert "`isaac omni stop`" in hint
     # The naked binary token must not be suggested when it would be refused.
-    assert "`omnigent stop`" not in hint
+    assert "`xvaw stop`" not in hint
 
 
 def test_redirect_stderr_to_log_retargets_existing_logging_stderr_handlers(
@@ -430,7 +430,7 @@ def test_main_logs_click_exceptions(
     from omnigent import cli as cli_module
 
     # An unsupported --harness is a deterministic ClickException trigger that
-    # raises before any daemon/network work. (A bare `omnigent run` no longer
+    # raises before any daemon/network work. (A bare `xvaw run` no longer
     # errors — it drops into first-run `configure harnesses` — so it can't be
     # the trigger here.)
     monkeypatch.setattr(sys, "argv", ["omnigent", "run", "--harness", "not-a-real-harness"])
@@ -587,7 +587,7 @@ def test_safe_mtime_returns_zero_for_vanished_file(tmp_path: Path) -> None:
 def test_prune_old_logs_survives_file_vanishing_mid_sort(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Concurrent ``omnigent run`` launches race to prune the same logs; a file
+    """Concurrent ``xvaw run`` launches race to prune the same logs; a file
     globbed by one but deleted by the other must not crash the sort (previously a
     FileNotFoundError in the stat sort key aborted CLI startup)."""
     real = [tmp_path / f"cli-{i:03d}.log" for i in range(cli_diagnostics.MAX_LOG_FILES + 3)]
@@ -654,7 +654,7 @@ def test_does_not_suppress_hint_for_ordinary_errors() -> None:
 
 def test_suppresses_hint_for_usage_errors() -> None:
     """A parse-time ``click.UsageError`` (unknown command, bad flag) is never a
-    tunnel rejection, so the ``omnigent stop`` hint is withheld."""
+    tunnel rejection, so the ``xvaw stop`` hint is withheld."""
     import click
 
     unknown_command = click.UsageError("No such command 'x'.")
@@ -736,7 +736,7 @@ def test_daemon_exit_error_carries_server_log_tail(
         cli._discover_local_server_url(timeout=1.0)
 
     message = str(excinfo.value)
-    assert "daemon exited before its Omnigent server became ready" in message
+    assert "daemon exited before its Xvaw server became ready" in message
     assert "Server log" in message
     assert "omnigent[postgres]" in message  # the actionable cause, inline
 
@@ -768,7 +768,7 @@ def test_daemon_exit_error_omits_tail_without_attributable_record(
         cli._discover_local_server_url(timeout=1.0)
 
     message = str(excinfo.value)
-    assert "daemon exited before its Omnigent server became ready" in message
+    assert "daemon exited before its Xvaw server became ready" in message
     assert "unrelated humming server" not in message
     assert "Last 50 lines" not in message
 
@@ -818,7 +818,7 @@ def test_main_surfaces_install_command_on_stderr_without_recovery_hint(
     """
     Foreground acceptance, part 2 (top-level ``main()``): the terminal output
     for a daemon-startup failure must contain the corrective install command
-    and must NOT contain the stale-host recovery hint — `omnigent stop`
+    and must NOT contain the stale-host recovery hint — `xvaw stop`
     cannot install a missing dependency.
     """
     import contextlib
@@ -832,7 +832,7 @@ def test_main_surfaces_install_command_on_stderr_without_recovery_hint(
 
     def _boom(*_args: object, **_kwargs: object) -> None:
         raise LocalServerStartupError(
-            "The local daemon exited before its Omnigent server became ready.\n"
+            "The local daemon exited before its Xvaw server became ready.\n"
             "  Last 50 lines:\n"
             "  ModuleNotFoundError: ... pip install 'omnigent[postgres]' ..."
         )

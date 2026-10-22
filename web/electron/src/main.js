@@ -1726,7 +1726,7 @@ function resolvedCliPath() {
 function missingHostCliError(serverUrl) {
   return databricksInternalFeaturesEnabled() && isDatabricksManagedServerUrl(serverUrl)
     ? "The isaac CLI was not found. Install it before connecting this machine."
-    : "The omnigent CLI was not found. Install it or set its path.";
+    : "The Xvaw CLI was not found. Install it or set its path.";
 }
 
 /**
@@ -3386,7 +3386,7 @@ async function exportDiagnostics() {
   try {
     const options = {
       title: "Export Xvaw Desktop Diagnostics",
-      defaultPath: `Omnigent-desktop-diagnostics-${new Date().toISOString().slice(0, 10)}.jsonl`,
+      defaultPath: `Xvaw-desktop-diagnostics-${new Date().toISOString().slice(0, 10)}.jsonl`,
       filters: [{ name: "Diagnostic logs", extensions: ["jsonl"] }],
     };
     const { canceled, filePath } = parent
@@ -4615,7 +4615,7 @@ function registerIpc() {
     }
     const cliPath = resolvedCliPath();
     if (!cliPath) {
-      return { ok: false, error: "The omnigent CLI was not found. Install it or set its path." };
+      return { ok: false, error: "The Xvaw CLI was not found. Install it or set its path." };
     }
     // Stream the server's startup log lines to the setup page as it boots.
     const onLine = (line) => {
@@ -5395,7 +5395,7 @@ if (!gotLock) {
   // `npm start -- 'omnigent://...'` exercise the real code path on macOS too.
   // Safe: a packaged macOS launch has no omnigent:// in argv, so no double-handling.
   for (const arg of process.argv) {
-    if (typeof arg === "string" && arg.startsWith("omnigent://")) enqueueDeepLink(arg);
+    if (typeof arg === "string" && parseOmnigentDeepLink(arg)) enqueueDeepLink(arg);
   }
 
   // macOS: `open-url` fires for omnigent:// links, including BEFORE
@@ -5417,7 +5417,7 @@ if (!gotLock) {
     // scan above). A plain second launch (no URL) just focuses an existing window.
     let handledUrl = false;
     for (const arg of argv) {
-      if (typeof arg === "string" && arg.startsWith("omnigent://")) {
+      if (typeof arg === "string" && parseOmnigentDeepLink(arg)) {
         enqueueDeepLink(arg);
         handledUrl = true;
       }
@@ -5435,7 +5435,7 @@ if (!gotLock) {
     diagnostics.initialize(app);
     // App User Model ID so Windows attributes notifications/taskbar correctly.
     if (process.platform === "win32")
-      app.setAppUserModelId(isDevBuild ? DEV_DOMAIN : "ai.omnigent.desktop");
+      app.setAppUserModelId(isDevBuild ? DEV_DOMAIN : "ai.neuraltech.xvaw.desktop");
     applyDockIcon();
     registerPermissions();
     registerLocalhostAccess();
@@ -5463,6 +5463,7 @@ if (!gotLock) {
     // per-install registration that survives reinstalls; this lets dev
     // (`electron .`) clicks route to the running dev instance too. No-op
     // (returns false) when another app is already the default handler.
+    app.setAsDefaultProtocolClient("xvaw");
     app.setAsDefaultProtocolClient("omnigent");
     // If a deep link arrived before ready (macOS open-url, or Windows/Linux
     // argv), open it instead of the default launch window; the drain's

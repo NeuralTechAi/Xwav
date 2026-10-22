@@ -2816,7 +2816,7 @@ async def test_invoke_tool_raises_elicitation_on_input_required() -> None:
     # input_requests carries the full elicitation payloads.
     assert "eid_abc" in exc.input_requests, (
         "input_requests must include the elicitation id from the server; "
-        "if missing, the Omnigent server can't surface the elicitation to the user"
+        "if missing, the Xvaw server can't surface the elicitation to the user"
     )
     # request_state must be echoed back verbatim on retry.
     assert exc.request_state == "state_xyz", (
@@ -2949,7 +2949,7 @@ async def test_call_tool_with_elicitation_raises_on_second_mrtr() -> None:
     # Second round's elicitation data must surface.
     assert "eid_2" in exc.input_requests, (
         "Multi-round MRTR must surface the second elicitation's requests; "
-        "if missing, the Omnigent server can't show the next approval form"
+        "if missing, the Xvaw server can't show the next approval form"
     )
     assert exc.request_state == "state_round2", (
         "Multi-round MRTR must carry the new requestState for the next retry"

@@ -87,7 +87,7 @@ export function downloadSettings(exported: ExportedSettings): void {
   try {
     const a = document.createElement("a");
     a.href = url;
-    a.download = "omnigent-settings.json";
+    a.download = "xvaw-settings.json";
     a.click();
   } finally {
     URL.revokeObjectURL(url);

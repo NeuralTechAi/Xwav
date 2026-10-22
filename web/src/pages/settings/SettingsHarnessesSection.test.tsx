@@ -418,7 +418,7 @@ describe("Harness details", () => {
     expect(screen.getByText("/opt/bin/claude")).toBeTruthy();
     for (const arg of STARTUP.args ?? []) expect(screen.getAllByText(arg)).toHaveLength(1);
     expect(screen.getByText(/Sessions and workspaces may override/)).toBeTruthy();
-    expect(screen.getByText(/harness.claude-native in ~\/.omnigent\/config.yaml/)).toBeTruthy();
+    expect(screen.getByText(/From the harness configuration on/)).toBeTruthy();
   });
 
   it("keeps tool discovery lazy and shows host-reported details", () => {

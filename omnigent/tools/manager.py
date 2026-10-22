@@ -823,7 +823,7 @@ class ToolManager:
         for callable_tool in load_local_callable_tools(server_local_tools):
             if not is_valid_tool_name(callable_tool.name()):
                 _logger.warning(
-                    "Omnigent callable tool %r has invalid name — skipping",
+                    "Xvaw callable tool %r has invalid name — skipping",
                     callable_tool.name(),
                 )
                 continue

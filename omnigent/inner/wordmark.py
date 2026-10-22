@@ -1,4 +1,4 @@
-"""The Omnigent brand wordmark and Otto lockup for CLI output.
+"""The Xvaw wordmark and wave lockup for CLI output.
 
 A bold "ANSI-Shadow" block-letter ``omnigent`` wordmark — the canonical
 figlet font with one duplicate body row dropped (5 rows), so every letter
@@ -12,7 +12,7 @@ banner (TTY gating, ``OMNIGENT_NO_BANNER``) lives one layer up in
 by command code. Keeping the gate out of here avoids a circular import
 (``ui`` imports ``wordmark``) and keeps the art unit-testable in isolation.
 
-The brand color is Otto's magenta-pink ``#F43BA6`` (see
+The brand color is Otto's magenta-pink ``#6EE7D2`` (see
 :data:`omnigent.inner.mascots.MASCOT_ART_COLOR`); the optional gradient
 fades it toward a lighter pink across the wordmark columns.
 """
@@ -32,8 +32,8 @@ WORDMARK_COLOR = MASCOT_ART_COLOR
 # Gradient endpoints (magenta → soft pink). Used only when a caller asks
 # for ``gradient=True`` and the terminal supports enough colors; rich
 # downgrades or drops the color automatically otherwise.
-_GRADIENT_START = (0xF4, 0x3B, 0xA6)  # #F43BA6
-_GRADIENT_END = (0xFF, 0x9F, 0xD6)  # #FF9FD6
+_GRADIENT_START = (0x6E, 0xE7, 0xD2)  # #6EE7D2
+_GRADIENT_END = (0x89, 0xA9, 0xFF)  # #89A9FF
 
 # Two-space gutter between Otto and the wordmark in the lockup.
 _GAP = "  "
@@ -51,6 +51,10 @@ _INDENT = "  "
 # are concatenated.
 _GLYPH_ROWS = 5
 _GLYPHS: dict[str, tuple[str, ...]] = {
+    "x": ("██╗  ██╗", "╚██╗██╔╝", " ╚███╔╝ ", " ██╔██╗ ", "██╔╝ ██╗"),
+    "v": ("██╗   ██╗", "██║   ██║", "╚██╗ ██╔╝", " ╚████╔╝ ", "  ╚═══╝  "),
+    "a": (" █████╗ ", "██╔══██╗", "███████║", "██╔══██║", "╚═╝  ╚═╝"),
+    "w": ("██╗    ██╗", "██║    ██║", "██║ █╗ ██║", "╚███╔███╔╝", " ╚══╝╚══╝ "),
     "o": (" ██████╗ ", "██╔═══██╗", "██║   ██║", "╚██████╔╝", " ╚═════╝ "),
     "m": ("███╗   ███╗", "████╗ ████║", "██╔████╔██║", "██║ ╚═╝ ██║", "╚═╝     ╚═╝"),
     "n": ("███╗   ██╗", "████╗  ██║", "██╔██╗ ██║", "██║ ╚████║", "╚═╝  ╚═══╝"),
@@ -60,7 +64,7 @@ _GLYPHS: dict[str, tuple[str, ...]] = {
     "t": ("████████╗", "╚══██╔══╝", "   ██║   ", "   ██║   ", "   ╚═╝   "),
 }
 
-_WORDMARK_TEXT = "omnigent"
+_WORDMARK_TEXT = "xvaw"
 
 
 def _build_wordmark(word: str) -> tuple[str, ...]:
@@ -217,7 +221,7 @@ def _print_epilogue(console: Console, rows: list[tuple[str, str]]) -> None:
 
 def render_compact(console: Console, *, subtitle: str | None = None) -> None:
     """
-    Print the one-line brandmark: ``✦ omnigent  <subtitle>``.
+    Print the one-line brandmark: ``≋ Xvaw  <subtitle>``.
 
     Used as a lightweight branded header on non-interactive commands that
     don't warrant the full lockup (``version``, ``status``, ``upgrade``…).
@@ -227,8 +231,8 @@ def render_compact(console: Console, *, subtitle: str | None = None) -> None:
     :returns: None.
     """
     line = Text(_INDENT)
-    line.append("✦ ", style=WORDMARK_COLOR)
-    line.append("omnigent", style=f"bold {WORDMARK_COLOR}")
+    line.append("≋ ", style=WORDMARK_COLOR)
+    line.append("Xvaw", style=f"bold {WORDMARK_COLOR}")
     if subtitle:
         line.append(f"  {subtitle}", style="dim")
     console.print(line)

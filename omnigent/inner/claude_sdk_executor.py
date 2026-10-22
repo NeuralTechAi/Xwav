@@ -984,14 +984,14 @@ def _augment_system_prompt_for_omnigent_mcp_tools(
             f"use `mcp__omnigent__{name}` when instructions say `{name}`" for name in examples
         )
         note = (
-            "Claude SDK tool naming: Omnigent tools are exposed as MCP tools. "
-            f"{example_text}. For any other Omnigent tool, use "
+            "Claude SDK tool naming: Xvaw tools are exposed as MCP tools. "
+            f"{example_text}. For any other Xvaw tool, use "
             "`mcp__omnigent__<tool_name>` rather than the bare name."
         )
     else:
         note = (
-            "Claude SDK tool naming: Omnigent tools are exposed as MCP tools. "
-            "When instructions mention a bare Omnigent tool name, invoke "
+            "Claude SDK tool naming: Xvaw tools are exposed as MCP tools. "
+            "When instructions mention a bare Xvaw tool name, invoke "
             "`mcp__omnigent__<tool_name>` rather than the bare name."
         )
 
@@ -2401,7 +2401,7 @@ class ClaudeSDKExecutor(Executor):
         allowed = await self._elicitation_handler(tool_name, tool_input)
         if allowed:
             return PermissionResultAllow()
-        return PermissionResultDeny(message="Denied via Omnigent elicitation")
+        return PermissionResultDeny(message="Denied via Xvaw elicitation")
 
     async def _evaluate_tool_call_policy(
         self,
@@ -2474,7 +2474,7 @@ class ClaudeSDKExecutor(Executor):
         if _action == "POLICY_ACTION_ASK":
             from claude_agent_sdk import PermissionResultAllow, PermissionResultDeny
 
-            reason = _verdict.reason or "Approval required by Omnigent TOOL_CALL policy"
+            reason = _verdict.reason or "Approval required by Xvaw TOOL_CALL policy"
             if self._elicitation_handler is None:
                 logger.warning(
                     "TOOL_CALL policy ASK had no elicitation handler; denying tool=%s reason=%s",
@@ -2489,12 +2489,12 @@ class ClaudeSDKExecutor(Executor):
         if _action == "POLICY_ACTION_DENY":
             from claude_agent_sdk import PermissionResultDeny
 
-            reason = _verdict.reason or "Denied by Omnigent TOOL_CALL policy"
+            reason = _verdict.reason or "Denied by Xvaw TOOL_CALL policy"
             logger.info("TOOL_CALL policy denied tool=%s reason=%s", tool_name, reason)
             return PermissionResultDeny(message=reason)
         from claude_agent_sdk import PermissionResultDeny
 
-        reason = f"Unexpected Omnigent TOOL_CALL policy verdict: {_action!r}"
+        reason = f"Unexpected Xvaw TOOL_CALL policy verdict: {_action!r}"
         logger.warning("TOOL_CALL policy failed closed tool=%s reason=%s", tool_name, reason)
         return PermissionResultDeny(message=reason)
 

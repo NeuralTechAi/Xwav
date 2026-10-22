@@ -344,7 +344,7 @@ def test_host_enable_subcommand_installs_user_service(
 
     assert result.exit_code == 0, result.output
     assert captured == [(None, {"HOME": str(tmp_path)})]
-    assert "Enabled the Omnigent host user service for local" in result.output
+    assert "Enabled the Xvaw host user service for local" in result.output
 
 
 def test_host_disable_subcommand_removes_user_service(
@@ -368,7 +368,7 @@ def test_host_disable_subcommand_removes_user_service(
 
     assert result.exit_code == 0, result.output
     assert removed == [True]
-    assert "Disabled the Omnigent host user service" in result.output
+    assert "Disabled the Xvaw host user service" in result.output
 
 
 def test_host_rejects_unknown_plain_token_as_subcommand(

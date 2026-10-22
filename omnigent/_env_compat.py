@@ -4,7 +4,8 @@ The project's env-var prefix has changed twice as the name evolved:
 ``OMNIAGENTS_`` (original) -> ``OMNIGENTS_`` -> ``OMNIGENT_`` (current). All
 current code reads the new ``OMNIGENT_`` names. To keep existing deployments,
 CI configs, and shell profiles that still export either older prefix working,
-this shim mirrors every legacy variable onto its ``OMNIGENT_`` equivalent at
+Xvaw settings may use the public ``XVAW_`` prefix. This shim mirrors every
+legacy variable onto its ``OMNIGENT_`` equivalent at
 process startup -- but only when the new name is unset, so an explicitly-set
 ``OMNIGENT_`` value always wins.
 
@@ -25,7 +26,7 @@ import os
 # A variable named ``OMNIGENTS_FOO`` or ``OMNIAGENTS_FOO`` is mirrored to
 # ``OMNIGENT_FOO``.
 _NEW_PREFIX = "OMNIGENT_"
-_LEGACY_PREFIXES = ("OMNIGENTS_", "OMNIAGENTS_")
+_LEGACY_PREFIXES = ("XVAW_", "OMNIGENTS_", "OMNIAGENTS_")
 
 # Module-level guard so repeated imports/calls don't rescan the environment.
 _mirrored = False

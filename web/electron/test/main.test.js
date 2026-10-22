@@ -3320,7 +3320,7 @@ describe("deep-link path join wiring (src/main.js)", () => {
   });
 
   it("stores the clean serverUrl (no conversation path) separately from loadUrl", () => {
-    // The window's server IDENTITY (for `omnigent host --server` etc.) must not
+    // The window's server IDENTITY (for `xvaw host --server` etc.) must not
     // carry the /c/<id> path. Guard that createWindow sets `serverUrl: serverUrl`
     // (the clean value), not `serverUrl: destination`/`loadUrl`.
     assert.match(
@@ -3328,7 +3328,7 @@ describe("deep-link path join wiring (src/main.js)", () => {
       /serverUrl:\s*destination\s*\?\s*serverUrl\s*:\s*null/,
       [
         "createWindow no longer stores the clean serverUrl as the window's server",
-        "identity — it must keep the /c/<id> path out of `omnigent host --server`.",
+        "identity — it must keep the /c/<id> path out of `xvaw host --server`.",
         "Restore `serverUrl: destination ? serverUrl : null` in the windows.set call.",
       ].join(" "),
     );
@@ -3355,10 +3355,10 @@ describe("deep-link ingestion wiring (src/main.js)", () => {
     );
   });
 
-  it("scans second-instance argv for omnigent:// and enqueues as live code", () => {
+  it("scans second-instance argv for supported session links and enqueues as live code", () => {
     assert.match(
       liveCode,
-      /app\.on\("second-instance"[\s\S]{0,220}startsWith\("omnigent:\/\/"\)[\s\S]{0,60}enqueueDeepLink\(/,
+      /app\.on\("second-instance"[\s\S]{0,260}parseOmnigentDeepLink\(arg\)[\s\S]{0,60}enqueueDeepLink\(/,
       [
         "main.js no longer scans second-instance argv for omnigent://. Windows/Linux",
         "warm-start deep links (a second launch funneled by the single-instance lock)",
@@ -4628,7 +4628,7 @@ describe("onboarding runner IPC", () => {
     const event = { sender: setupSender(), senderFrame: setupFrame(h) };
     const result = await h.ipc.get("omnigent:connect-runner")(event, server, "local");
     assert.equal(result.ok, false);
-    assert.match(result.error, /omnigent CLI was not found/);
+    assert.match(result.error, /Xvaw CLI was not found/);
   });
 
   // Remote runs on a managed server behind the internal flag; local uses a laptop CLI.

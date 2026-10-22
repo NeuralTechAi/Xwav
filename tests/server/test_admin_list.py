@@ -82,7 +82,7 @@ def test_loader_ignores_comments_and_blanks(tmp_path: Path) -> None:
     never match.
     """
     f = tmp_path / "admins"
-    f.write_text("# Omnigent admins\n\nalice@example.com   # founder\n   \nbob@example.com\n")
+    f.write_text("# Xvaw admins\n\nalice@example.com   # founder\n   \nbob@example.com\n")
     s = MtimeCachedIdentitySet(f)
     assert s.snapshot() == frozenset({"alice@example.com", "bob@example.com"})
 

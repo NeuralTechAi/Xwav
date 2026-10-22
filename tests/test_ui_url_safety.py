@@ -11,7 +11,7 @@ from tests.helpers.ui_url_safety import DEV_PORTS, unsafe_ui_base_url_reason
 def test_unsafe_ui_base_url_reason_refuses_known_dev_ports(port: int) -> None:
     reason = unsafe_ui_base_url_reason(f"http://example.com:{port}")
 
-    assert reason == f"port {port} is a known Omnigent/Vite dev port"
+    assert reason == f"port {port} is a known Xvaw/Vite dev port"
 
 
 @pytest.mark.parametrize(

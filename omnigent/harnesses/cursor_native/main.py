@@ -347,7 +347,7 @@ def run_cursor_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Cursor requires a resolved Omnigent server URL. The CLI should call "
+            "Cursor requires a resolved Xvaw server URL. The CLI should call "
             "_ensure_backend before run_cursor_native."
         )
     effective_cursor_args = _inject_mode_arg(cursor_args, mode)

@@ -2494,7 +2494,7 @@ async def _maybe_rotate_session_on_thread_started(
     await old_usage_coalescer.close()
     await old_elicitation_tracker.close()
     _logger.info(
-        "Codex forwarder rotated Omnigent session after native thread switch: "
+        "Codex forwarder rotated Xvaw session after native thread switch: "
         "old_session=%s new_session=%s new_thread=%s",
         old_session_id,
         new_session_id,
@@ -6643,7 +6643,7 @@ def _codex_tool_call_from_item(item: _JsonObject) -> _CodexToolCall | None:
 # access" preset's ``danger-full-access`` (or a config ``sandbox_mode``) does.
 _CODEX_SANDBOX_NAMESPACE_ERROR_MARKER = "No permissions to create new namespace"
 _CODEX_SANDBOX_BYPASS_GUIDANCE = (
-    "Omnigent: Codex's command sandbox could not start because this container "
+    "Xvaw: Codex's command sandbox could not start because this container "
     "disallows unprivileged user namespaces, so the command did not run. To run "
     'shell commands here, start a new Codex session with the "Full access" '
     "approval preset (New chat → permissions dropdown), or set "
@@ -7765,7 +7765,7 @@ def _note_forward_failure(event_type: str, result: _PostResult, session_id: str)
         and not _forward_health.degraded_logged
     ):
         _logger.error(
-            "codex-native forward sync degraded: %d consecutive Omnigent "
+            "codex-native forward sync degraded: %d consecutive Xvaw "
             "event-post failures; transcript/usage mirroring may be incomplete "
             "(latest type=%s)",
             _forward_health.consecutive_failures,

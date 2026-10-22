@@ -537,7 +537,7 @@ def test_run_smart_routing_is_removed(args: list[str]) -> None:
 
     assert result.exit_code == 1, result.output
     assert "per-harness first-message only" in result.output
-    assert "omnigent claude --smart-routing" in result.output
+    assert "xvaw claude --smart-routing" in result.output
     assert "web UI" in result.output
 
 
@@ -562,7 +562,7 @@ def test_run_no_longer_advertises_smart_routing() -> None:
 def test_a_subcommand_arms_the_session_and_launches_bare(
     command: str, launcher: str, monkeypatch: pytest.MonkeyPatch, _routing_env: None
 ) -> None:
-    # `omnigent claude|codex --smart-routing` takes no -p: the hook routes.
+    # `xvaw claude|codex --smart-routing` takes no -p: the hook routes.
     _mock_info()
     _mock_hosts({f"{command}-native": True})
     route = _mock_create(harness=f"{command}-native")
@@ -742,7 +742,7 @@ def test_smart_routing_entry_points_error_on_an_ungatewayed_harness(
     assert result.exit_code == 1, result.output
     assert "not AI-Gateway-backed" in result.output
     # The error names the harness and the way out, not just "unavailable".
-    assert "omnigent configure harnesses" in result.output
+    assert "xvaw configure harnesses" in result.output
     # Nothing was created: a pick that cannot be applied is not attempted, so
     # preflight's reads are the only traffic.
     assert all(call.request.method == "GET" for call in respx.calls)

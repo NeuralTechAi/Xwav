@@ -1,4 +1,4 @@
-"""Tests for ``omnigent login`` against Databricks-fronted servers.
+"""Tests for ``xvaw login`` against Databricks-fronted servers.
 
 Covers the two Databricks deployment shapes the login probe detects:
 
@@ -743,7 +743,7 @@ def test_login_header_mode_sets_default_server(
     """
     Header-auth mode logs in nothing but still records the default.
 
-    ``omnigent login <url>`` against a header-mode server needs no
+    ``xvaw login <url>`` against a header-mode server needs no
     credentials (a proxy injects identity), but the user's intent — "make
     this my server" — is the same, so a bare ``omnigent`` afterwards
     targets it. This also proves the default is set for a non-Databricks
@@ -1344,7 +1344,7 @@ def test_resolve_server_url_strips_query_and_expands(
     """A bare workspace URL carrying ``?o=`` still expands to the API mount.
 
     The ``?o=`` selector on the input must not corrupt the probe or defeat
-    expansion — ``omnigent run --server https://<ws>/?o=<id>`` has to reach
+    expansion — ``xvaw run --server https://<ws>/?o=<id>`` has to reach
     ``/api/2.0/omnigent`` (the selector rides via the login record /
     ``X-Databricks-Org-Id``, never the base URL). A regression sends every
     request to the workspace root, which bounces to ``/login``.
@@ -1441,7 +1441,7 @@ def test_workspace_url_expands_web_ui_path_to_api_mount(
     """The guide's web-UI URL (``<ws>/omnigent``) expands to the API mount.
 
     The internal user guide hands out ``<ws>/omnigent`` for the browser;
-    a user who pastes it into ``omnigent login`` must reach the API mount
+    a user who pastes it into ``xvaw login`` must reach the API mount
     (``/api/2.0/omnigent``), not 404 the UI path's own /v1/me probe.
     """
 

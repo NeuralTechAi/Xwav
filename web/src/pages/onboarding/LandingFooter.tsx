@@ -40,7 +40,7 @@ export function LandingFooter() {
         •
       </span>
       <span className="whitespace-nowrap px-2 text-base text-muted-foreground">
-        Xvaw · Built on the open-source Omnigent framework
+        Xvaw · Your agents. One workspace.
       </span>
     </div>
   );

@@ -98,7 +98,7 @@ struct DeepLink: Equatable {
   /// empty/nested id, an id that isn't a real conversation id, or unparseable
   /// input) — an unrecognized deep link must never crash or mis-navigate.
   static func parse(_ raw: URL) -> DeepLink? {
-    guard raw.scheme?.lowercased() == "omnigent" else { return nil }
+    guard let scheme = raw.scheme?.lowercased(), ["xvaw", "omnigent"].contains(scheme) else { return nil }
     guard let host = raw.host, !host.isEmpty else { return nil }
 
     // v1 accepts only `/c/<id>`. CRUCIALLY, `URL.path` returns the
@@ -127,8 +127,8 @@ struct DeepLink: Equatable {
     guard !id.isEmpty, !id.contains("/") else { return nil }
     guard isValidConversationId(id) else { return nil }
 
-    let scheme = defaultScheme(for: host)
-    guard let origin = makeOrigin(scheme: scheme, host: host, port: raw.port) else { return nil }
+    let originScheme = defaultScheme(for: host)
+    guard let origin = makeOrigin(scheme: originScheme, host: host, port: raw.port) else { return nil }
     return DeepLink(origin: origin, path: "/c/\(id)")
   }
 

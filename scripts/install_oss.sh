@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Omnigent installer.
+# Xvaw installer.
 #
 # Installs `omnigent[databricks]` from PyPI with uv and the Databricks CLI,
 # wires up PATH, and points you at first-run. The wheel bundles the web UI, so the
@@ -63,7 +63,7 @@ init_style() {
     DIM="${ESC}[2m"
     # Brand accent — Otto's magenta-pink (#F43BA6), matching the Python CLI
     # palette in omnigent/inner/ui.py so the installer and the tool agree.
-    MAGENTA="${ESC}[38;2;244;59;166m"
+    MAGENTA="${ESC}[38;2;110;231;210m"
     GREEN="${ESC}[32m"
     YELLOW="${ESC}[33m"
     RED="${ESC}[31m"
@@ -76,13 +76,8 @@ init_style() {
 # Skipped off a TTY (use_terminal_ui) so piped/CI installs stay clean.
 print_banner() {
   use_terminal_ui || return 0
-  printf '\n'
-  printf '%s  ⠀⠀⠀⢠⣿⡄⠀⠀⠀   ██████╗ ███╗   ███╗███╗   ██╗██╗ ██████╗ ███████╗███╗   ██╗████████╗%s\n' "$MAGENTA" "$RESET"
-  printf '%s  ⢴⣶⣶⠉⣿⠉⣶⣶⡦  ██╔═══██╗████╗ ████║████╗  ██║██║██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝%s\n' "$MAGENTA" "$RESET"
-  printf '%s  ⠀⠙⣿⣶⣿⣶⣿⠋⠀  ██║   ██║██╔████╔██║██╔██╗ ██║██║██║  ███╗█████╗  ██╔██╗ ██║   ██║%s\n' "$MAGENTA" "$RESET"
-  printf '%s  ⠀⢠⣿⡿⠿⢿⣿⡄⠀  ╚██████╔╝██║ ╚═╝ ██║██║ ╚████║██║╚██████╔╝███████╗██║ ╚████║   ██║%s\n' "$MAGENTA" "$RESET"
-  printf '%s  ⠀⠈⠁⠀⠀⠀⠈⠁⠀   ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═══╝╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝%s\n' "$MAGENTA" "$RESET"
-  printf '%s  all your agents, one cli%s\n\n' "$DIM" "$RESET"
+  printf '\n%s  ≋≋≋  Xvaw%s\n' "$MAGENTA" "$RESET"
+  printf '%s  Your agents. One workspace.%s\n\n' "$DIM" "$RESET"
 }
 
 usage() {
@@ -518,13 +513,13 @@ install_omnigent() {
     else
       target="$INSTALL_URL"
     fi
-    step "Installing Omnigent from source${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
+    step "Installing Xvaw from source${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
   elif [ -n "$VERSION" ]; then
     target="${PACKAGE_NAME}${extras_suffix}==${VERSION}"
-    step "Installing Omnigent $VERSION${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
+    step "Installing Xvaw $VERSION${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
   else
     target="${PACKAGE_NAME}${extras_suffix}"
-    step "Installing Omnigent${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
+    step "Installing Xvaw${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
   fi
   # --force so re-running upgrades instead of no-op'ing; -q hides uv's
   # "Installed N executables" summary (the package also ships an `omni` alias).
@@ -665,7 +660,7 @@ maybe_add_bin_to_path() {
       step "PATH is already configured in $profile"
       return
     fi
-    fail "$profile already has an Omnigent installer block. Update it manually to: $path_line"
+    fail "$profile already has an Xvaw installer block. Update it manually to: $path_line"
   fi
 
   if ! prompt_yes_no "Add $bin_dir to PATH in $profile?"; then
@@ -717,7 +712,7 @@ verify_omnigent() {
   fi
 
   if [ -z "$cli_path" ]; then
-    fail "Omnigent installed, but the omnigent command was not found."
+    fail "Xvaw installed, but the omnigent command was not found."
   fi
 
   "$cli_path" --help >/dev/null
@@ -742,9 +737,9 @@ print_next_steps() {
     command_prefix="PATH=\"$bin_dir:\$PATH\" "
   fi
 
-  printf '\n%sOmnigent installed successfully.%s\n\n' "$BOLD" "$RESET"
+  printf '\n%sXvaw installed successfully.%s\n\n' "$BOLD" "$RESET"
   printf 'Start chatting — first run sets up a model and a local web UI:\n'
-  printf '  %s%somnigent%s\n\n' "$command_prefix" "$MAGENTA" "$RESET"
+  printf '  %s%sxvaw%s\n\n' "$command_prefix" "$MAGENTA" "$RESET"
   printf 'Or launch a specific coding harness:\n'
   printf '  %somnigent claude          # Claude Code\n' "$command_prefix"
   printf '  %somnigent codex           # Codex\n\n' "$command_prefix"
@@ -753,10 +748,10 @@ print_next_steps() {
   printf 'Uninstall the CLI but keep local history and credentials:\n'
   printf '  %somnigent uninstall --yes\n\n' "$command_prefix"
   if has_databricks_extra; then
-    printf 'Connect to a Databricks-hosted Omnigent server:\n'
-    printf '  %somnigent login <workspace-url>/omnigent\n\n' "$command_prefix"
+    printf 'Connect to a Databricks-hosted Xvaw server:\n'
+    printf '  %sxvaw login <workspace-url>/omnigent\n\n' "$command_prefix"
     printf '%sDatabricks dependencies and CLI are installed. To use a workspace\n' "$DIM"
-    printf 'as your model provider, select Databricks in omnigent setup.%s\n' "$RESET"
+    printf 'as your model provider, select Databricks in xvaw setup.%s\n' "$RESET"
   fi
 }
 

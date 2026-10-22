@@ -35,7 +35,7 @@ describe("cliCommandParts", () => {
     assert.deepEqual(cliCommandParts("/bin/omnigent"), {
       executable: "/bin/omnigent",
       prefixArgs: [],
-      displayName: "omnigent",
+      displayName: "xvaw",
     });
     assert.deepEqual(
       cliCommandParts({
@@ -185,11 +185,12 @@ describe("candidatePaths", () => {
     assert.ok(paths.includes("/usr/local/bin/omni"));
   });
 
-  it("lists the canonical omnigent name before the omni alias within a dir", () => {
+  it("prefers the Xvaw launcher while retaining the legacy aliases", () => {
     const paths = candidatePaths();
+    const xvaw = paths.indexOf("/opt/homebrew/bin/xvaw");
     const og = paths.indexOf("/opt/homebrew/bin/omnigent");
     const omni = paths.indexOf("/opt/homebrew/bin/omni");
-    assert.ok(og !== -1 && omni !== -1 && og < omni);
+    assert.ok(xvaw !== -1 && og !== -1 && omni !== -1 && xvaw < og && og < omni);
   });
 });
 

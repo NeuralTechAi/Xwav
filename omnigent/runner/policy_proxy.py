@@ -105,7 +105,7 @@ async def _evaluate_policy_via_omnigent(
     _default_action = "POLICY_ACTION_DENY" if _fail_closed else "POLICY_ACTION_ALLOW"
     verdict_action = _default_action
     verdict_reason: str | None = (
-        f"Omnigent policy evaluation unavailable; failing closed for {phase}."
+        f"Xvaw policy evaluation unavailable; failing closed for {phase}."
         if _fail_closed
         else None
     )

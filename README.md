@@ -19,7 +19,7 @@ An open-source workspace for orchestrating Claude Code, Codex, Cursor, Pi, and c
 
 ## Run this fork locally
 
-Xvaw is a rebranded fork of [Omnigent](https://github.com/omnigent-ai/omnigent). The Python package, imports, `OMNIGENT_*` environment variables, configuration paths, protocol schemes, and SDK contracts keep their upstream names for compatibility. The additional `xvaw` command runs the same local CLI. Upstream installers and PyPI packages install **Omnigent**, not this fork; use this source checkout for Xvaw.
+Xvaw is a rebranded fork of [Omnigent](https://github.com/omnigent-ai/omnigent). The Python package, imports, configuration paths, and SDK contracts keep their upstream names for compatibility. Settings accept the public `XVAW_*` prefix, and new session links use `xvaw://` while older links remain accepted. The additional `xvaw` command runs the same local CLI. Upstream installers and PyPI packages install **Omnigent**, not this fork; use this source checkout for Xvaw.
 
 ```bash
 git clone https://github.com/NeuralTechAi/Xvaw.git

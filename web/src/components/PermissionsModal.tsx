@@ -587,7 +587,7 @@ function getShareableLink(sessionId: string, rebasePath: (path: string) => strin
 }
 
 /**
- * The `omnigent://<host>/c/<session_id>` deep link encoded into the share QR
+ * The `xvaw://<host>/c/<session_id>` deep link encoded into the share QR
  * code. The host (with port when non-default) is parsed from the same shareable
  * URL `getShareableLink` resolves — so standalone and embedded (host-transformed)
  * origins agree on the same server the desktop shell's deep-link handler keys
@@ -598,10 +598,10 @@ function getDeepLink(sessionId: string, rebasePath: (path: string) => string): s
   const url = getShareableLink(sessionId, rebasePath);
   try {
     const { host } = new URL(url);
-    return `omnigent://${host}/c/${sessionId}`;
+    return `xvaw://${host}/c/${sessionId}`;
   } catch {
     // Unparseable transform output: fall back to the current origin's host.
-    return `omnigent://${window.location.host}/c/${sessionId}`;
+    return `xvaw://${window.location.host}/c/${sessionId}`;
   }
 }
 
@@ -640,7 +640,7 @@ function CopyLinkButton({ sessionId }: { sessionId: string }) {
 
 /**
  * A separate modal showing a QR code encoding the session's
- * `omnigent://<host>/c/<id>` deep link so a user can scan it with their phone
+ * `xvaw://<host>/c/<id>` deep link so a user can scan it with their phone
  * to open the session in the Xvaw app. The code is rendered on a fixed
  * white tile so it stays scannable regardless of the app's dark/light theme
  * (a dark-on-dark QR won't read). Error correction is bumped to M for

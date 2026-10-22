@@ -459,7 +459,7 @@ def run_codex_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Codex requires a resolved Omnigent server URL. The CLI should call "
+            "Codex requires a resolved Xvaw server URL. The CLI should call "
             "_ensure_backend before run_codex_native."
         )
     with TemporaryDirectory(prefix="omnigent-codex-native-") as tmpdir:
@@ -2727,20 +2727,20 @@ def _codex_function_call_payload_from_session_item(
     if not isinstance(name, str) or not name:
         item_id = item.get("id")
         raise click.ClickException(
-            "Cannot synthesize Codex resume rollout: Omnigent function_call "
+            "Cannot synthesize Codex resume rollout: Xvaw function_call "
             f"{item_id!r} has an invalid name."
         )
     if not isinstance(call_id, str) or not call_id:
         item_id = item.get("id")
         raise click.ClickException(
-            "Cannot synthesize Codex resume rollout: Omnigent function_call "
+            "Cannot synthesize Codex resume rollout: Xvaw function_call "
             f"{item_id!r} has an invalid call_id."
         )
     arguments = item.get("arguments")
     if not isinstance(arguments, str):
         item_id = item.get("id")
         raise click.ClickException(
-            "Cannot synthesize Codex resume rollout: Omnigent function_call "
+            "Cannot synthesize Codex resume rollout: Xvaw function_call "
             f"{item_id!r} has non-string arguments."
         )
     if len(arguments) > _MAX_REPLAYED_ARGUMENTS_CHARS:
@@ -2782,14 +2782,14 @@ def _codex_function_call_output_payload_from_session_item(
     if not isinstance(call_id, str) or not call_id:
         item_id = item.get("id")
         raise click.ClickException(
-            "Cannot synthesize Codex resume rollout: Omnigent function_call_output "
+            "Cannot synthesize Codex resume rollout: Xvaw function_call_output "
             f"{item_id!r} has an invalid call_id."
         )
     output = item.get("output")
     if not isinstance(output, str):
         item_id = item.get("id")
         raise click.ClickException(
-            "Cannot synthesize Codex resume rollout: Omnigent function_call_output "
+            "Cannot synthesize Codex resume rollout: Xvaw function_call_output "
             f"{item_id!r} has non-string output."
         )
     return {

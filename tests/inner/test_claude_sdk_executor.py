@@ -4775,7 +4775,7 @@ class TestToolCallPolicyGate(unittest.TestCase):
             )
 
             self.assertIsInstance(result, PermissionResultDeny)
-            self.assertIn("Unexpected Omnigent TOOL_CALL policy verdict", result.message)
+            self.assertIn("Unexpected Xvaw TOOL_CALL policy verdict", result.message)
 
         _run(_t())
 

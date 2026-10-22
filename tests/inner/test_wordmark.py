@@ -20,13 +20,13 @@ def test_wordmark_is_five_rows_of_equal_display_width() -> None:
 def test_wordmark_uses_brand_color() -> None:
     """The wordmark accent stays in sync with the mascot brand color."""
 
-    assert wordmark.WORDMARK_COLOR == MASCOT_ART_COLOR == "#F43BA6"
+    assert wordmark.WORDMARK_COLOR == MASCOT_ART_COLOR == "#6EE7D2"
 
 
 def test_every_letter_in_omnigent_has_a_glyph() -> None:
     """The glyph map covers every letter rendered, and only symbols."""
 
-    for char in "omnigent":
+    for char in "xvaw":
         assert char in wordmark._GLYPHS
     # The art is symbol-only — no letters or digits leak into the rows.
     assert all(not any(c.isalnum() for c in line) for line in wordmark.WORDMARK_LINES)
@@ -56,7 +56,13 @@ def test_render_lockup_plain_console_has_no_ansi() -> None:
 def test_render_lockup_color_console_emits_ansi() -> None:
     """A color terminal renders the lockup with ANSI color codes."""
 
-    console = Console(force_terminal=True, width=120, file=_StringFile())
+    console = Console(
+        force_terminal=True,
+        no_color=False,
+        color_system="truecolor",
+        width=120,
+        file=_StringFile(),
+    )
     wordmark.render_lockup(console, gradient=True)
     assert "\x1b[" in console.file.getvalue()  # type: ignore[attr-defined]
 
@@ -67,9 +73,9 @@ def test_render_compact_includes_name() -> None:
     console = Console(no_color=True, width=120, file=_StringFile())
     wordmark.render_compact(console, subtitle="0.4.2")
     out = console.file.getvalue()  # type: ignore[attr-defined]
-    assert "omnigent" in out
+    assert "Xvaw" in out
     assert "0.4.2" in out
-    assert "✦" in out
+    assert "≋" in out
 
 
 class _StringFile:

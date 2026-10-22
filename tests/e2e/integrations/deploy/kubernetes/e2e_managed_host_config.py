@@ -172,7 +172,7 @@ def assert_injected_config(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--server", required=True, help="Omnigent server base URL")
+    parser.add_argument("--server", required=True, help="Xvaw server base URL")
     parser.add_argument("--agent-id", default=None, help="Agent to bind (default: first)")
     parser.add_argument("--namespace", default="omnigent-sandboxes", help="Runner-Pod namespace")
     parser.add_argument(

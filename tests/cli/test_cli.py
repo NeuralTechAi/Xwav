@@ -146,9 +146,9 @@ def test_global_profiling_writes_summary_and_timestamped_stats(tmp_path: Path) -
 
     assert result.returncode == 0, result.stderr
     assert "CLI profile:" in result.stderr
-    assert "Top Omnigent call paths" in result.stderr
-    assert "Top Omnigent functions by self time" in result.stderr
-    self_time_table = result.stderr.split("Top Omnigent functions by self time", 1)[1]
+    assert "Top Xvaw call paths" in result.stderr
+    assert "Top Xvaw functions by self time" in result.stderr
+    self_time_table = result.stderr.split("Top Xvaw functions by self time", 1)[1]
     assert "<built-in method" not in self_time_table
     assert "Full profile data:" in result.stderr
     [profile_path] = list((tmp_path / "data" / "profiles").glob("omnigent-cli-*.prof"))
@@ -165,7 +165,7 @@ def test_python_module_entrypoint_uses_unified_click_cli() -> None:
 
     This catches ``omnigent/__main__.py`` pointing at the legacy
     argparse CLI, which bypasses the Omnigent REPL path. In that broken
-    state ``python -m omnigent run ...`` opens the old ``>``
+    state ``python -m xvaw run ...`` opens the old ``>``
     prompt and loses AP-only input features such as slash-command
     autocomplete and bracketed-paste abstraction.
     """
@@ -180,7 +180,7 @@ def test_python_module_entrypoint_uses_unified_click_cli() -> None:
     assert "Usage: python -m omnigent [OPTIONS] COMMAND [ARGS]..." in result.stdout
     assert "Commands:" in result.stdout
     assert "run" in result.stdout and "Attach the REPL to a live session" in result.stdout
-    assert "Omnigent quick chat" not in result.stdout
+    assert "Xvaw quick chat" not in result.stdout
 
 
 def _run_entrypoint(*args: str, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
@@ -348,7 +348,7 @@ def test_server_uvicorn_log_config_mirrors_foreground_tty_by_default(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """Foreground ``omnigent server`` keeps uvicorn access logs on stderr."""
+    """Foreground ``xvaw server`` keeps uvicorn access logs on stderr."""
     monkeypatch.delenv("OMNIGENT_LOG_TO_STDERR", raising=False)
     monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
 
@@ -457,7 +457,7 @@ def _fake_run_claude_native_capture(
     """
     Build a ``run_claude_native`` stub that records its kwargs.
 
-    Shared by the ``omnigent claude`` CLI parsing tests below so a
+    Shared by the ``xvaw claude`` CLI parsing tests below so a
     signature change to ``run_claude_native`` (new kwarg, renamed
     kwarg) updates one place instead of every test.
 
@@ -485,7 +485,7 @@ def _fake_run_codex_native_capture(
     """
     Build a ``run_codex_native`` stub that records its kwargs.
 
-    Shared by ``omnigent codex`` parsing tests so wrapper signature
+    Shared by ``xvaw codex`` parsing tests so wrapper signature
     changes only update one helper.
 
     :param captured: Dict the stub writes recorded kwargs into.
@@ -519,7 +519,7 @@ def test_claude_command_resume_binds_session_and_passes_unknown_args(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent claude --resume <conv_id>`` binds the Omnigent
+    ``xvaw claude --resume <conv_id>`` binds the Omnigent
     session; unknown args after ``--`` reach ``run_claude_native``
     as raw passthrough.
 
@@ -572,7 +572,7 @@ def test_claude_command_short_r_binds_omnigent_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent claude -r <conv_id>`` is the Omnigent resume shortcut.
+    ``xvaw claude -r <conv_id>`` is the Omnigent resume shortcut.
 
     With the unified ``--resume`` UX, ``-r`` is the Omnigent alias
     (not Claude's own short flag). Users who need Claude's own
@@ -601,7 +601,7 @@ def test_claude_command_bare_resume_requests_picker(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent claude --resume`` (no value) requests the picker.
+    ``xvaw claude --resume`` (no value) requests the picker.
 
     Bare ``--resume`` sets the picker sentinel, which the CLI
     translates into ``resume_picker=True`` for ``run_claude_native``.
@@ -681,7 +681,7 @@ def test_claude_command_profile_startup_threads_profiler(
     ``--profile-startup`` starts timing before backend setup.
 
     This covers the slow-start diagnostic path users need for
-    ``omnigent claude``: the profiler must be created in the Click
+    ``xvaw claude``: the profiler must be created in the Click
     command, emit early marks, and be passed to ``run_claude_native``
     so native launch marks share the same timer.
 
@@ -739,7 +739,7 @@ def test_claude_command_use_native_config_bypasses_databricks_auth(
 def test_claude_command_flag_is_deprecated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``omnigent claude --command`` emits a DeprecationWarning pointing to env/config."""
+    """``xvaw claude --command`` emits a DeprecationWarning pointing to env/config."""
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
     monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
     monkeypatch.setattr(
@@ -759,7 +759,7 @@ def test_codex_command_resume_binds_session_and_passes_unknown_args(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent codex --resume <conv_id>`` binds the Omnigent
+    ``xvaw codex --resume <conv_id>`` binds the Omnigent
     session and preserves Codex CLI passthrough args after ``--``.
     """
     monkeypatch.setattr(
@@ -803,7 +803,7 @@ def test_codex_command_bare_resume_requests_picker(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent codex --resume`` requests the codex-native picker.
+    ``xvaw codex --resume`` requests the codex-native picker.
     """
     captured: dict[str, object] = {}
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
@@ -824,7 +824,7 @@ def test_codex_command_session_legacy_alias_routes_to_session_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent codex --session <id>`` routes into ``session_id``.
+    ``xvaw codex --session <id>`` routes into ``session_id``.
     """
     captured: dict[str, object] = {}
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
@@ -1091,7 +1091,7 @@ def test_codex_cli_rejects_runner_owned_transport_args(
     result = CliRunner().invoke(cli, ["codex", *codex_args])
 
     assert result.exit_code == 2, result.output
-    assert f"'{reserved}' is reserved for Omnigent" in result.output
+    assert f"'{reserved}' is reserved for Xvaw" in result.output
 
 
 def test_pi_config_args_form_base_cli_args_append(
@@ -1165,7 +1165,7 @@ def test_help_hides_extras_gated_harness_when_sdk_missing(
 
     assert result.exit_code == 0, result.output
     # Not listed as launchable harnesses...
-    assert "Launch Cursor with Omnigent" not in result.output
+    assert "Launch Cursor with Xvaw" not in result.output
     assert "Launch Antigravity" not in result.output
     # ...but a generic notice points at setup instead.
     assert "Some harnesses need an optional extra" in result.output
@@ -1447,7 +1447,7 @@ def test_copilot_command_forwards_to_run_on_the_copilot_harness(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``omnigent copilot`` dispatches ``run --harness copilot`` with pass-through
-    flags intact and a canonical ``omnigent run --harness copilot`` resume prefix."""
+    flags intact and a canonical ``xvaw run --harness copilot`` resume prefix."""
     result, dispatch = _invoke_bundled_agent_command(
         monkeypatch, ["copilot", "-p", "review the last commit", "--model", "m1"]
     )
@@ -2302,7 +2302,7 @@ def test_server_command_reads_tunnel_token_and_does_not_spawn_runner(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """``omnigent server`` is a pure state server — no embedded runner.
+    """``xvaw server`` is a pure state server — no embedded runner.
 
     The server reads ``OMNIGENT_RUNNER_TUNNEL_TOKEN`` from the
     environment and passes it as ``runner_tunnel_tokens`` to
@@ -2484,7 +2484,7 @@ def test_server_with_explicit_db_does_not_reuse_canonical_server(
 
     Regression: the unified machine-global lifecycle (reuse a running
     canonical server via ~/.omnigent/local_server.pid) must apply ONLY
-    to a *bare* loopback ``omnigent server``. The daemon and the e2e
+    to a *bare* loopback ``xvaw server``. The daemon and the e2e
     harness spawn DEDICATED servers with explicit --database-uri /
     --artifact-location / --port; if the reuse-check fired for them, a
     healthy canonical server on a *different* DB would make the dedicated
@@ -2524,7 +2524,7 @@ def test_server_with_explicit_db_does_not_reuse_canonical_server(
     monkeypatch.setattr(app_module, "create_app", _spy_create_app)
     monkeypatch.setattr(uvicorn.server.Server, "run", _fake_server_run)
 
-    # A healthy canonical server EXISTS. A bare `omnigent server` would
+    # A healthy canonical server EXISTS. A bare `xvaw server` would
     # reuse it; an explicit-DB server must ignore it. register/clear must
     # never fire for the dedicated server (it doesn't own the pidfile).
     from omnigent.host import local_server as _local_server_mod
@@ -2574,10 +2574,10 @@ def test_server_with_explicit_port_does_not_check_canonical_server(
     An explicit ``--port`` starts a dedicated local server.
 
     A healthy canonical local server on another port must not make
-    ``omnigent server --port <new>`` reuse and exit. Explicit port
+    ``xvaw server --port <new>`` reuse and exit. Explicit port
     selection is the user asking for another listener, while the
     canonical local-server reuse path is only for bare
-    ``omnigent server``. The bind preflight is spied rather than
+    ``xvaw server``. The bind preflight is spied rather than
     really bound; port availability is covered by the adjacent
     occupied-port and bind-probe tests.
 
@@ -2648,7 +2648,7 @@ def test_server_with_explicit_port_does_not_check_canonical_server(
     assert result.exit_code == 0, result.output
     assert "already running" not in result.output
     assert captured["uvicorn_kwargs"]["port"] == 44770
-    assert "Starting omnigent server on 127.0.0.1:44770" in result.output
+    assert "Starting Xvaw server on 127.0.0.1:44770" in result.output
     assert bind_probes == [("127.0.0.1", 44770)]
 
 
@@ -2657,7 +2657,7 @@ def test_server_command_explicit_occupied_port_fails() -> None:
     An explicit ``--port`` must fail instead of choosing a replacement.
 
     The test owns a real listening socket on a kernel-assigned port,
-    then asks ``omnigent server`` for that exact port. The command
+    then asks ``xvaw server`` for that exact port. The command
     must fail during preflight, before uvicorn or fallback-port logic
     can start the server elsewhere.
 
@@ -2685,7 +2685,7 @@ def test_server_command_explicit_occupied_port_fails() -> None:
     assert f"Cannot start server on 127.0.0.1:{port}" in result.output
     assert "port is unavailable" in result.output
     assert "using" not in result.output
-    assert "Starting omnigent server" not in result.output
+    assert "Starting xvaw server" not in result.output
 
 
 @pytest.mark.parametrize("fail_startup", [False, True])
@@ -2757,7 +2757,7 @@ def test_server_command_keeps_explicit_port_bound_through_startup(
     else:
         assert captured["uvicorn_kwargs"]["port"] == port
         assert captured["listener"].fileno() == -1
-        assert f"Starting omnigent server on 127.0.0.1:{port}" in result.output
+        assert f"Starting Xvaw server on 127.0.0.1:{port}" in result.output
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as released:
         released.bind(("127.0.0.1", port))
     assert "port is unavailable" not in result.output
@@ -2868,7 +2868,7 @@ def test_expand_config_expands_executor_connection(
 
     The server no longer expands uploaded
     bundles, so the client must resolve ``executor.connection`` (not
-    just ``llm.connection``) or local ``omnigent run`` specs using the
+    just ``llm.connection``) or local ``xvaw run`` specs using the
     consolidated executor block would ship unresolved ``${VAR}``.
     """
     monkeypatch.setenv("EXEC_API_KEY", "sk-exec-999")
@@ -3414,7 +3414,7 @@ def _write_upload_agent(
 
 def _upload_and_parse(agent_dir: Path) -> dict[str, Any]:
     """
-    Bundle *agent_dir* as ``omnigent run`` does, then parse it the way
+    Bundle *agent_dir* as ``xvaw run`` does, then parse it the way
     the server parses an uploaded session bundle.
 
     :param agent_dir: The agent image directory.
@@ -3619,7 +3619,7 @@ def test_bundle_materializes_standalone_omnigent_yaml(tmp_path: Path) -> None:
     """
     ``_bundle`` wraps a standalone omnigent YAML file in a tarball.
 
-    ``omnigent run <yaml> --server`` uploads the returned bytes
+    ``xvaw run <yaml> --server`` uploads the returned bytes
     directly to ``POST /api/agents``. If the YAML bytes are passed
     through unchanged, the remote server rejects them as an invalid
     tarball before the runner tunnel can start.
@@ -3799,7 +3799,7 @@ def test_preregister_agent_accepts_directory(tmp_path: Path) -> None:
     canonical agent-image bundle. The stored bytes round-trip
     through ``spec.load`` to the same name the YAML declared.
 
-    What breaks if this fails: ``omnigent server --agent my-agent/``
+    What breaks if this fails: ``xvaw server --agent my-agent/``
     regresses — the standard case every omnigent user exercises.
     """
     agent_dir = tmp_path / "native-agent"
@@ -3930,7 +3930,7 @@ def test_preregister_agent_accepts_omnigent_yaml_file(tmp_path: Path) -> None:
     stored in the artifact store round-trips through
     ``_find_omnigent_yaml_in_dir`` to the same spec.
 
-    What breaks if this fails: ``omnigent server --agent coding_supervisor.yaml``
+    What breaks if this fails: ``xvaw server --agent coding_supervisor.yaml``
     either crashes on the bundle step or stores a broken tarball
     the server later fails to rehydrate.
     """
@@ -4463,7 +4463,7 @@ def test_global_profiling_coexists_with_run_databricks_profile(
 
     assert result.exit_code == 0, result.output
     assert seen["value"] == "my-sp"
-    assert "Top Omnigent call paths" in result.stderr
+    assert "Top Xvaw call paths" in result.stderr
     profiles = tmp_path / "data" / "profiles"
     assert len(list(profiles.glob("omnigent-cli-*.prof"))) == 1
 
@@ -5370,7 +5370,7 @@ def test_run_server_resume_native_redirects_before_attach_preflight(
     """Terminal-native ``run --server --resume`` redirects before attach checks.
 
     The pre-attach liveness check is for Omnigent REPL co-drive. Native-wrapper
-    sessions need to hand off to ``omnigent claude`` / ``omnigent codex``
+    sessions need to hand off to ``xvaw claude`` / ``xvaw codex``
     even when their old runner is gone, otherwise a cold native resume fails
     before the wrapper can relaunch its terminal.
     """
@@ -5625,7 +5625,7 @@ def test_is_run_shorthand(argv: list[str], expected: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# `omnigent config` command
+# `xvaw config` command
 # ---------------------------------------------------------------------------
 
 
@@ -5634,7 +5634,7 @@ def test_config_list_empty(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config list`` prints a no-defaults message when neither
+    ``xvaw config list`` prints a no-defaults message when neither
     global nor project-level config files exist.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -5684,7 +5684,7 @@ def test_config_set_global_writes_file(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config set --global key=value`` persists the value so that
+    ``xvaw config set --global key=value`` persists the value so that
     ``_load_global_config`` returns it.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -5873,7 +5873,7 @@ def test_config_list_shows_saved_values(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config list`` prints all defaults that were previously
+    ``xvaw config list`` prints all defaults that were previously
     written with ``config set --global``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -6091,7 +6091,7 @@ def test_config_unset_removes_key(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config unset --global server`` removes the key from
+    ``xvaw config unset --global server`` removes the key from
     the config file without touching other keys.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -6143,7 +6143,7 @@ def test_config_set_profile_rejected_as_unknown_key(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config set profile=...`` fails with the unknown-key error.
+    ``xvaw config set profile=...`` fails with the unknown-key error.
 
     Pins the removal of the ``profile`` config key alongside the
     ``--profile`` CLI flag: a user migrating from an older release must
@@ -6171,7 +6171,7 @@ def test_config_set_local_writes_project_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config set key=value`` without ``--global`` writes to
+    ``xvaw config set key=value`` without ``--global`` writes to
     ``.omnigent/config.yaml`` in the current directory.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -6192,7 +6192,7 @@ def test_config_set_local_writes_project_config(
 
 
 # ---------------------------------------------------------------------------
-# `omnigent run` picks up global config defaults
+# `xvaw run` picks up global config defaults
 # ---------------------------------------------------------------------------
 
 
@@ -6201,7 +6201,7 @@ def test_run_applies_global_config_agent_default(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent run`` (no AGENT arg) uses the ``default_agent`` key from
+    ``xvaw run`` (no AGENT arg) uses the ``default_agent`` key from
     global config as the target when no explicit target is given.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -6236,7 +6236,7 @@ def test_run_cli_arg_overrides_global_config(
     tmp_path: Path,
 ) -> None:
     """
-    An explicit CLI arg on ``omnigent run`` takes precedence over the
+    An explicit CLI arg on ``xvaw run`` takes precedence over the
     corresponding key in global config.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -6273,7 +6273,7 @@ def test_run_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent run`` forwards the persisted browser-open setting.
+    ``xvaw run`` forwards the persisted browser-open setting.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.omnigent.
@@ -6306,7 +6306,7 @@ def _capture_run_dispatch(
     tmp_path: Path,
 ) -> dict[str, object]:
     """
-    Wire ``omnigent run`` to capture dispatch kwargs without launching.
+    Wire ``xvaw run`` to capture dispatch kwargs without launching.
 
     Points the global config at an empty *tmp_path* file (so the test is
     isolated from the developer's real ``~/.omnigent/config.yaml``) and
@@ -6344,7 +6344,7 @@ def test_run_interactive_defaults_browser_open_on(
     tmp_path: Path,
 ) -> None:
     """
-    Interactive ``omnigent run`` opens the browser by default.
+    Interactive ``xvaw run`` opens the browser by default.
 
     With no ``auto_open_conversation`` configured, a bare interactive
     ``run`` (no ``-p``) defaults the browser-open ON so users discover
@@ -6366,7 +6366,7 @@ def test_run_headless_prompt_defaults_browser_open_off(
     tmp_path: Path,
 ) -> None:
     """
-    Headless ``omnigent run -p`` stays quiet by default.
+    Headless ``xvaw run -p`` stays quiet by default.
 
     A one-shot ``-p`` invocation with no configured preference must NOT
     open the browser — the user is scripting, not exploring the UI.
@@ -6468,7 +6468,7 @@ def test_claude_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent claude`` forwards the persisted browser-open setting.
+    ``xvaw claude`` forwards the persisted browser-open setting.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.omnigent.
@@ -6494,7 +6494,7 @@ def test_codex_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent codex`` forwards the persisted browser-open setting.
+    ``xvaw codex`` forwards the persisted browser-open setting.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.omnigent.
@@ -6560,7 +6560,7 @@ def test_run_bare_omnigent_with_harness_only_config(
 def test_bare_omnigent_harness_flag_dispatches_to_run(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``omnigent --harness ...`` is shorthand for ``omnigent run --harness ...``."""
+    """``omnigent --harness ...`` is shorthand for ``xvaw run --harness ...``."""
     from omnigent.cli import main
 
     dispatched: dict[str, object] = {}
@@ -6610,7 +6610,7 @@ def test_bare_omnigent_non_tty_shows_help(
 def test_bare_omnigent_tty_dispatches_to_start(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Bare ``omnigent`` on an interactive terminal behaves like ``omnigent start``.
+    """Bare ``omnigent`` on an interactive terminal behaves like ``xvaw start``.
 
     ``start`` brings up the local server / host in the background rather than
     dropping into an agent REPL. We assert only that the bare invocation is
@@ -6648,7 +6648,7 @@ def test_bare_omnigent_rejects_positional_server_url(
     assert exc_info.value.code == 2
     terminal = capsys.readouterr()
     assert "server URLs must be passed with --server" in terminal.err
-    assert "omnigent run --server http://localhost:8000" in terminal.err
+    assert "xvaw run --server http://localhost:8000" in terminal.err
 
 
 def test_unknown_command_reports_no_such_command(
@@ -6710,7 +6710,7 @@ def test_setup_invalid_provider_is_a_user_error_not_a_crash(
 
 
 def test_setup_command_replaces_wizard(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``omnigent setup`` is the visible standard setup flow command."""
+    """``xvaw setup`` is the visible standard setup flow command."""
     configure_flow = Mock()
     configure_databricks = Mock()
     run_onboarding = Mock(return_value=True)
@@ -7076,7 +7076,7 @@ def test_agy_cli_alias_registered_and_in_subcommands() -> None:
     assert "agy" not in _ALIAS_COMMANDS
 
 
-# ── first-run smart defaults (omnigent run) ──────────
+# ── first-run smart defaults (xvaw run) ──────────
 
 
 def _fake_provider_for(*configured: str):
@@ -7822,7 +7822,7 @@ def test_run_agent_with_native_terminal_harness_is_rejected() -> None:
         )
 
 
-# ── omnigent setup: Qwen Code drill-in (_manage_qwen_harness) ────────────
+# ── xvaw setup: Qwen Code drill-in (_manage_qwen_harness) ────────────
 
 
 def test_qwen_auth_configured_detects_env_var(
@@ -7910,7 +7910,7 @@ def test_manage_qwen_harness_back_does_not_launch(
     launch.assert_not_called()
 
 
-# ── omnigent setup: Hermes drill-in (_manage_hermes_harness) ─────────────
+# ── xvaw setup: Hermes drill-in (_manage_hermes_harness) ─────────────
 
 
 def test_manage_hermes_harness_installs_then_opens_config_menu(
@@ -7952,7 +7952,7 @@ def test_manage_hermes_harness_declines_install(
     install.assert_not_called()
 
 
-# ── omnigent setup: Goose drill-in (_manage_goose_harness) ───────────────
+# ── xvaw setup: Goose drill-in (_manage_goose_harness) ───────────────
 
 
 def test_manage_goose_harness_missing_cli_shows_hint_returns(
@@ -8027,7 +8027,7 @@ def test_manage_goose_harness_configure_launches(
     launch.assert_called_once()
 
 
-# ── omnigent setup: Kimi Code drill-in (_manage_kimi_harness) ────────────
+# ── xvaw setup: Kimi Code drill-in (_manage_kimi_harness) ────────────
 
 
 def test_manage_kimi_harness_not_installed_shows_hint_returns(

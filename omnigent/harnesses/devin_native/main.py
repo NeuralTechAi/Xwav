@@ -562,7 +562,7 @@ def run_devin_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Devin requires a resolved Omnigent server URL. The CLI should call "
+            "Devin requires a resolved Xvaw server URL. The CLI should call "
             "_ensure_backend before run_devin_native."
         )
     resolved_model = resolve_devin_launch_model(model, effort)

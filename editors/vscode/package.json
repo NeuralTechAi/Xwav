@@ -1,14 +1,14 @@
 {
-  "name": "omnigent-vscode",
-  "displayName": "Omnigent",
-  "description": "Open your running local Omnigent server inside VS Code, in an editor-beside iframe.",
+  "name": "xvaw-vscode",
+  "displayName": "Xvaw",
+  "description": "Open your running local Xvaw server inside VS Code, in an editor-beside iframe.",
   "version": "0.1.0",
-  "publisher": "databricks",
+  "publisher": "neuraltechai",
   "license": "Apache-2.0",
-  "icon": "media/omnigent-icon.png",
+  "icon": "media/xvaw-icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/omnigent-ai/omnigent.git",
+    "url": "https://github.com/NeuralTechAi/Xvaw.git",
     "directory": "editors/vscode"
   },
   "engines": {
@@ -18,56 +18,56 @@
   "activationEvents": [],
   "contributes": {
     "configuration": {
-      "title": "Omnigent",
+      "title": "Xvaw",
       "properties": {
-        "omnigent.serverUrl": {
+        "xvaw.serverUrl": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Manual Omnigent server URL override for a **localhost** server (e.g. `http://127.0.0.1:6767`). Leave empty to auto-discover a locally running Omnigent server. Non-localhost URLs are not supported in this build."
+          "markdownDescription": "Manual Xvaw server URL override for a **localhost** server (e.g. `http://127.0.0.1:6767`). Leave empty to auto-discover a locally running Xvaw server. Non-localhost URLs are not supported in this build."
         }
       }
     },
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "omnigent-container",
-          "title": "Omnigent",
-          "icon": "media/omnigent-icon.svg"
+          "id": "xvaw-container",
+          "title": "Xvaw",
+          "icon": "media/xvaw-icon.svg"
         }
       ]
     },
     "views": {
-      "omnigent-container": [
+      "xvaw-container": [
         {
           "type": "tree",
-          "id": "omnigent.home",
-          "name": "Omnigent"
+          "id": "xvaw.home",
+          "name": "Xvaw"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "omnigent.home",
-        "contents": "Open the running Omnigent server UI in an editor tab.\n[Open Omnigent](command:omnigent.open)\nStart a local server with `omnigent server`, or set `omnigent.serverUrl` to a localhost URL."
+        "view": "xvaw.home",
+        "contents": "Open the running Xvaw server UI in an editor tab.\n[Open Xvaw](command:xvaw.open)\nStart a local server with `xvaw server`, or set `xvaw.serverUrl` to a localhost URL."
       }
     ],
     "commands": [
       {
-        "command": "omnigent.open",
-        "title": "Omnigent: Open",
-        "icon": "media/omnigent-icon.svg"
+        "command": "xvaw.open",
+        "title": "Xvaw: Open",
+        "icon": "media/xvaw-icon.svg"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "omnigent.open",
+          "command": "xvaw.open",
           "group": "navigation@99"
         }
       ],
       "commandPalette": [
         {
-          "command": "omnigent.open"
+          "command": "xvaw.open"
         }
       ]
     }

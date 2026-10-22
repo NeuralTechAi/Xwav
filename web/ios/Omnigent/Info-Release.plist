@@ -27,6 +27,7 @@
 			<string>ai.omnigent.ios.deeplink</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>xvaw</string>
 				<string>omnigent</string>
 			</array>
 		</dict>

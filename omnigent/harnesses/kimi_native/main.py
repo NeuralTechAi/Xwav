@@ -187,7 +187,7 @@ def run_kimi_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Kimi requires a resolved Omnigent server URL. The CLI should call "
+            "Kimi requires a resolved Xvaw server URL. The CLI should call "
             "_ensure_backend before run_kimi_native."
         )
     with TemporaryDirectory(prefix="omnigent-kimi-native-") as tmpdir:

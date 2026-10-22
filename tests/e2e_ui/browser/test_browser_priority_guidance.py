@@ -243,7 +243,7 @@ def test_instructions_steer_model_to_embedded_browser(
     instruction_text = _request_instruction_text(request)
     assert _BROWSER_GUIDANCE_RE.search(instruction_text), (
         "browser_* tools are advertised but the composed system "
-        "prompt carries no guidance prioritizing the Omnigent embedded "
+        "prompt carries no guidance prioritizing the Xvaw embedded "
         "browser, so models default to their own web tooling. Instructions "
         f"received by the model were:\n---\n{instruction_text}\n---"
     )
@@ -341,7 +341,7 @@ def test_agent_reaches_for_embedded_browser_on_neutral_browse_ask(
 
         assert "browser_navigate" in call_names, (
             "asked to look at a web page, the agent never reached "
-            "for the Omnigent embedded browser (no browser_navigate call in "
+            "for the Xvaw embedded browser (no browser_navigate call in "
             "the transcript) — it used its own web tooling instead. Tool "
             f"calls this turn were: {call_names!r}"
         )

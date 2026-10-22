@@ -941,7 +941,7 @@ describe("PermissionsModal", () => {
   });
 
   describe("share QR code", () => {
-    // The QR encodes an `omnigent://<host>/c/<id>` deep link (the same scheme
+    // The QR encodes an `xvaw://<host>/c/<id>` deep link (the same scheme
     // the desktop shell's deep-link handler parses — see electron/src/deepLink.js).
     // Pin the host resolution against the standalone origin and the embedded
     // host transform so the encoded value stays correct in both contexts.
@@ -963,7 +963,7 @@ describe("PermissionsModal", () => {
       }
     }
 
-    it("encodes the omnigent:// deep link for the session from the server origin", async () => {
+    it("encodes the xvaw:// deep link for the session from the server origin", async () => {
       listMock.mockResolvedValue([]);
 
       await withLocation("https://app.example.com", async () => {
@@ -976,12 +976,12 @@ describe("PermissionsModal", () => {
         expect(screen.queryByTestId("share-qr-code")).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole("button", { name: /open in mobile app/i }));
         const qr = await screen.findByTestId("share-qr-code");
-        expect(qr).toHaveAttribute("data-value", "omnigent://app.example.com/c/conv_abc");
+        expect(qr).toHaveAttribute("data-value", "xvaw://app.example.com/c/conv_abc");
       });
     });
 
     it("includes the port in the host when non-default", async () => {
-      // Mirrors the deep-link convention: `omnigent://localhost:8000/c/<id>`.
+      // Mirrors the deep-link convention: `xvaw://localhost:8000/c/<id>`.
       listMock.mockResolvedValue([]);
 
       await withLocation("http://localhost:8000", async () => {
@@ -992,7 +992,7 @@ describe("PermissionsModal", () => {
         await waitFor(() => expect(listMock).toHaveBeenCalled());
         fireEvent.click(screen.getByRole("button", { name: /open in mobile app/i }));
         const qr = await screen.findByTestId("share-qr-code");
-        expect(qr).toHaveAttribute("data-value", "omnigent://localhost:8000/c/conv_abc");
+        expect(qr).toHaveAttribute("data-value", "xvaw://localhost:8000/c/conv_abc");
       });
     });
 
@@ -1009,7 +1009,7 @@ describe("PermissionsModal", () => {
       await waitFor(() => expect(listMock).toHaveBeenCalled());
       fireEvent.click(screen.getByRole("button", { name: /open in mobile app/i }));
       const qr = await screen.findByTestId("share-qr-code");
-      expect(qr).toHaveAttribute("data-value", "omnigent://host.example.com/c/conv_xyz");
+      expect(qr).toHaveAttribute("data-value", "xvaw://host.example.com/c/conv_xyz");
     });
   });
 

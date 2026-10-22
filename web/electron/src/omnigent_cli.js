@@ -33,7 +33,7 @@ const DEFAULT_TIMEOUT_MS = 10000;
  * install instructions in the repo root README.
  */
 const INSTALL_COMMAND =
-  "curl -fsSL https://raw.githubusercontent.com/omnigent-ai/omnigent/main/scripts/install_oss.sh | sh";
+  "curl -fsSL https://raw.githubusercontent.com/NeuralTechAi/Xvaw/main/scripts/install_oss.sh | sh -s -- --repo https://github.com/NeuralTechAi/Xvaw.git";
 
 /**
  * Strip a trailing slash so URL comparisons survive the difference between
@@ -93,7 +93,7 @@ function sameLoopbackServer(a, b) {
  * @returns {string}
  */
 function localDataDir() {
-  const raw = process.env.OMNIGENT_DATA_DIR;
+  const raw = process.env.OMNIGENT_DATA_DIR ?? process.env.XVAW_DATA_DIR;
   if (raw && raw.trim() !== "") {
     const expanded = raw.startsWith("~") ? path.join(os.homedir(), raw.slice(1)) : raw;
     return path.resolve(expanded);
@@ -109,7 +109,7 @@ function localDataDir() {
  * @returns {string}
  */
 function localConfigDir() {
-  const raw = process.env.OMNIGENT_CONFIG_HOME;
+  const raw = process.env.OMNIGENT_CONFIG_HOME ?? process.env.XVAW_CONFIG_HOME;
   if (raw && raw.trim() !== "") {
     const expanded = raw.startsWith("~") ? path.join(os.homedir(), raw.slice(1)) : raw;
     return path.resolve(expanded);
@@ -263,7 +263,7 @@ async function localServerHealthy(timeoutMs = 1500) {
  * first (canonical) but accept `omni` so a machine that only installed the
  * alias still resolves. See pyproject.toml `[project.scripts]`.
  */
-const CLI_NAMES = ["omnigent", "omni"];
+const CLI_NAMES = ["xvaw", "omnigent", "omni"];
 
 /**
  * Well-known install locations for the CLI binary, in priority order. For each
@@ -389,7 +389,7 @@ function resolveCliPath(configuredPath, deps = {}) {
  */
 function cliCommandParts(command) {
   if (typeof command === "string" && command !== "") {
-    return { executable: command, prefixArgs: [], displayName: "omnigent" };
+    return { executable: command, prefixArgs: [], displayName: "xvaw" };
   }
   if (
     command &&

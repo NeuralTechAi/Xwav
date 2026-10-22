@@ -183,7 +183,7 @@ describe("SetupTerminalStep", () => {
     const { container, rerender } = render(<SetupTerminalStep {...props} />);
     const bar = () => container.querySelector<HTMLElement>("[style*='width']")?.style.width;
     expect(bar()).toBe("10%");
-    act(() => emit("$ omnigent host --server https://team.example.com/"));
+    act(() => emit("$ xvaw host --server https://team.example.com/"));
     expect(bar()).toBe("35%");
     rerender(<SetupTerminalStep {...props} connection={{ phase: "connecting" }} />);
     expect(bar()).toBe("70%");

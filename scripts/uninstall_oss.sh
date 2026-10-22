@@ -581,20 +581,22 @@ remove_tree() {
 }
 
 desktop_paths() {
-  case "$(uname -s)" in
-    Darwin)
-      printf '%s\n' \
-        "$HOME/Library/Application Support/Omnigent" \
-        "$HOME/Library/Caches/Omnigent" \
-        "$HOME/Library/Logs/Omnigent"
-      ;;
-    *)
-      printf '%s\n' \
-        "${XDG_CONFIG_HOME:-$HOME/.config}/Omnigent" \
-        "${XDG_CACHE_HOME:-$HOME/.cache}/Omnigent" \
-        "${XDG_STATE_HOME:-$HOME/.local/state}/Omnigent"
-      ;;
-  esac
+  for app_name in Xvaw Omnigent; do
+    case "$(uname -s)" in
+      Darwin)
+        printf '%s\n' \
+          "$HOME/Library/Application Support/$app_name" \
+          "$HOME/Library/Caches/$app_name" \
+          "$HOME/Library/Logs/$app_name"
+        ;;
+      *)
+        printf '%s\n' \
+          "${XDG_CONFIG_HOME:-$HOME/.config}/$app_name" \
+          "${XDG_CACHE_HOME:-$HOME/.cache}/$app_name" \
+          "${XDG_STATE_HOME:-$HOME/.local/state}/$app_name"
+        ;;
+    esac
+  done
 }
 
 purge_state() {
@@ -698,7 +700,7 @@ emit_json() {
 }
 
 if ! has_shell_install_signal; then
-  record_action anchor omnigent detect failed "" "no Omnigent install detected"
+  record_action anchor omnigent detect failed "" "no Xvaw install detected"
   EXIT_CODE=3
   [ "$JSON" = true ] && emit_json
   exit "$EXIT_CODE"

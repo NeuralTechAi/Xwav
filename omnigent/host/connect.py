@@ -1542,7 +1542,7 @@ class HostProcess:
             `omnigent login http://localhost:6767` to authenticate."``.
         """
         return (
-            "If this server uses Omnigent accounts or OIDC login, run "
+            "If this server uses Xvaw accounts or OIDC login, run "
             f"`{cli_invocation()} login {self._login_hint_url()}` to authenticate."
         )
 

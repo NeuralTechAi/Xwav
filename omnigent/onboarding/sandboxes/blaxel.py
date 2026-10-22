@@ -44,10 +44,10 @@ if TYPE_CHECKING:
 
 
 DEFAULT_BLAXEL_HOST_IMAGE: str = "blaxel/omnigent-host:latest"
-"""Public Blaxel Hub image containing the Omnigent host runtime."""
+"""Public Blaxel Hub image containing the Xvaw host runtime."""
 
 HOST_IMAGE_ENV_VAR: str = "OMNIGENT_BLAXEL_HOST_IMAGE"
-"""Optional override for the Blaxel-compatible Omnigent host image."""
+"""Optional override for the Blaxel-compatible Xvaw host image."""
 
 SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_BLAXEL_SANDBOX_ENV"
 """Comma-separated server environment variable names to inject."""
@@ -715,7 +715,7 @@ class BlaxelSandboxLauncher(ExecModelHostLauncher):
             if name in _CONTROL_CREDENTIAL_ENV_VARS:
                 raise click.ClickException(
                     f"sandbox env passthrough must not inject Blaxel control credential {name}; "
-                    "keep provider credentials in the Omnigent server process only."
+                    "keep provider credentials in the Xvaw server process only."
                 )
             value = os.environ.get(name)
             if value is None:
@@ -867,7 +867,7 @@ class BlaxelSandboxLauncher(ExecModelHostLauncher):
     def keep_alive(self, sandbox_id: str) -> None:
         """Explain that the host process owns Blaxel keep-alive."""
         del sandbox_id
-        click.echo("  → the Omnigent host process keeps the Blaxel sandbox active")
+        click.echo("  → the Xvaw host process keeps the Blaxel sandbox active")
 
     @staticmethod
     def _process_identifier(process: object, fallback_name: str) -> str:
@@ -1078,7 +1078,7 @@ class BlaxelSandboxLauncher(ExecModelHostLauncher):
         status = _status_value(getattr(process, "status", ""))
         if status in _TERMINAL_PROCESS_STATUSES:
             raise click.ClickException(
-                f"Omnigent host process failed to start on Blaxel sandbox '{sandbox_id}'."
+                f"Xvaw host process failed to start on Blaxel sandbox '{sandbox_id}'."
             )
         return RemoteCommandResult(returncode=0, stdout="launched\n", stderr="")
 

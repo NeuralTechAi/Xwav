@@ -247,7 +247,7 @@ def test_startup_phase_labels_avoid_internal_jargon(label: str) -> None:
     """
     # Internal nouns that mean nothing to an end user staring at startup.
     # "server" is intentionally NOT here: "local server" is user-facing
-    # vocabulary (it is the ``omnigent server`` they may run directly).
+    # vocabulary (it is the ``xvaw server`` they may run directly).
     jargon = {
         "daemon",
         "host",

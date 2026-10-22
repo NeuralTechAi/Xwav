@@ -51,9 +51,7 @@ class TlsInterceptor:
         self._contexts: dict[str, ssl.SSLContext] = {}
         now = datetime.datetime.now(datetime.UTC)
         self._key = ec.generate_private_key(ec.SECP256R1())
-        self._name = x509.Name(
-            [x509.NameAttribute(NameOID.COMMON_NAME, "Omnigent resilience lab CA")]
-        )
+        self._name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Xvaw resilience lab CA")])
         self._ca = (
             x509.CertificateBuilder()
             .subject_name(self._name)

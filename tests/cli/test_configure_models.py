@@ -1,4 +1,4 @@
-"""Tests for ``omnigent setup --no-internal-beta`` (CLI model-provider config).
+"""Tests for ``xvaw setup --no-internal-beta`` (CLI model-provider config).
 
 Drives the click command tree with :class:`click.testing.CliRunner` and
 piped stdin, then asserts on the **exact config mutations** written to a
@@ -184,7 +184,7 @@ def _config_yaml(config_home) -> dict[str, object]:
 
 
 def test_configure_models_list_groups_configured_providers(isolated_config) -> None:
-    """``omnigent config list`` renders each configured provider grouped by harness.
+    """``xvaw config list`` renders each configured provider grouped by harness.
 
     Seeds two providers directly, then asserts the listing shows both
     names, their kind words, the Claude/Codex harness groups, and the
@@ -3413,7 +3413,7 @@ def test_configure_harnesses_add_other_key_no_remaining_providers_aborts_cleanly
     Regression for #820: when every catch-all key provider is already configured,
     ``other_key_providers()`` returns ``[]`` and the secondary ``select`` was
     handed an empty option list, raising ``ValueError: select() requires at least
-    one option`` out of ``omnigent setup``. The add branch must detect the empty
+    one option`` out of ``xvaw setup``. The add branch must detect the empty
     list, tell the user, and return — exit code 0, no traceback. Driven under Pi
     (the surface from the report), with the harness CLI forced installed so the
     drill-in reaches the add menu.

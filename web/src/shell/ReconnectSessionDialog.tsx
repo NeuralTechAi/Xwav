@@ -39,7 +39,7 @@ const RUN_DESCRIPTION =
  * {@link SessionLiveness} variants that leave the session unreachable:
  *
  * - `host_offline` — the session is host-bound and the host tunnel is
- *   down. The owner reconnects the host (`omnigent host`); a
+ *   down. The owner reconnects the host (`xvaw host`); a
  *   non-owner can't reach that machine, so cloning is their only path.
  * - `local_stranded` — not host-bound and the runner is down. Whoever
  *   started it relaunches from their machine via the wrapper's resume
@@ -51,20 +51,20 @@ export type ReconnectState = "host_offline" | "local_stranded";
  * Build the CLI command the user pastes to bring an unreachable session
  * back. Two forms, picked by `state`:
  *
- * 1. `host_offline` — `omnigent host` re-registers the host
+ * 1. `host_offline` — `xvaw host` re-registers the host
  *    machine; the server relaunches the session's runner on demand once
  *    it's back. No `--resume` and no agent YAML (the host launches
  *    whatever the session was bound to), regardless of wrapper.
  * 2. `local_stranded` — the session isn't host-bound, so the user
  *    relaunches a runner directly. claude-native sessions
- *    (`wrapper === "claude-code-native-ui"`) use `omnigent claude
- *    --resume <id>`; everything else uses the generic `omnigent run
+ *    (`wrapper === "claude-code-native-ui"`) use `xvaw claude
+ *    --resume <id>`; everything else uses the generic `xvaw run
  *    path/to/agent.yaml --resume <id>`.
  *
  * The native wrapper is resolved from the `omnigent.wrapper` label, then
  * the canonical `harness` — a pre-native session (e.g. a legacy `devin-acp`
  * row) can carry no wrapper label yet still be a native harness, and the
- * generic `omnigent run` form cannot resume it.
+ * generic `xvaw run` form cannot resume it.
  *
  * The Databricks profile stays a placeholder in every form — it's
  * per-deployment and not knowable from the browser.
@@ -86,23 +86,23 @@ export function buildReconnectCommand({
   // dialog AND remains valid when pasted into a shell.
   const quotedServerUrl = quoteShellArgument(serverUrl);
   if (state === "host_offline") {
-    return ["omnigent host \\", `  --server ${quotedServerUrl}`].join("\n");
+    return ["xvaw host \\", `  --server ${quotedServerUrl}`].join("\n");
   }
   // Every native TUI wrapper resumes through its own verb (`omnigent devin
   // --resume …`), and the verb is the registry key — the generic
-  // `omnigent run <agent.yaml>` below cannot resume one at all, so it was wrong
+  // `xvaw run <agent.yaml>` below cannot resume one at all, so it was wrong
   // for every native harness except claude. Fall back to the canonical harness
   // when there's no wrapper label (a label-less pre-native session).
   const nativeAgent = nativeCodingAgentForWrapper(wrapper) ?? nativeCodingAgentForHarness(harness);
   if (nativeAgent !== undefined) {
     return [
-      `omnigent ${nativeAgent.key} \\`,
+      `xvaw ${nativeAgent.key} \\`,
       `  --resume ${conversationId} \\`,
       `  --server ${quotedServerUrl}`,
     ].join("\n");
   }
   return [
-    "omnigent run path/to/agent.yaml \\",
+    "xvaw run path/to/agent.yaml \\",
     `  --resume ${conversationId} \\`,
     `  --server ${quotedServerUrl}`,
   ].join("\n");
@@ -129,7 +129,7 @@ export function buildReconnectCommand({
  * case where reconnecting is impossible and Clone is the only action.
  *
  * @param wrapper - The conversation's `omnigent.wrapper` label
- *   (`"claude-code-native-ui"` for `omnigent claude` sessions). Picks
+ *   (`"claude-code-native-ui"` for `xvaw claude` sessions). Picks
  *   the `local_stranded` command form.
  * @param harness - The conversation's canonical harness, used to pick the
  *   `local_stranded` command form when no wrapper label is present.

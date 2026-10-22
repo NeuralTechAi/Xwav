@@ -64,7 +64,7 @@ def _assert_gensee_enabled(client: httpx.Client) -> None:
     info = response.json()
     providers = info.get("sandbox_providers") or []
     assert "gensee" in providers or info.get("sandbox_provider") == "gensee", (
-        "the target Omnigent server does not advertise Gensee as a managed sandbox provider"
+        "the target Xvaw server does not advertise Gensee as a managed sandbox provider"
     )
 
 
@@ -73,7 +73,7 @@ def _assert_agent_exists(client: httpx.Client, agent_id: str) -> None:
     response.raise_for_status()
     agents = response.json().get("data") or []
     assert any(agent.get("id") == agent_id for agent in agents), (
-        f"agent {agent_id!r} is not registered on the target Omnigent server"
+        f"agent {agent_id!r} is not registered on the target Xvaw server"
     )
 
 

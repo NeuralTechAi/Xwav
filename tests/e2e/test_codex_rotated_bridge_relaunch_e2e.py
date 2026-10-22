@@ -220,7 +220,7 @@ def test_rotated_codex_session_relaunches_into_its_bridge_directory(
                 and s.session_id != original_id
                 and s
             ),
-            "native /new to rotate the Omnigent session",
+            "native /new to rotate the Xvaw session",
         )
         rotated_id = rotated.session_id
         assert rotated.thread_id != original.thread_id

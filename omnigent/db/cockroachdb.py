@@ -56,12 +56,12 @@ def _parse_crdb_server_version(raw: str) -> Version:
         raise RuntimeError(f"CockroachDB returned an invalid version string: {raw!r}.") from exc
     if version < CRDB_MINIMUM_VERSION:
         raise RuntimeError(
-            f"CockroachDB {version} is unsupported. Omnigent requires "
+            f"CockroachDB {version} is unsupported. Xvaw requires "
             f"CockroachDB {CRDB_MINIMUM_VERSION} or newer."
         )
     if version not in CRDB_TESTED_VERSIONS:
         _logger.warning(
-            "CockroachDB %s is newer than the minimum but outside Omnigent's "
+            "CockroachDB %s is newer than the minimum but outside Xvaw's "
             "release-tested matrix (%s).",
             version,
             ", ".join(str(item) for item in sorted(CRDB_TESTED_VERSIONS)),
@@ -82,11 +82,11 @@ def _verify_crdb_read_committed(engine: Engine, version: Version) -> None:
     if version < Version("24.1"):
         setting_hint = (
             " Enable it with `SET CLUSTER SETTING "
-            "sql.txn.read_committed_isolation.enabled = true;`, then restart Omnigent."
+            "sql.txn.read_committed_isolation.enabled = true;`, then restart Xvaw."
         )
     raise RuntimeError(
         f"CockroachDB {version} did not honor READ COMMITTED isolation "
-        f"(effective isolation: {effective!r}). Omnigent requires READ COMMITTED."
+        f"(effective isolation: {effective!r}). Xvaw requires READ COMMITTED."
         f"{setting_hint}"
     )
 
@@ -139,7 +139,7 @@ def _start_or_resume_crdb_bootstrap(
     if not marker_exists:
         if existing_tables:
             raise RuntimeError(
-                "CockroachDB contains tables but has no supported Omnigent schema revision. "
+                "CockroachDB contains tables but has no supported Xvaw schema revision. "
                 "Use a new empty database; PostgreSQL migrations and partial CRDB migration "
                 "attempts cannot be upgraded safely."
             )
@@ -192,7 +192,7 @@ def _start_or_resume_crdb_bootstrap(
             )
         return
     raise RuntimeError(
-        "CockroachDB has an invalid Omnigent bootstrap marker or unexpected tables. "
+        "CockroachDB has an invalid Xvaw bootstrap marker or unexpected tables. "
         "Use a new empty database rather than stamping an unknown partial schema."
     )
 
@@ -322,7 +322,7 @@ def _initialize_or_verify_crdb_schema(engine: Engine, db_uri: str) -> None:
     _verify_db_revision_is_supported(db_uri, current, head)
     if not _crdb_revision_is_supported(db_uri, current, head):
         raise RuntimeError(
-            f"CockroachDB schema revision {current!r} predates Omnigent's CRDB "
+            f"CockroachDB schema revision {current!r} predates Xvaw's CRDB "
             f"baseline {CRDB_BASELINE_REVISION!r}. Use a new empty database."
         )
     if current != head:

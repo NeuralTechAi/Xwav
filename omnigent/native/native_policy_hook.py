@@ -73,12 +73,12 @@ _USER_PROMPT_SUBMIT = "UserPromptSubmit"
 # body). Mirrors the runner-side fail-closed default in
 # ``omnigent.runner.policy_proxy._evaluate_policy_via_omnigent``.
 _EVAL_UNAVAILABLE_REASON = (
-    "Omnigent policy evaluation unavailable (could not reach or authenticate to the "
-    "Omnigent server); failing closed for this tool call."
+    "Xvaw policy evaluation unavailable (could not reach or authenticate to the "
+    "Xvaw server); failing closed for this tool call."
 )
 _EVAL_UNAVAILABLE_REQUEST_REASON = (
-    "Omnigent policy evaluation unavailable (could not reach or authenticate to the "
-    "Omnigent server); failing closed for this request."
+    "Xvaw policy evaluation unavailable (could not reach or authenticate to the "
+    "Xvaw server); failing closed for this request."
 )
 
 
@@ -535,8 +535,8 @@ def fail_closed_hook_output(
 
 
 _EVAL_UNAVAILABLE_ASK_REASON = (
-    "Omnigent policy evaluation unavailable (could not reach or authenticate to the "
-    "Omnigent server); please approve or deny this tool call manually."
+    "Xvaw policy evaluation unavailable (could not reach or authenticate to the "
+    "Xvaw server); please approve or deny this tool call manually."
 )
 
 
@@ -683,7 +683,7 @@ def post_evaluate_with_retry(
                         headers = refreshed
                         reauthed = True
                         print(
-                            f"omnigent {hook_label}: Omnigent auth expired "
+                            f"omnigent {hook_label}: Xvaw auth expired "
                             "(login redirect/401); re-minted token and retrying",
                             file=sys.stderr,
                         )
@@ -696,9 +696,8 @@ def post_evaluate_with_retry(
                 # cryptic "empty/malformed response".
                 if resp.is_redirect:
                     location = resp.headers.get("location", "")
-                    last_error = (
-                        f"Omnigent auth expired: HTTP {resp.status_code} login redirect"
-                        + (f" to {location}" if location else "")
+                    last_error = f"Xvaw auth expired: HTTP {resp.status_code} login redirect" + (
+                        f" to {location}" if location else ""
                     )
                     print(
                         f"omnigent {hook_label}: {last_error}; failing closed",
@@ -720,12 +719,12 @@ def post_evaluate_with_retry(
                     max_delay=_EVALUATE_POLICY_MAX_RETRY_AFTER_S,
                 )
                 print(
-                    f"omnigent {hook_label}: Omnigent returned 429; retrying",
+                    f"omnigent {hook_label}: Xvaw returned 429; retrying",
                     file=sys.stderr,
                 )
             elif status < 500:
                 print(
-                    f"omnigent {hook_label}: Omnigent returned {status}"
+                    f"omnigent {hook_label}: Xvaw returned {status}"
                     + (f": {body_preview}" if body_preview else ""),
                     file=sys.stderr,
                 )
@@ -735,7 +734,7 @@ def post_evaluate_with_retry(
                     time.monotonic() - attempt_started >= _EVALUATE_POLICY_HELD_POLL_FLOOR_S
                 )
                 print(
-                    f"omnigent {hook_label}: Omnigent returned {status}"
+                    f"omnigent {hook_label}: Xvaw returned {status}"
                     + (
                         " after a held poll (gateway sever); re-parking"
                         if held_poll_severed
@@ -746,7 +745,7 @@ def post_evaluate_with_retry(
         except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
             last_error = f"connection error: {exc}"
             print(
-                f"omnigent {hook_label}: Omnigent request failed; retrying: {exc}",
+                f"omnigent {hook_label}: Xvaw request failed; retrying: {exc}",
                 file=sys.stderr,
             )
         except httpx.HTTPError as exc:
@@ -760,7 +759,7 @@ def post_evaluate_with_retry(
             )
             if not held_poll_severed:
                 print(
-                    f"omnigent {hook_label}: Omnigent request failed: {exc}",
+                    f"omnigent {hook_label}: Xvaw request failed: {exc}",
                     file=sys.stderr,
                 )
                 return None, last_error

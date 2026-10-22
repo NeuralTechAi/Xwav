@@ -14,7 +14,7 @@ import { maybeMockSetup } from "./pages/onboarding/mockSetup";
 import "./index.css";
 
 const DEFAULT_URL = "http://localhost:6767";
-const CLOUD_DOCS_URL = "https://omnigent.ai/docs/deploy/overview";
+const CLOUD_DOCS_URL = "https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally";
 
 /** The `omnigentSetup` preload bridge (see electron/src/preload.js). */
 interface OmnigentSetup {
@@ -114,6 +114,7 @@ export function BridgeSetupApp() {
     const bridge = setupBridge();
     // No shell bridge (browser preview): nothing to probe, render immediately.
     if (!bridge) {
+      setInstalled(false);
       setReady(true);
       return;
     }
@@ -181,7 +182,7 @@ export function BridgeSetupApp() {
     serverNames,
     installed,
     installSupported,
-    onRecheckCli: refreshCliStatus,
+    onRecheckCli: setupBridge() ? refreshCliStatus : undefined,
     connectedBefore,
     localServerRunning,
     onConnect: async (url, onPhase) => {
@@ -261,8 +262,8 @@ export function BridgeSetupApp() {
                 return {
                   ok: false,
                   error:
-                    "The installer finished but the omnigent CLI still isn't detected. " +
-                    "Try opening a new terminal, or install it from https://omnigent.ai/.",
+                    "The installer finished but the Xvaw CLI still isn't detected. " +
+                    "Try opening a new terminal, or follow the source-install instructions at https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally.",
                 };
               }
               return { ok: result?.ok === true, error: result?.error };

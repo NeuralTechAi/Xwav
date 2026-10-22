@@ -81,7 +81,7 @@ def load_snapshot(test_name: str) -> dict[str, SnapshotField]:
     if not path.is_file():
         raise FileNotFoundError(
             f"Snapshot not found: {path}. Phase 0 tests ship with "
-            f"their snapshots captured against current Omnigent."
+            f"their snapshots captured against current Xvaw."
         )
     raw = json.loads(path.read_text())
     out: dict[str, SnapshotField] = {}

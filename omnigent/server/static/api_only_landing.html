@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Omnigent — web UI not installed</title>
+<title>Xvaw — web UI not installed</title>
 <style>
   :root { color-scheme: light dark; }
   body {
@@ -22,7 +22,7 @@
 </style>
 </head>
 <body>
-  <h1>Omnigent is running — but the web UI isn't installed</h1>
+  <h1>Xvaw is running — but the web UI isn't installed</h1>
   <p>
     This server was built without the web UI (API-only mode), so there's
     nothing to render in the browser here.
@@ -31,28 +31,28 @@
   <p>
     A normal install includes the web UI, so this means either you're running a
     source checkout that hasn't built it, or the UI was skipped at build time
-    (<code>OMNIGENT_SKIP_WEB_UI</code>) — possibly a cached UI-less build being
+    (<code>XVAW_SKIP_WEB_UI</code>) — possibly a cached UI-less build being
     reused.
   </p>
   <p>
     <strong>From a source checkout</strong> — build the UI in place (needs
-    <code>Node.js</code> and <code>npm</code>), then restart:
+    <code>Node.js</code> and <code>pnpm</code>), then restart:
   </p>
   <pre>cd web
-npm install
-npm run build</pre>
+pnpm install --frozen-lockfile
+pnpm run build</pre>
   <p>
     <strong>Installed from source / git</strong> — rebuild with the UI included:
-    make sure <code>OMNIGENT_SKIP_WEB_UI</code> is unset and <code>npm</code>
+    make sure <code>XVAW_SKIP_WEB_UI</code> is unset and <code>pnpm</code>
     works, clear the cache (a cached UI-less build can otherwise be reused), then
     reinstall the same spec you originally used:
   </p>
-  <pre>uv cache clean omnigent</pre>
+  <pre>uv cache clean</pre>
   <p class="muted">
-    <code>npm run dev</code> is for live UI development — it runs a separate dev
+    <code>pnpm run dev</code> is for live UI development — it runs a separate dev
     server and won't fix this page. The CLI works regardless, and the JSON API
     is at <a href="/docs">/docs</a>.
-    Details: <a href="https://github.com/omnigent-ai/omnigent#readme">omnigent-ai/omnigent</a>
+    Details: <a href="https://github.com/NeuralTechAi/Xvaw#readme">NeuralTechAi/Xvaw</a>
   </p>
 </body>
 </html>

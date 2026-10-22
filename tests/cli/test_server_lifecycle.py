@@ -224,7 +224,7 @@ def test_server_background_reuses(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_server_background_omits_log_when_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
     """No log line when the running server has no captured-log file.
 
-    A foreground ``omnigent server`` streams logs to its terminal, so a
+    A foreground ``xvaw server`` streams logs to its terminal, so a
     reuse of it carries ``log_path=None`` and ``server --background`` must not
     print a bogus or empty ``log:`` line.
     """

@@ -652,7 +652,7 @@ class NativeTuiDriver:
         result = TurnResult()
         if self._vendor.harness not in _NATIVE_OMNIGENT_MCP_HARNESSES:
             result.error = (
-                f"{self._vendor.harness!r} has no Omnigent MCP bridge; "
+                f"{self._vendor.harness!r} has no Xvaw MCP bridge; "
                 "its relayed tools use another native mechanism"
             )
             return result

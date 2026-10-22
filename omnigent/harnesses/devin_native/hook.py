@@ -222,7 +222,7 @@ def _mirror_permission_request(
                     if refreshed:
                         headers = refreshed
                         print(
-                            "omnigent devin permission-request hook: Omnigent auth "
+                            "omnigent devin permission-request hook: Xvaw auth "
                             "expired; re-minted token and retrying",
                             file=sys.stderr,
                         )

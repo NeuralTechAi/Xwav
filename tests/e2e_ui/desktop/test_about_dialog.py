@@ -58,7 +58,7 @@ def test_about_dialog_update_flow(page: Page) -> None:
     page.add_init_script(_ABOUT_BRIDGE)
     page.goto(_ABOUT_PAGE.as_uri())
 
-    expect(page.get_by_role("heading", name="Omnigent macOS app")).to_be_visible()
+    expect(page.get_by_role("heading", name="Xvaw macOS app")).to_be_visible()
     expect(page.get_by_text("0.13.0", exact=True)).to_be_visible()
     expect(page.get_by_text("0.13.0.dev0", exact=True)).to_be_visible()
     expect(page.get_by_text("/Users/alice/.local/bin/omnigent", exact=True)).to_be_visible()

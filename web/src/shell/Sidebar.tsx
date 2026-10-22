@@ -116,7 +116,7 @@ import {
   useSearchParams,
 } from "@/lib/routing";
 import { SidebarHeaderActions, SidebarSettingsButton } from "./SidebarHeaderActions";
-import omnigentWordmark from "@/assets/omnigent-wordmark.svg";
+import { XvawIcon } from "@/components/icons/XvawIcon";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1140,12 +1140,13 @@ function SidebarImpl({
                     {branding.app_name}
                   </span>
                 ) : (
-                  <img
-                    src={omnigentWordmark}
-                    alt="Xvaw"
+                  <span
                     data-testid="sidebar-wordmark"
-                    className="h-[15px] w-auto shrink-0 translate-y-px dark:invert"
-                  />
+                    className="inline-flex items-center gap-2 text-[17px] font-semibold tracking-tight"
+                  >
+                    <XvawIcon className="size-6 shrink-0" />
+                    Xvaw
+                  </span>
                 )}
               </Link>
               {/* On the macOS shell this copy is hidden and an identical cluster

@@ -422,7 +422,7 @@ def load_omnigent_yaml(
             for e in result.errors
         ):
             message += (
-                "\n\nNote: if this harness is valid on a newer Omnigent server, "
+                "\n\nNote: if this harness is valid on a newer Xvaw server, "
                 "this client (runner) may be older than the server that produced "
                 "the spec — upgrade the runner to pick up newer harnesses."
             )

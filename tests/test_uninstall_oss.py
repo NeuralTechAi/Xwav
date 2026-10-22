@@ -6,6 +6,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from omnigent.install_ledger import sha256_text
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "uninstall_oss.sh"
@@ -175,21 +177,23 @@ def test_uninstall_script_purge_without_target_also_removes_cli(tmp_path: Path) 
     assert uv_log.read_text().strip() == "tool uninstall omnigent"
 
 
+@pytest.mark.parametrize("app_name", ["Omnigent", "Xvaw"])
 def test_uninstall_script_purge_uses_unique_backup_paths_for_multiple_trees(
     tmp_path: Path,
+    app_name: str,
 ) -> None:
     home = tmp_path / "home"
     state = home / ".omnigent"
     workspace = home / "omnigent"
     linux_desktop_dirs = (
-        home / ".config" / "Omnigent",
-        home / ".cache" / "Omnigent",
-        home / ".local" / "state" / "Omnigent",
+        home / ".config" / app_name,
+        home / ".cache" / app_name,
+        home / ".local" / "state" / app_name,
     )
     mac_desktop_dirs = (
-        home / "Library" / "Application Support" / "Omnigent",
-        home / "Library" / "Caches" / "Omnigent",
-        home / "Library" / "Logs" / "Omnigent",
+        home / "Library" / "Application Support" / app_name,
+        home / "Library" / "Caches" / app_name,
+        home / "Library" / "Logs" / app_name,
     )
     for directory in (state, workspace, *linux_desktop_dirs, *mac_desktop_dirs):
         directory.mkdir(parents=True)

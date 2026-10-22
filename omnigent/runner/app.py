@@ -1718,7 +1718,7 @@ def create_runner_app(
                 [
                     "",
                     "Last captured terminal output: unavailable. The process exited before "
-                    "Omnigent captured a pane snapshot.",
+                    "Xvaw captured a pane snapshot.",
                 ]
             )
         return "\n".join(parts)

@@ -50,7 +50,7 @@ _REGION = "eu-west-1"
 _RUN_TIMEOUT_S = 240
 _STOP_TIMEOUT_S = 120
 
-_SESSION_LINE_RE = re.compile(r"Omnigent session: (?P<base>https?://[^/\s]+)/c/(?P<sid>[0-9a-f]+)")
+_SESSION_LINE_RE = re.compile(r"Xvaw session: (?P<base>https?://[^/\s]+)/c/(?P<sid>[0-9a-f]+)")
 _PROXY_VARS = frozenset({"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"})
 
 

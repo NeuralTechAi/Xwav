@@ -34,10 +34,16 @@ The SVG and React mark share the same 128-unit geometry. Keep both in sync when 
 
 ## Fork boundaries
 
-The Python distribution and import namespace remain `omnigent`, and `xvaw` is an added CLI alias. Environment variables, config/state locations, HTTP headers, deep-link schemes, SDK APIs, and native source/target identifiers retain upstream names. This avoids breaking integrations. Xvaw's desktop app ID is `ai.neuraltech.xvaw.desktop`; iOS/Android signing and application IDs still require owner-specific configuration before distribution.
+The Python distribution and import namespace remain `omnigent`, and `xvaw` is an added CLI alias. The public XVAW_* environment prefix maps to the existing runtime settings. Configuration/state locations, HTTP headers, SDK APIs, and native source/target identifiers retain their compatibility names. New session links use xvaw://; desktop and iOS also accept older session links. This avoids breaking integrations. Xvaw's desktop app ID is `ai.neuraltech.xvaw.desktop`; iOS and Android use ai.neuraltech.xvaw application IDs. Their signing requires owner-specific configuration before distribution.
 
 The Electron source installer uses the upstream installer's existing `--repo` option to install this fork. Public release downloads and auto-updates are not configured. Upstream signing identity and compiled `Assets.car` are removed from Xvaw desktop packaging; macOS uses the generated Xvaw ICNS instead. Recompile the Apple Icon Composer source on macOS if a native dynamic icon is needed.
 
 The inherited installer/CLI upgrade commands, app-store metadata, release workflows, documentation, historical screenshots, and tests can reference upstream services. They are not evidence of published Xvaw releases. Use the source instructions in the root README for this fork.
 
 Omnigent's original copyright, LICENSE, NOTICE, SDK identities, and historical attribution are retained. This fork is not an official Omnigent or Databricks distribution.
+
+## Interface audit
+
+The main sidebar uses the wave icon and a theme-aware Xvaw name. Onboarding, login, settings, reconnect commands, permissions dialogs, settings exports, installer output, CLI banners/help, native store copy, and the API-only fallback use Xvaw. Original artwork paths are compatibility aliases containing the new artwork. The VS Code extension also uses Xvaw titles, a new setting namespace, and the wave icon; older settings and command bindings retain compatibility. Legal upstream attribution remains in LICENSE, NOTICE, and the root README.
+
+XVAW_* settings are aliases for the existing runtime environment variables. An explicitly supplied internal/legacy setting retains precedence so existing deployments behave consistently. Use xvaw host, xvaw server, and xvaw --version in user-facing command examples.

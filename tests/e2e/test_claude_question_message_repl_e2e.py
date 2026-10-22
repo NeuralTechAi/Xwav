@@ -374,7 +374,7 @@ def test_web_followup_preserves_real_repl_question(
 
             _wait_for(
                 approval_displayed,
-                description="the generic Omnigent REPL's approval display",
+                description="the generic Xvaw REPL's approval display",
                 timeout=10,
             )
             evidence["repl_displayed_approval"] = True
@@ -562,7 +562,7 @@ def test_web_followup_preserves_real_repl_question(
 
             evidence["mirrored_followup_after_answer"] = _wait_for(
                 mirrored_followup,
-                description="the delivered follow-up in Omnigent's persisted conversation",
+                description="the delivered follow-up in Xvaw's persisted conversation",
                 timeout=30,
             )
             evidence["followup_delivered_at"] = _now()

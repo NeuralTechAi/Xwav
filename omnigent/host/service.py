@@ -123,7 +123,7 @@ def _systemd_unit(
     ]
     lines = [
         "[Unit]",
-        "Description=Omnigent host",
+        "Description=Xvaw host",
         "Wants=network-online.target",
         "After=network-online.target",
         "",

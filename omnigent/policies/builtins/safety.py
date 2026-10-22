@@ -880,7 +880,7 @@ POLICY_REGISTRY: list[dict[str, object]] = [
         "kind": "callable",
         "name": "Require Approval for File & Shell Operations",
         "description": "Asks for user approval before any file or shell tool call — "
-        "covers Omnigent sys_os_* tools, Claude Code and Codex native tools "
+        "covers Xvaw sys_os_* tools, Claude Code and Codex native tools "
         "(Bash, Read, Write, Edit, MultiEdit, NotebookEdit, Glob, Grep), "
         "Cursor native tools (Shell), Pi native tools (read, bash, write, edit), "
         "opencode native tools (bash, edit, read, grep, glob), "

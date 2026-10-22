@@ -10,7 +10,7 @@ from omnigent.inner import ui
 def test_accent_is_brand_magenta() -> None:
     """The shared accent is the Omnigent brand magenta."""
 
-    assert ui.ACCENT == "#F43BA6"
+    assert ui.ACCENT == "#6EE7D2"
 
 
 def test_show_banner_requires_a_tty() -> None:
@@ -41,11 +41,11 @@ def test_warnings_and_errors_go_to_stderr(capsys: pytest.CaptureFixture[str]) ->
 def test_status_lines_go_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:
     """Normal status (step/success/info) prints to stdout."""
 
-    ui.step("Installing Omnigent")
+    ui.step("Installing Xvaw")
     ui.success("Verified omnigent")
     ui.info("Using ~/.omnigent")
     captured = capsys.readouterr()
-    assert "Installing Omnigent" in captured.out
+    assert "Installing Xvaw" in captured.out
     assert "✓ Verified omnigent" in captured.out
     assert captured.err == ""
 

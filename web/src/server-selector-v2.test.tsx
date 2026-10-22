@@ -147,3 +147,16 @@ it("keeps remote connections available without a CLI or installer", async () => 
   expect(startLocalServer).not.toHaveBeenCalled();
   expect(installCli).not.toHaveBeenCalled();
 });
+
+it("shows source-install instructions in a browser without the desktop bridge", async () => {
+  delete (window as { omnigentSetup?: unknown }).omnigentSetup;
+  render(<BridgeSetupApp />);
+  fireEvent.click(await screen.findByRole("button", { name: "Get started locally" }));
+  fireEvent.click(screen.getByRole("button", { name: "Install Xvaw" }));
+  expect(screen.getByRole("link", { name: "Installation instructions" })).toHaveAttribute(
+    "href",
+    "https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally",
+  );
+  expect(screen.getByRole("button", { name: "Check again" })).toBeDisabled();
+  expect(screen.queryByText("The desktop shell is unavailable.")).not.toBeInTheDocument();
+});

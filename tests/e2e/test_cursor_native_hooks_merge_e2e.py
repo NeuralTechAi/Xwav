@@ -147,7 +147,7 @@ def test_cursor_native_launch_preserves_existing_hooks_json(
             entry.get("command", "") for entry in hooks.get("stop", []) if isinstance(entry, dict)
         ]
         assert any("cursor_native.usage" in command for command in stop_commands), (
-            "launch never registered Omnigent's cursor_native usage stop hook in "
+            "launch never registered Xvaw's cursor_native usage stop hook in "
             f".cursor/hooks.json — cannot observe the rewrite; file was:\n{raw}"
         )
 

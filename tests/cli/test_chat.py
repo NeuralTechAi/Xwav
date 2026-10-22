@@ -1122,7 +1122,7 @@ def test_run_local_headless_prompt_uses_directory_bundle_for_root_config_yaml(
 ) -> None:
     """One-shot local prompt mode also preserves directory-agent siblings.
 
-    This covers ``omnigent run bundle/config.yaml -p ...``. Without the
+    This covers ``xvaw run bundle/config.yaml -p ...``. Without the
     canonicalization in the headless helper, startup registration would lose
     the sibling directories. Session creation reuses the registered agent.
     """
@@ -1646,7 +1646,7 @@ def test_prepare_chat_session_via_daemon_binds_runner_to_clear_stopped_marker(
 
     # The launched runner is re-bound to the resumed session through the
     # PATCH chokepoint that clears omnigent.stopped — same pattern as
-    # ``omnigent claude`` (claude_native.py's bind_session_runner call).
+    # ``xvaw claude`` (claude_native.py's bind_session_runner call).
     assert captured["bind"] == {"session_id": "conv_resume", "runner_id": "runner_daemon"}
 
 
@@ -1735,7 +1735,7 @@ def test_prepare_chat_session_via_daemon_reports_create_failure_as_click_error(
     ("server_url", "expected_hint"),
     [
         # A local server that stopped — the user restarts it.
-        ("http://127.0.0.1:6767", "omnigent stop"),
+        ("http://127.0.0.1:6767", "xvaw stop"),
         # A remote target — the URL, the network, or a proxy is at fault.
         ("https://example.databricksapps.com", "proxy"),
     ],
@@ -1799,7 +1799,7 @@ def test_prepare_chat_session_via_daemon_reports_unreachable_server_as_click_err
     ("server_url", "expected_hint"),
     [
         # A local server that stopped — the user restarts it.
-        ("http://127.0.0.1:6767", "omnigent stop"),
+        ("http://127.0.0.1:6767", "xvaw stop"),
         # A remote target — the URL, the network, or a proxy is at fault.
         ("https://example.databricksapps.com", "proxy"),
     ],
@@ -1813,7 +1813,7 @@ def test_pick_agent_reports_unreachable_server_as_click_error(
     """An unreachable server in ``_pick_agent`` is a ``ClickException``.
 
     ``_pick_agent`` runs the session-listing ``httpx.get`` on the direct
-    server-URL chat path (``omnigent run --server <url>`` and headless
+    server-URL chat path (``xvaw run --server <url>`` and headless
     prompts). Without a transport-error guard, a stale/unreachable server
     URL escaped as a raw ``httpx.ConnectError`` all the way to the crash
     handler — a crash screen and a file-an-issue prompt for what is an
@@ -1993,7 +1993,7 @@ def test_pick_agent_headless_with_several_agents_asks_for_agent_flag(
 ) -> None:
     """Headless ``-p`` cannot answer a menu: it fails naming the agents and ``--agent``.
 
-    The stale-host hint is withheld because ``omnigent stop`` cannot help here.
+    The stale-host hint is withheld because ``xvaw stop`` cannot help here.
     """
     requests = _serve_listings(monkeypatch, agent_pages=[_agents_page(["coder", "scribe"])])
 
@@ -2269,7 +2269,7 @@ def test_pick_agent_menu_accepts_a_name_or_index(
 @pytest.mark.parametrize(
     ("status", "expected_hint"),
     [
-        (401, "Sign in with `omnigent login https://example.databricks.com/omnigent`"),
+        (401, "Sign in with `xvaw login https://example.databricks.com/omnigent`"),
         (403, "ask the server administrator to grant access"),
         (404, None),
         (500, None),
@@ -2586,7 +2586,7 @@ def test_apply_overrides_writes_nested_config_harness_for_spec_version_bundle() 
     ``executor.config.harness`` — the ONLY harness location that
     format's parser reads.
 
-    Regression guard for the polly no-op: ``omnigent run
+    Regression guard for the polly no-op: ``xvaw run
     examples/polly --harness pi`` used to write the flat
     ``executor.harness`` key, which ``_parse_executor`` ignores for
     spec_version specs — the brain silently stayed on claude-sdk.
@@ -2696,7 +2696,7 @@ def test_apply_overrides_harness_and_model_together_for_spec_version_bundle() ->
     parser-read locations: nested ``config.harness`` and flat
     ``executor.model``.
 
-    This is the polly-on-GPT invocation shape: ``omnigent run
+    This is the polly-on-GPT invocation shape: ``xvaw run
     examples/polly --harness openai-agents --model <gpt>``.
     """
     raw: dict[str, object] = {
@@ -2886,7 +2886,7 @@ def test_materialize_override_bundle_bakes_env_var_into_yaml(
     What this proves: the env var survives the
     ``mkdtemp`` → ``yaml.safe_load`` → ``_apply_overrides_to_raw``
     → ``yaml.safe_dump`` round-trip and lands as a real,
-    on-disk override the omnigent server reads. If the
+    on-disk override the xvaw server reads. If the
     written YAML has ``model: databricks-gpt-5-4``, the env-var
     fallback regressed somewhere in the materialization
     pipeline.
@@ -3113,7 +3113,7 @@ def test_materialize_bundle_overrides_brain_harness(
 
     End-to-end through the production pipeline: ``copytree`` →
     ``_apply_overrides_to_raw`` → ``yaml.safe_dump`` → ``omnigent.spec.load``
-    → ``validate``. This is the exact path ``omnigent run examples/polly
+    → ``validate``. This is the exact path ``xvaw run examples/polly
     --harness pi`` (or ``examples/debby``) takes before the bundle reaches
     a server.
 
@@ -3133,7 +3133,7 @@ def test_materialize_bundle_overrides_brain_harness(
     """
     import importlib.resources
 
-    # Isolate from the developer's omnigent config and ambient creds so
+    # Isolate from the developer's xvaw config and ambient creds so
     # env-auth baking / model fallback can't make the result machine-dependent.
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config"))
     monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
@@ -4143,7 +4143,7 @@ def test_spec_used_families_multi_vendor_directory_agent(tmp_path) -> None:
 
     # Both the orchestrator (anthropic) and its sub-agent (openai) count,
     # whether the caller passes the config.yaml or the directory itself
-    # (the latter is what `omnigent run <dir>` threads through).
+    # (the latter is what `xvaw run <dir>` threads through).
     assert _spec_used_families(root / "config.yaml") == ["anthropic", "openai"]
     assert _spec_used_families(root) == ["anthropic", "openai"]
 
@@ -4366,7 +4366,7 @@ def test_prepare_chat_session_via_daemon_reports_unparseable_proxy_env(
     # Exact match: proves the error names the target server and the parse
     # failure (a substring URL probe here trips CodeQL's url-sanitization rule).
     assert str(excinfo.value) == (
-        "Could not connect to the Omnigent server at "
+        "Could not connect to the Xvaw server at "
         "https://example.databricksapps.com. "
         "Check the URL, your network connection, and any HTTP proxy settings. "
         "(the proxy environment could not be parsed: Invalid port: ':')"
@@ -4856,7 +4856,7 @@ async def test_query_sessions_once_reconciles_persisted_text_on_failed_status(
 ) -> None:
     """A spurious ``failed`` after a completed turn returns the persisted text.
 
-    This is the exact reported bug: ``omnigent run -p`` printed
+    This is the exact reported bug: ``xvaw run -p`` printed
     "Error: turn failed" while the remote session held the response. If
     this fails, the ``-p`` path is again raising on a transport-induced
     ``session.status: failed`` instead of recovering the saved answer.
@@ -5191,7 +5191,7 @@ def test_env_auth_injection_skipped_when_global_auth_configured(
 ) -> None:
     """An ambient OPENAI_API_KEY must not be baked over configured auth.
 
-    With a global ``auth:`` block (written by ``omnigent setup``), the
+    With a global ``auth:`` block (written by ``xvaw setup``), the
     user's configured Databricks routing is the explicit choice; baking
     the shell's env key into the materialized spec as ``executor.auth``
     would silently hijack it — the exact failure mode that produced
@@ -5367,10 +5367,10 @@ def test_cursor_native_resume_never_drives_an_omnigent_turn(
     )
 
     def _fail_repl(*_args: object, **_kwargs: object) -> None:
-        raise AssertionError("_run_repl drove an Omnigent turn for a cursor-native resume")
+        raise AssertionError("_run_repl drove an Xvaw turn for a cursor-native resume")
 
     def _fail_one_shot(*_args: object, **_kwargs: object) -> None:
-        raise AssertionError("_run_one_shot drove an Omnigent turn for a cursor-native resume")
+        raise AssertionError("_run_one_shot drove an Xvaw turn for a cursor-native resume")
 
     monkeypatch.setattr(chat_module, "_run_repl", _fail_repl)
     monkeypatch.setattr(chat_module, "_run_one_shot", _fail_one_shot)
@@ -5929,7 +5929,7 @@ def test_one_shot_unknown_agent_is_a_clean_cli_error() -> None:
 
 
 def test_require_registered_agent_accepts_a_user_agent(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``omnigent agent add`` installs a user agent; ``--agent`` must accept it."""
+    """``xvaw agent add`` installs a user agent; ``--agent`` must accept it."""
     _serve_listings(
         monkeypatch,
         agent_pages=[_agents_page(["scribe"])],

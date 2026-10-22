@@ -1,7 +1,7 @@
 """Unit tests for CLI OIDC token storage (omnigent/cli_auth.py).
 
 Tests the store/load/clear lifecycle for session tokens persisted
-by ``omnigent login``.
+by ``xvaw login``.
 """
 
 from __future__ import annotations
@@ -36,8 +36,8 @@ def token_dir(tmp_path, monkeypatch):
 def test_store_and_load_token(token_dir) -> None:
     """A stored token can be loaded back by server URL.
 
-    This is the happy path: ``omnigent login`` stores a token,
-    ``omnigent run --server`` loads it.
+    This is the happy path: ``xvaw login`` stores a token,
+    ``xvaw run --server`` loads it.
     """
     from omnigent.cli_auth import load_token, store_token
 
@@ -56,8 +56,8 @@ def test_store_and_load_token(token_dir) -> None:
 def test_load_returns_none_when_no_file(token_dir) -> None:
     """load_token returns None when no token file exists.
 
-    The first time a user runs ``omnigent run --server`` without
-    having run ``omnigent login``, there should be no crash.
+    The first time a user runs ``xvaw run --server`` without
+    having run ``xvaw login``, there should be no crash.
     """
     from omnigent.cli_auth import load_token
 
@@ -85,7 +85,7 @@ def test_load_returns_none_for_expired_token(token_dir) -> None:
     """load_token returns None when the stored token has expired.
 
     Expired tokens must not be used — the user needs to re-run
-    ``omnigent login``.
+    ``xvaw login``.
     """
     from omnigent.cli_auth import load_token, store_token
 
@@ -163,7 +163,7 @@ def test_file_permissions(token_dir) -> None:
 def test_store_overwrites_existing(token_dir) -> None:
     """Storing a token for the same server overwrites the old one.
 
-    Re-running ``omnigent login`` should update the token, not
+    Re-running ``xvaw login`` should update the token, not
     append.
     """
     from omnigent.cli_auth import load_token, store_token
@@ -214,7 +214,7 @@ def test_multiple_servers(token_dir) -> None:
 def test_store_and_load_databricks_record(token_dir) -> None:
     """A stored Databricks pointer record resolves back to its workspace.
 
-    ``omnigent login <apps-url>`` stores the record; the server-auth
+    ``xvaw login <apps-url>`` stores the record; the server-auth
     chain looks up the workspace host to mint fresh tokens.
     """
     from omnigent.cli_auth import load_databricks_workspace_host, store_databricks_auth
@@ -820,7 +820,7 @@ def test_refresh_404_on_loopback_is_quiet(token_dir, monkeypatch, caplog) -> Non
 
     A local/header-mode dev server has no refresh route, so a near-expiry
     token would 404 on every reconnect. That case logs at debug (no warning,
-    no misleading "run omnigent login" advice) so it doesn't spam the host
+    no misleading "run xvaw login" advice) so it doesn't spam the host
     daemon's reconnect loop.
     """
     import logging
@@ -856,7 +856,7 @@ def test_refresh_404_on_remote_warns_without_relogin_advice(
 
     A missing /oauth/token route on a real server (wrong URL, or a build
     without session refresh) is not fixed by re-login, so the warning must
-    not tell the user to run `omnigent login`.
+    not tell the user to run `xvaw login`.
     """
     import logging
 
@@ -881,7 +881,7 @@ def test_refresh_404_on_remote_warns_without_relogin_advice(
         assert refresh_stored_token(url) is None
     warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
     assert any("404" in m for m in warnings)
-    assert not any("omnigent login" in m for m in warnings)
+    assert not any("xvaw login" in m for m in warnings)
 
 
 def test_safe_log_url_strips_userinfo_and_query() -> None:

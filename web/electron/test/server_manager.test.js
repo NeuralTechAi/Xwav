@@ -123,7 +123,7 @@ describe("ensureServerAuth", () => {
     assert.equal(res.ok, false);
     assert.equal(res.authError, true);
     assert.doesNotMatch(res.error, /ticket=|SECRET123/);
-    assert.match(res.error, /omnigent login https:\/\/app\.example\.com/);
+    assert.match(res.error, /xvaw login https:\/\/app\.example\.com/);
   });
 
   it("uses the same generic message when login fails with no output", async () => {
@@ -135,6 +135,6 @@ describe("ensureServerAuth", () => {
 
     assert.equal(res.ok, false);
     assert.equal(res.authError, true);
-    assert.match(res.error, /omnigent login https:\/\/app\.example\.com/);
+    assert.match(res.error, /xvaw login https:\/\/app\.example\.com/);
   });
 });

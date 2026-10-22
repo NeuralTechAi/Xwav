@@ -834,9 +834,9 @@ def test_upgrade_failure_message_reports_a_destroyed_install(
     assert "your previous install is intact" not in message
     assert "no longer installed" in message
     # Actionable recovery, preserving the extras this install had.
-    assert "install.sh | sh -s -- --extra databricks" in message
-    assert "omnigent login" in message
-    assert "OMNIGENT_SKIP_WEB_UI=true" in message
+    assert "--repo https://github.com/NeuralTechAi/Xvaw.git --extra databricks" in message
+    assert "xvaw login" in message
+    assert "XVAW_SKIP_WEB_UI=true" in message
 
 
 def test_upgrade_failure_message_confirms_a_surviving_install(
@@ -876,4 +876,4 @@ def test_upgrade_nightly_failure_surfaces_recovery_when_install_is_gone(
     assert result.exit_code != 0
     assert "your previous install is intact" not in result.output
     assert "no longer installed" in result.output
-    assert "install.sh" in result.output
+    assert "install_oss.sh" in result.output

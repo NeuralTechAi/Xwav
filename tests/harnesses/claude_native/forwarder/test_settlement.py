@@ -306,7 +306,7 @@ async def test_scheduled_wake_forwards_marker_under_a_new_turn_id(
         Accept every forwarder POST, recording its payload.
 
         :param request: Outbound HTTP request from the forwarder.
-        :returns: HTTP 202 for the mock Omnigent endpoint.
+        :returns: HTTP 202 for the mock Xvaw endpoint.
         """
         payload = json.loads(request.content.decode("utf-8"))
         assert isinstance(payload, dict)

@@ -17,7 +17,7 @@ from tests.codex_parity.helpers import (
 from tests.e2e_ui.conftest import MockedCodexNativeSession
 from tests.e2e_ui.messages.test_message_render_parity import _select_view_mode, _send
 
-_PROMPT = "Keep working while the Omnigent server restarts."
+_PROMPT = "Keep working while the Xvaw server restarts."
 _RESPONSES = [
     [
         ev_response_created("resp-restart-tool"),

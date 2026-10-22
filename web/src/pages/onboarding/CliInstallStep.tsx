@@ -18,7 +18,7 @@ export function CliInstallStep({
     setError(undefined);
     try {
       if (!(await onRecheck?.())) {
-        setError("Xvaw CLI not found. Make sure omnigent is on your PATH, then check again.");
+        setError("Xvaw CLI not found. Make sure xvaw is on your PATH, then check again.");
       }
     } catch {
       setError("Could not check for the Xvaw CLI. Please try again.");
@@ -44,7 +44,7 @@ export function CliInstallStep({
         </a>
       </Button>
       <p className="text-sm text-muted-foreground">
-        Check that <code>omnigent --version</code> works in a new terminal.
+        Check that <code>xvaw --version</code> works in a new terminal.
       </p>
       {error && (
         <p role="alert" className="text-sm text-destructive">

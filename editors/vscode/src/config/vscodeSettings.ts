@@ -7,8 +7,12 @@ import * as vscode from "vscode";
 import type { Settings } from "./index";
 
 export function readSettings(): Settings {
-  const cfg = vscode.workspace.getConfiguration("omnigent");
+  const cfg = vscode.workspace.getConfiguration("xvaw");
   return {
-    serverUrl: cfg.get<string>("serverUrl", ""),
+    serverUrl:
+      cfg.get<string>("serverUrl", "") ||
+      vscode.workspace
+        .getConfiguration("omnigent")
+        .get<string>("serverUrl", ""),
   };
 }

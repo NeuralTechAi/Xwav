@@ -12,18 +12,12 @@ from omnigent.inner.mascots import (
 )
 
 
-def test_random_mascot_lines_returns_otto_the_starfish() -> None:
-    """The TUI mascot uses the static Otto-the-starfish art."""
+def test_random_mascot_lines_returns_xvaw_waves() -> None:
+    """The TUI mascot uses the Xvaw wave art."""
 
     lines = random_mascot_lines()
 
-    assert lines == [
-        "⠀⠀⠀⢠⣿⡄⠀⠀⠀",
-        "⢴⣶⣶⠉⣿⠉⣶⣶⡦",
-        "⠀⠙⣿⣶⣿⣶⣿⠋⠀",
-        "⠀⢠⣿⡿⠿⢿⣿⡄⠀",
-        "⠀⠈⠁⠀⠀⠀⠈⠁⠀",
-    ]
+    assert lines == ["  ~~~~~~ ", "         ", " ~~~~~~  ", "         ", "  ~~~~~~ "]
     assert MASCOT_ART_COL_WIDTH == 9
     # The art is symbol-only: no letters or digits anywhere.
     assert all(not any(ch.isalnum() for ch in line) for line in lines)
@@ -34,7 +28,7 @@ def test_mascot_art_color_matches_panel_border_token() -> None:
     """The mascot color matches the startup panel accent."""
 
     assert random_mascot_color() == MASCOT_ART_COLOR
-    assert MASCOT_ART_COLOR == "#F43BA6"
+    assert MASCOT_ART_COLOR == "#6EE7D2"
 
 
 def test_mascot_payload_for_identity_stable() -> None:

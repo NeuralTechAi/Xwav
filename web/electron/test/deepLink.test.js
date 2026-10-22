@@ -13,6 +13,13 @@ const assert = require("node:assert/strict");
 const { parseOmnigentDeepLink, chooseDeepLinkStrategy } = require("../src/deepLink");
 
 describe("parseOmnigentDeepLink", () => {
+  it("accepts Xvaw links while preserving legacy session links", () => {
+    const expected = { origin: "https://example.com", path: "/c/conv_wave" };
+    assert.deepEqual(parseOmnigentDeepLink("xvaw://example.com/c/conv_wave"), expected);
+    assert.deepEqual(parseOmnigentDeepLink("omnigent://example.com/c/conv_wave"), expected);
+    assert.equal(parseOmnigentDeepLink("xvaw://example.com/settings"), null);
+  });
+
   it("parses a loopback host with a port as http", () => {
     assert.deepEqual(parseOmnigentDeepLink("omnigent://localhost:8000/c/conv_abc"), {
       origin: "http://localhost:8000",

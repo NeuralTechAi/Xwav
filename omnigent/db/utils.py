@@ -759,9 +759,9 @@ def _verify_db_revision_is_supported(
         script.get_revision(current)
     except CommandError as exc:
         raise RuntimeError(
-            "Omnigent database schema is newer than this version of Omnigent "
+            "Xvaw database schema is newer than this version of Xvaw "
             f"(found revision {current!r}, latest supported revision {head!r}). "
-            "Upgrade Omnigent before using this database."
+            "Upgrade Xvaw before using this database."
         ) from exc
 
 
@@ -803,7 +803,7 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
 
     if current != head:
         _logger.warning(
-            "Omnigent database schema is out of date "
+            "Xvaw database schema is out of date "
             "(found revision %r, expected %r); attempting automatic migration.",
             current,
             head,
@@ -812,7 +812,7 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
             _run_migrations(engine, db_uri)
         except Exception as exc:
             raise RuntimeError(
-                f"Omnigent database schema is out of date "
+                f"Xvaw database schema is out of date "
                 f"(found revision {current!r}, expected {head!r}) "
                 f"and automatic migration failed. Take a backup of your database, then run\n"
                 f"\n"
@@ -824,7 +824,7 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
         migrated = _get_current_db_revision(engine)
         if migrated != head:
             raise RuntimeError(
-                f"Omnigent automatic database migration did not reach head "
+                f"Xvaw automatic database migration did not reach head "
                 f"(started at {current!r}, now at {migrated!r}, expected {head!r}). "
                 f"Take a backup of your database, then run\n"
                 f"\n"

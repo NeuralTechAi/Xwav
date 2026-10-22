@@ -115,14 +115,14 @@ function rowFor(id: string): HTMLElement {
 }
 
 describe("sidebar highlight while viewing a sub-agent", () => {
-  it("renders the official Xvaw wordmark instead of styled text", () => {
+  it("renders the Xvaw name and wave mark in the home link", () => {
     mockConversations([]);
     renderAt("/");
 
     const wordmark = screen.getByTestId("sidebar-wordmark");
-    expect(wordmark).toHaveAttribute("alt", "Xvaw");
-    expect(wordmark).toHaveClass("h-[15px]", "dark:invert");
-    expect(wordmark.getAttribute("src")).toContain("omnigent-wordmark");
+    expect(wordmark).toHaveTextContent("Xvaw");
+    expect(wordmark.querySelector("svg")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Xvaw" })).toContainElement(wordmark);
   });
 
   it("sits flush to the window edge, no floating margin or border", () => {

@@ -1531,7 +1531,7 @@ def _fail_on_unsupported_tool(
                 f"omnigent agent {agent_name!r} declares tool "
                 f"{tool_name!r} of type `mcp` with "
                 f"``databricks_server={tool.databricks_server!r}`` — "
-                f"Omnigent' MCPServerConfig doesn't understand the "
+                f"Xvaw' MCPServerConfig doesn't understand the "
                 f"named-Databricks-server shape. Translate to an "
                 f"explicit HTTP ``url`` or stdio ``command``+``args`` "
                 f"MCP first.",

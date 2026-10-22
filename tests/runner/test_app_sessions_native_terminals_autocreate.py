@@ -3180,7 +3180,7 @@ def test_publish_native_terminal_start_error_redacts_mismatch_path(
         "code": "native_terminal_start_failed",
         "error_id": error_id,
         "message": (
-            "Claude Code is Windows-native, but Omnigent is running under WSL. "
+            "Claude Code is Windows-native, but Xvaw is running under WSL. "
             "Install @anthropic-ai/claude-code from WSL so a WSL-native `claude` "
             f"binary wins PATH resolution, then retry. Error ID: {error_id}."
         ),

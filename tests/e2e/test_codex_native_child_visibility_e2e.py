@@ -285,7 +285,7 @@ class CodexNativeChildVisibilityE2ETest(unittest.TestCase):
                     os.killpg(process.pid, signal.SIGKILL)
                     process.wait(timeout=5)
         _, survivors = reap_leaked_omnigent_processes(self.data)
-        self.assertFalse(survivors, "Test-owned Omnigent processes survived cleanup")
+        self.assertFalse(survivors, "Test-owned Xvaw processes survived cleanup")
         for log in self.logs:
             log.close()
         # Raw native logs and credentials remain private; only deliberate test

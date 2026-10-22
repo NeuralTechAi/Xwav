@@ -2212,7 +2212,7 @@ def _databricks_codex_config_overrides(
         "model_supports_reasoning_summaries=true",
         (
             "model_providers.omnigent_databricks="
-            '{name="Omnigent Databricks",'
+            '{name="Xvaw Databricks",'
             f"base_url={json.dumps(base_url)},"
             'auth={command="sh",'
             f'args=["-c",{auth_command_json}],'
@@ -2273,7 +2273,7 @@ def _provider_codex_config_overrides(
     overrides.append(f'model_provider="{provider_name}"')
     overrides.append(
         f"model_providers.{provider_name}="
-        '{name="Omnigent Provider",'
+        '{name="Xvaw Provider",'
         f"base_url={json.dumps(base_url)},"
         'auth={command="sh",'
         f'args=["-c",{auth_command_json}],'
@@ -2298,7 +2298,7 @@ def _brokered_codex_config_overrides(
         "model_supports_reasoning_summaries=true",
         (
             f"model_providers.{provider_name}="
-            '{name="Omnigent Brokered",'
+            '{name="Xvaw Brokered",'
             f"base_url={json.dumps(base_url)},"
             'env_key="OPENAI_API_KEY",'
             'wire_api="responses"}'
@@ -4805,7 +4805,7 @@ class CodexExecutor(Executor):
                     # silently selecting a ``databricks-*`` default.
                     raise OSError(
                         "CodexExecutor(gateway=True) with a gateway base URL requires a "
-                        "model: the Omnigent producer must resolve one before spawning."
+                        "model: the Xvaw producer must resolve one before spawning."
                     )
                 effective_model = model
             # ``DATABRICKS_HOST`` is read by the Databricks ``databricks auth

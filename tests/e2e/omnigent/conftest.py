@@ -90,7 +90,7 @@ def omnigent_python() -> Path:
     """
     if not _OMNIGENT_VENV_PYTHON.is_file():
         raise RuntimeError(
-            f"Omnigent venv python not found at {_OMNIGENT_VENV_PYTHON}. "
+            f"Xvaw venv python not found at {_OMNIGENT_VENV_PYTHON}. "
             f"These e2e tests require the sibling checkout at "
             f"{_OMNIGENT_REPO} with .venv set up."
         )

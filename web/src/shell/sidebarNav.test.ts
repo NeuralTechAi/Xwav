@@ -298,7 +298,7 @@ describe("getConversationAgentType", () => {
       labels: { "omnigent.wrapper": "claude-code-native-ui" },
     });
     // claude-code-native-ui is the wrapper label assigned to sessions started
-    // via `omnigent claude`. Any other label value must not match.
+    // via `xvaw claude`. Any other label value must not match.
     expect(getConversationAgentType(conv)).toBe("Claude Code");
   });
 
@@ -307,7 +307,7 @@ describe("getConversationAgentType", () => {
       labels: { "omnigent.wrapper": "codex-native-ui" },
     });
     // codex-native-ui is the wrapper label assigned to sessions started
-    // via `omnigent codex`. It gets its own filter bucket and row icon.
+    // via `xvaw codex`. It gets its own filter bucket and row icon.
     expect(getConversationAgentType(conv)).toBe("Codex");
   });
 

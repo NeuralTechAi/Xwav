@@ -2068,7 +2068,7 @@ class CodexNativeAppServer:
         config_source = _codex_home_config_source_from_env()
         if self.codex_home.resolve() == config_source.resolve():
             raise ValueError(
-                "Omnigent could not isolate this session's Codex configuration. "
+                "Xvaw could not isolate this session's Codex configuration. "
                 "Startup was stopped to protect your shared config. Please report this as a bug."
             )
         self.codex_home.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -3130,7 +3130,7 @@ async def trust_native_policy_hooks(client: CodexAppServerClient, *, cwd: str) -
     ours = _our_policy_hooks_from_list(listed, cwd)
     if not ours:
         raise RuntimeError(
-            f"Omnigent policy hook was not discovered for cwd {cwd!r}; "
+            f"Xvaw policy hook was not discovered for cwd {cwd!r}; "
             "tool-call policy enforcement would silently not run. "
             f"{_hooks_list_diagnostics(listed, cwd)}."
         )
@@ -3156,7 +3156,7 @@ async def trust_native_policy_hooks(client: CodexAppServerClient, *, cwd: str) -
             else ""
         )
         raise RuntimeError(
-            "Omnigent policy hook still untrusted after config/batchWrite; "
+            "Xvaw policy hook still untrusted after config/batchWrite; "
             "tool-call policy enforcement would not run. Untrusted hooks: "
             f"{_untrusted_hook_detail(still_untrusted)}.{hint}"
         )

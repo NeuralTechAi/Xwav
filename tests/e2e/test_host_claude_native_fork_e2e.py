@@ -797,7 +797,7 @@ def test_fork_sdk_source_into_native_builds_history(
             )
             assert marker in text, (
                 f"native clone did not recall {marker!r} (got {text!r}) — the SDK "
-                "source's Omnigent items were not rebuilt into the clone's Claude "
+                "source's Xvaw items were not rebuilt into the clone's Claude "
                 "transcript, so it launched fresh without history"
             )
 

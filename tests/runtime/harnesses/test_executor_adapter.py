@@ -1698,7 +1698,7 @@ def test_translate_event_non_mcp_request_queues_tool_use_id() -> None:
         f"tool_use_id so the dispatch's action_required emit "
         f"reuses the same call_id as the inline observed emit. "
         f"Got {list(adapter._pending_mcp_call_ids)!r} — without "
-        f"this, the Omnigent client receives two function_call events "
+        f"this, the Xvaw client receives two function_call events "
         f"with different call_ids and the REPL double-renders "
         f"the ⏵ line."
     )
@@ -2019,7 +2019,7 @@ async def test_observed_and_dispatched_call_ids_match_for_openai_agents() -> Non
     # Step 3 — the dispatched call_id MUST match the observed one.
     assert captured_dispatched_call_ids == [sdk_call_id], (
         f"Dispatch must reuse the observed event's call_id so "
-        f"the Omnigent client can dedupe. Observed call_id was "
+        f"the Xvaw client can dedupe. Observed call_id was "
         f"{observed_call_id!r}; dispatched call_ids were "
         f"{captured_dispatched_call_ids!r}. A mismatch here is "
         f"the exact 2026-04-29 user-reported regression — the "

@@ -784,8 +784,8 @@ function StartupSettings({ host, harness }: { host: Host; harness: string }) {
     );
   }
   const source = {
-    env: `From OMNIGENT_${harness.replace(/-native$/, "").toUpperCase()}_PATH on ${host.name}.`,
-    config: `From harness.${harness} in ~/.omnigent/config.yaml on ${host.name}.`,
+    env: `From a command-path environment override on ${host.name}.`,
+    config: `From the harness configuration on ${host.name}.`,
     default: `Default command on ${host.name}.`,
   }[data.command_source];
   return (

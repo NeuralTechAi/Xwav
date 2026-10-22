@@ -266,7 +266,7 @@ def emfile_server() -> Iterator[str]:
             log_handle.close()
             log_text = log_path.read_text(errors="replace")
             raise RuntimeError(
-                f"Omnigent server failed to start within 30 s. Log tail:\n{log_text[-2000:]}"
+                f"Xvaw server failed to start within 30 s. Log tail:\n{log_text[-2000:]}"
             )
         yield base_url
     finally:

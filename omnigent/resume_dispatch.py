@@ -313,7 +313,7 @@ def _read_wrapper_label_local(*, conv_id: str) -> str | None:
     if conversation is None:
         raise click.ClickException(
             f"Conversation {conv_id!r} not found in the local persistent store. "
-            "Pass --server if the conversation lives on a remote Omnigent server.",
+            "Pass --server if the conversation lives on a remote Xvaw server.",
         )
     labels = conversation.labels
     return labels.get(_WRAPPER_LABEL_KEY) if isinstance(labels, dict) else None

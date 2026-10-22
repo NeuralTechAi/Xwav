@@ -349,7 +349,7 @@ def test_run_kiro_native_requires_server(monkeypatch: pytest.MonkeyPatch) -> Non
     """A missing server URL is a programming error surfaced as a clear message."""
     monkeypatch.setattr("omnigent.harnesses.kiro_native.main._preflight_local_tools", lambda: None)
 
-    with pytest.raises(ClickException, match="resolved Omnigent server URL"):
+    with pytest.raises(ClickException, match="resolved Xvaw server URL"):
         run_kiro_native(server=None, session_id=None, kiro_args=())
 
 

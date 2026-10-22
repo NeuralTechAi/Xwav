@@ -106,7 +106,7 @@ async def test_compact_skips_omnigent_compaction_when_runner_handles_it(
         """Fail loudly if AP-side compaction is reached on the 200 path."""
         raise AssertionError(
             "compact_conversation_now must not run when the runner "
-            "reported it handled /compact (200). The Omnigent server fell "
+            "reported it handled /compact (200). The Xvaw server fell "
             "through to its own compaction instead of skipping."
         )
 

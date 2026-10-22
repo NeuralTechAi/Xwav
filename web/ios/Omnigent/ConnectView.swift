@@ -236,8 +236,8 @@ private enum InfoLink: Identifiable {
 
   var url: URL {
     switch self {
-    case .website: URL(string: "https://omnigent.ai")!
-    case .docs: URL(string: "https://omnigent.ai/docs")!
+    case .website: URL(string: "https://github.com/NeuralTechAi/Xvaw")!
+    case .docs: URL(string: "https://github.com/NeuralTechAi/Xvaw#readme")!
     case .privacy: URL(string: "https://omnigent.ai/privacy")!
     }
   }

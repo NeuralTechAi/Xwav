@@ -1057,7 +1057,7 @@ def _consent_html(
         body = (
             "<h1>Authorize access</h1>"
             f"<p>{app_name} is requesting permission to act as "
-            f"<b>{esc(user_id)}</b> on this Omnigent server.</p>"
+            f"<b>{esc(user_id)}</b> on this Xvaw server.</p>"
             f'<p class="muted">Code: {esc(user_code)}</p>'
             '<p class="warn">⚠️ Only approve if <b>you</b> just started this '
             "login and this code matches the one the application showed you. If "
@@ -1073,7 +1073,7 @@ def _consent_html(
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        "<title>Authorize access — Omnigent</title><style>"
+        "<title>Authorize access — Xvaw</title><style>"
         "body{font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;"
         "padding:0 1rem;line-height:1.5}h1{font-size:1.4rem}.muted{color:#666;"
         "font-size:.9rem}.warn{color:#8a5a00;background:#fff7e6;padding:.6rem .8rem;"

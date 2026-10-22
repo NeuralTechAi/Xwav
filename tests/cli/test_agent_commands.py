@@ -1,4 +1,4 @@
-"""``omnigent agent add|list|remove`` against a mocked ``/v1/agents``."""
+"""``xvaw agent add|list|remove`` against a mocked ``/v1/agents``."""
 
 from __future__ import annotations
 
@@ -435,7 +435,7 @@ def test_server_local_means_the_local_server(
     server: _FakeServer, monkeypatch: pytest.MonkeyPatch, configured: str | None
 ) -> None:
     """``local`` (the flag, or the configured default) is the local server, as for
-    ``omnigent run``, not a remote URL to reject."""
+    ``xvaw run``, not a remote URL to reject."""
     from types import SimpleNamespace
 
     def refuse(_server: str | None, _configured: object) -> None:
@@ -458,7 +458,7 @@ def test_list_without_agents_says_how_to_add_one(server: _FakeServer) -> None:
     server.pages = [{"data": [], "has_more": False, "last_id": None}]
     result = CliRunner().invoke(cli_mod.cli, ["agent", "list"])
     assert result.exit_code == 0, result.output
-    assert "No agents yet. Install one with: omnigent agent add <path>" in result.output
+    assert "No agents yet. Install one with: xvaw agent add <path>" in result.output
 
 
 def test_agent_is_a_registered_subcommand() -> None:

@@ -2019,7 +2019,7 @@ async def test_api_only_root_serves_html_200_to_any_client(
             assert resp.status_code == 200, headers
             assert resp.headers["content-type"].startswith("text/html"), headers
             assert "web UI" in resp.text
-            assert "OMNIGENT_SKIP_WEB_UI" in resp.text
+            assert "XVAW_SKIP_WEB_UI" in resp.text
 
 
 @pytest.mark.asyncio

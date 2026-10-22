@@ -26,7 +26,7 @@ _INTEGRATION_MODE_PROSE: dict[IntegrationMode, str] = {
 }
 
 _AUTH_PROSE: dict[AuthModel, str] = {
-    AuthModel.OMNIGENT_CREDENTIAL: "Omnigent credential (gateway / provider config)",
+    AuthModel.OMNIGENT_CREDENTIAL: "Xvaw credential (gateway / provider config)",
     AuthModel.OWN_AUTH: "Own auth (vendor login / API key)",
     AuthModel.SESSION_SCOPED_CONFIG: "Session-scoped vendor config",
 }

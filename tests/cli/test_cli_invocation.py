@@ -13,8 +13,8 @@ from omnigent.cli_invocation import DEFAULT_CLI_NAME, WRAPPER_COMMAND_ENV, cli_i
 
 
 def test_defaults_to_omnigent_when_wrapper_unset() -> None:
-    assert cli_invocation(env={}) == "omnigent"
-    assert DEFAULT_CLI_NAME == "omnigent"
+    assert cli_invocation(env={}) == "xvaw"
+    assert DEFAULT_CLI_NAME == "xvaw"
 
 
 def test_preserves_omni_alias_when_wrapper_unset() -> None:
@@ -29,8 +29,8 @@ def test_wrapper_command_overrides_both_names() -> None:
 
 
 def test_blank_wrapper_command_is_ignored() -> None:
-    assert cli_invocation(env={WRAPPER_COMMAND_ENV: "   "}) == "omnigent"
-    assert cli_invocation(env={WRAPPER_COMMAND_ENV: ""}) == "omnigent"
+    assert cli_invocation(env={WRAPPER_COMMAND_ENV: "   "}) == "xvaw"
+    assert cli_invocation(env={WRAPPER_COMMAND_ENV: ""}) == "xvaw"
 
 
 def test_wrapper_command_is_stripped() -> None:
@@ -41,10 +41,10 @@ def test_reads_process_environment_by_default(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setenv(WRAPPER_COMMAND_ENV, "isaac omni")
     assert cli_invocation() == "isaac omni"
     monkeypatch.delenv(WRAPPER_COMMAND_ENV, raising=False)
-    assert cli_invocation() == "omnigent"
+    assert cli_invocation() == "xvaw"
 
 
 def test_rendered_hint_names_the_wrapper() -> None:
     env = {WRAPPER_COMMAND_ENV: "isaac omni"}
     assert f"Run `{cli_invocation(env=env)} stop`" == "Run `isaac omni stop`"
-    assert f"Run `{cli_invocation(env={})} stop`" == "Run `omnigent stop`"
+    assert f"Run `{cli_invocation(env={})} stop`" == "Run `xvaw stop`"

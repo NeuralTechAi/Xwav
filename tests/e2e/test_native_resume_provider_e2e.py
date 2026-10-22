@@ -286,7 +286,7 @@ def test_connected_native_resume_routes_to_configured_provider(
                     for role, text in (("user", prompt), ("assistant", replies[expected]))
                 )
 
-            _wait(mirrored_reply, f"{harness} assistant reply mirrored into Omnigent")
+            _wait(mirrored_reply, f"{harness} assistant reply mirrored into Xvaw")
             if harness == "pi":
                 expected_input_tokens += input_tokens
                 expected_cache_tokens += cache_tokens

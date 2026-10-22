@@ -183,14 +183,14 @@ def _main_evaluate_policy(argv: list[str]) -> int:
     if resp is None:
         return _fail_closed(api_error or (reauth.failure_reason if reauth else None))
     if not resp.content:
-        print("omnigent codex evaluate-policy hook: empty Omnigent response", file=sys.stderr)
+        print("omnigent codex evaluate-policy hook: empty Xvaw response", file=sys.stderr)
         return _fail_closed()
 
     try:
         eval_response = resp.json()
     except json.JSONDecodeError:
         print(
-            "omnigent codex evaluate-policy hook: malformed Omnigent response",
+            "omnigent codex evaluate-policy hook: malformed Xvaw response",
             file=sys.stderr,
         )
         return _fail_closed()

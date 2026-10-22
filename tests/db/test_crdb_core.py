@@ -40,7 +40,7 @@ def test_parse_crdb_server_version_warns_outside_tested_matrix(
     version = cockroachdb._parse_crdb_server_version("CockroachDB CCL v26.1.0 (x86_64)")
 
     assert version == Version("26.1.0")
-    assert "outside Omnigent's release-tested matrix" in caplog.text
+    assert "outside Xvaw's release-tested matrix" in caplog.text
 
 
 def test_crdb_engine_reports_missing_optional_dependencies(
@@ -176,7 +176,7 @@ def test_bootstrap_rejects_invalid_marker() -> None:
     engine = MagicMock()
     engine.connect.return_value = nullcontext(connection)
 
-    with pytest.raises(RuntimeError, match="invalid Omnigent bootstrap marker"):
+    with pytest.raises(RuntimeError, match="invalid Xvaw bootstrap marker"):
         cockroachdb._start_or_resume_crdb_bootstrap(
             engine,
             Version("25.2.10"),
@@ -194,7 +194,7 @@ def test_bootstrap_rejects_marker_from_different_schema_head() -> None:
     engine = MagicMock()
     engine.connect.return_value = nullcontext(connection)
 
-    with pytest.raises(RuntimeError, match="invalid Omnigent bootstrap marker"):
+    with pytest.raises(RuntimeError, match="invalid Xvaw bootstrap marker"):
         cockroachdb._start_or_resume_crdb_bootstrap(
             engine,
             Version("25.2.10"),

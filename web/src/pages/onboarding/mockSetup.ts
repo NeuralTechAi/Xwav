@@ -96,8 +96,8 @@ export function maybeMockSetup(params: URLSearchParams): ServerSelectorV2Setup |
         const lines = [
           "Installing uv (required by the Xvaw installer)…",
           "Installing the Xvaw CLI…",
-          "uv tool install --force --python 3.12 omnigent",
-          "Installed omnigent",
+          "Building and installing Xvaw from source…",
+          "Installed Xvaw",
         ];
         let i = 0;
         const timer = setInterval(() => {
@@ -129,7 +129,7 @@ export function maybeMockSetup(params: URLSearchParams): ServerSelectorV2Setup |
               "Host is running",
             ]
           : [
-              `$ omnigent host --server ${url}`,
+              `$ xvaw host --server ${url}`,
               "Signing in to the server if needed…",
               "Connected this laptop.",
             ];
