@@ -1,14 +1,14 @@
 {
-  "name": "xvaw-vscode",
-  "displayName": "Xvaw",
-  "description": "Open your running local Xvaw server inside VS Code, in an editor-beside iframe.",
+  "name": "xwav-vscode",
+  "displayName": "Xwav",
+  "description": "Open your running local Xwav server inside VS Code, in an editor-beside iframe.",
   "version": "0.1.0",
   "publisher": "neuraltechai",
   "license": "Apache-2.0",
-  "icon": "media/xvaw-icon.png",
+  "icon": "media/xwav-icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NeuralTechAi/Xvaw.git",
+    "url": "https://github.com/NeuralTechAi/Xwav.git",
     "directory": "editors/vscode"
   },
   "engines": {
@@ -18,56 +18,56 @@
   "activationEvents": [],
   "contributes": {
     "configuration": {
-      "title": "Xvaw",
+      "title": "Xwav",
       "properties": {
-        "xvaw.serverUrl": {
+        "xwav.serverUrl": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Manual Xvaw server URL override for a **localhost** server (e.g. `http://127.0.0.1:6767`). Leave empty to auto-discover a locally running Xvaw server. Non-localhost URLs are not supported in this build."
+          "markdownDescription": "Manual Xwav server URL override for a **localhost** server (e.g. `http://127.0.0.1:6767`). Leave empty to auto-discover a locally running Xwav server. Non-localhost URLs are not supported in this build."
         }
       }
     },
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "xvaw-container",
-          "title": "Xvaw",
-          "icon": "media/xvaw-icon.svg"
+          "id": "xwav-container",
+          "title": "Xwav",
+          "icon": "media/xwav-icon.svg"
         }
       ]
     },
     "views": {
-      "xvaw-container": [
+      "xwav-container": [
         {
           "type": "tree",
-          "id": "xvaw.home",
-          "name": "Xvaw"
+          "id": "xwav.home",
+          "name": "Xwav"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "xvaw.home",
-        "contents": "Open the running Xvaw server UI in an editor tab.\n[Open Xvaw](command:xvaw.open)\nStart a local server with `xvaw server`, or set `xvaw.serverUrl` to a localhost URL."
+        "view": "xwav.home",
+        "contents": "Open the running Xwav server UI in an editor tab.\n[Open Xwav](command:xwav.open)\nStart a local server with `xwav server`, or set `xwav.serverUrl` to a localhost URL."
       }
     ],
     "commands": [
       {
-        "command": "xvaw.open",
-        "title": "Xvaw: Open",
-        "icon": "media/xvaw-icon.svg"
+        "command": "xwav.open",
+        "title": "Xwav: Open",
+        "icon": "media/xwav-icon.svg"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "xvaw.open",
+          "command": "xwav.open",
           "group": "navigation@99"
         }
       ],
       "commandPalette": [
         {
-          "command": "xvaw.open"
+          "command": "xwav.open"
         }
       ]
     }

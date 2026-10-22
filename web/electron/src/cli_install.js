@@ -1,10 +1,10 @@
 "use strict";
 
 /**
- * In-app Xvaw CLI installation (macOS).
+ * In-app Xwav CLI installation (macOS).
  *
  * Runs the repo's bundled `install_oss.sh --non-interactive`, which resolves to
- * a source install of NeuralTechAi/Xvaw via the existing --repo option and drops the `omnigent` /
+ * a source install of NeuralTechAi/Xwav via the existing --repo option and drops the `omnigent` /
  * `omni` binaries in ~/.local/bin. Streams the installer's live output so the
  * setup page can show it in a terminal pane, mirroring the local-server and
  * Arca-connect flows.
@@ -162,7 +162,7 @@ async function ensureUv(deps = {}) {
   const env = deps.env ?? process.env;
   const hasUv = deps.hasUv || ((e) => commandExists("uv", e));
   if (hasUv(env)) return { ok: true, env };
-  onOutput("Installing uv (required by the Xvaw installer)…\n");
+  onOutput("Installing uv (required by the Xwav installer)…\n");
   const run = await runStreaming("sh", ["-c", UV_INSTALLER], {
     spawn: deps.spawn,
     onOutput,
@@ -177,7 +177,7 @@ async function ensureUv(deps = {}) {
     return {
       ok: false,
       error:
-        "Couldn't install uv, which the Xvaw installer requires. " +
+        "Couldn't install uv, which the Xwav installer requires. " +
         "Install it from https://docs.astral.sh/uv/getting-started/installation/ and try again.",
     };
   }
@@ -221,7 +221,7 @@ function commandExists(name, env = process.env) {
 }
 
 /**
- * Install the Xvaw CLI. Ensures uv, then runs the bundled installer,
+ * Install the Xwav CLI. Ensures uv, then runs the bundled installer,
  * streaming output. Never rejects — resolves `{ ok, error? }`. macOS only; a
  * non-darwin platform resolves an actionable error.
  *
@@ -242,7 +242,7 @@ async function installCli(deps = {}) {
     return {
       ok: false,
       error:
-        "In-app install is macOS-only for now. Install Xvaw from https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally.",
+        "In-app install is macOS-only for now. Install Xwav from https://github.com/NeuralTechAi/Xwav#run-this-fork-locally.",
     };
   }
   const script = (deps.resolveInstallScript || resolveInstallScript)();
@@ -256,10 +256,10 @@ async function installCli(deps = {}) {
   const uv = await (deps.ensureUv || ensureUv)({ spawn: deps.spawn, onOutput });
   if (!uv.ok) return uv;
 
-  onOutput("Installing the Xvaw CLI…\n");
+  onOutput("Installing the Xwav CLI…\n");
   const run = await runStreaming(
     "sh",
-    [scriptArg, "--non-interactive", "--repo", "https://github.com/NeuralTechAi/Xvaw.git"],
+    [scriptArg, "--non-interactive", "--repo", "https://github.com/NeuralTechAi/Xwav.git"],
     {
       spawn: deps.spawn,
       onOutput,

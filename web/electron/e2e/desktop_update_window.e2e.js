@@ -5,7 +5,7 @@
 // version is published on the update feed; the update prompt card appears
 // bottom-right. Expected: the prompt reads as part of the app window. Observed
 // bug: the prompt is hosted in a second visible, FOCUSABLE top-level OS window
-// (titled "Xvaw Update"), so window switchers / Mission Control / screen
+// (titled "Xwav Update"), so window switchers / Mission Control / screen
 // -share pickers list it as another app window and clicking the card moves OS
 // focus out of the app.
 //
@@ -164,7 +164,7 @@ describe(
         /* oxlint-enable no-await-in-loop */
         assert.equal(checked, `ok ${FEED_VERSION}`, `update check never succeeded: ${checked}`);
 
-        // 3. The update prompt card renders ("Xvaw Desktop … is available").
+        // 3. The update prompt card renders ("Xwav Desktop … is available").
         const overlayPage = electronApp
           .windows()
           .find((page) => page.url().includes("update-overlay"));
@@ -174,7 +174,7 @@ describe(
         await window.waitForTimeout(1_500);
 
         // 4. THE BUG on macOS: the prompt is hosted in a separate visible,
-        //    focusable OS window ("Xvaw Update"), so Mission Control and
+        //    focusable OS window ("Xwav Update"), so Mission Control and
         //    screen-share pickers present it alongside the app. Linux keeps
         //    the default focusability because Electron makes non-focusable
         //    Linux windows unmanaged and always-on-top across all workspaces.

@@ -1235,7 +1235,7 @@ def test_render_startup_banner_omits_keybinding_hints() -> None:
     for legacy_hint in ("ctrl-g debug", "ctrl-d exit"):
         assert legacy_hint not in ansi, (
             f"AP welcome banner contains legacy hint {legacy_hint!r} "
-            f"which doesn't correspond to an Xvaw binding."
+            f"which doesn't correspond to an Xwav binding."
         )
 
 
@@ -1262,13 +1262,13 @@ def test_render_startup_banner_uses_mascot_accent_color() -> None:
     # builder injects it for both the box border and the mascot art
     # on the Omnigent path.
     assert "\x1b[38;2;244;59;166m" in ansi, (
-        f"Banner missing Xvaw truecolor accent escape "
+        f"Banner missing Xwav truecolor accent escape "
         f"(\\x1b[38;2;244;59;166m); got: {ansi!r}. If this is "
         f"absent, the AP-side override in "
         f"``_render_startup_banner_ansi`` isn't propagating into "
         f"the banner — the box border and mascot art would lose "
         f"the brand magenta, breaking the visual link with the "
-        f"rest of the Xvaw UI."
+        f"rest of the Xwav UI."
     )
 
 

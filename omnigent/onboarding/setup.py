@@ -384,8 +384,8 @@ def run_onboarding() -> bool:
 
     console.print(
         Panel(
-            "[bold]Xvaw onboarding[/bold]\n\n"
-            "Setting up the Databricks profiles Xvaw needs "
+            "[bold]Xwav onboarding[/bold]\n\n"
+            "Setting up the Databricks profiles Xwav needs "
             f"({', '.join(f'`{s.name}`' for s in DEFAULT_PROFILES)}).",
             border_style="cyan",
             padding=(1, 2),
@@ -629,7 +629,7 @@ def maybe_run_onboarding() -> None:
         if n:
             console.print(
                 f"omnigent: aliased {n} existing profile(s) "
-                f"to Xvaw names: "
+                f"to Xwav names: "
                 f"{', '.join(spec.name for _, spec in actions.aliasable)}"
             )
         existing = _existing_profile_hosts()
@@ -641,7 +641,7 @@ def maybe_run_onboarding() -> None:
     missing_parts = [s.name for s in actions.oauth]
     missing_parts += [f"{s.name} (wrong host)" for s, _ in actions.wrong_host]
     console.print(
-        f"\n  [yellow]Xvaw needs Databricks profiles: {', '.join(missing_parts)}[/yellow]"
+        f"\n  [yellow]Xwav needs Databricks profiles: {', '.join(missing_parts)}[/yellow]"
     )
     try:
         answer = input("  Run onboarding now? [Y/n] ").strip().lower()

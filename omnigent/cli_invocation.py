@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 
-DEFAULT_CLI_NAME = "xvaw"
+DEFAULT_CLI_NAME = "xwav"
 WRAPPER_COMMAND_ENV = "OMNIGENT_WRAPPER_COMMAND"
 
 

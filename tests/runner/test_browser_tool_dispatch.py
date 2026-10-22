@@ -141,7 +141,7 @@ async def test_browser_tool_read_timeout_returns_clean_json() -> None:
     )
     parsed = json.loads(out)
     assert "timed out" in parsed["error"]
-    assert "Xvaw desktop app" in parsed["error"]
+    assert "Xwav desktop app" in parsed["error"]
 
 
 @pytest.mark.asyncio

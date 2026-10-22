@@ -205,7 +205,7 @@ describe("themePalette", () => {
     expect(solarized.tokens.dark.muted).not.toBe(solarized.tokens.dark.popover);
   });
 
-  it("keeps Xvaw's text selection on the brand tint, not the neutral primary", () => {
+  it("keeps Xwav's text selection on the brand tint, not the neutral primary", () => {
     const omni = PALETTES.find((palette) => palette.id === "omni")!;
     expect(omni.tokens.light.selectionBackground).toBe("rgba(8, 127, 112, 0.12)");
     expect(omni.tokens.light.selectionForeground).toBe("#075E53");

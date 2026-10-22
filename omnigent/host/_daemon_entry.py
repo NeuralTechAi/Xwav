@@ -47,7 +47,7 @@ def main() -> None:
     parser.add_argument(
         "--local",
         action="store_true",
-        help="Start (or reuse) a local Xvaw server and connect to it.",
+        help="Start (or reuse) a local Xwav server and connect to it.",
     )
     args = parser.parse_args()
 

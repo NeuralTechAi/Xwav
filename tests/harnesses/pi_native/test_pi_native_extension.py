@@ -1172,7 +1172,7 @@ process.env.OMNIGENT_PI_NATIVE_CONFIG = configPath;
 const fetchCalls = [];
 global.fetch = async (url, request) => {
   fetchCalls.push({ url, request });
-  // Mimic the Xvaw /mcp proxy success envelope.
+  // Mimic the Xwav /mcp proxy success envelope.
   return {
     ok: true,
     async json() {
@@ -3482,7 +3482,7 @@ def test_tui_prompt_route_turn_failure_fails_open(tmp_path: Path) -> None:
   await handlers.input({ text: "two", source: "interactive" }, ctx);
   assert.equal(routeCalls, 1);
   assert.equal(setModelCalls.length, 0);
-  // The user's prompt is still mirrored to Xvaw.
+  // The user's prompt is still mirrored to Xwav.
   assert.ok(
     posted.some(
       (e) => e.type === "external_conversation_item" && e.data.item_data.role === "user",

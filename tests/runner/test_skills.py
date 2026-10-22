@@ -14,6 +14,8 @@ from omnigent.runner import create_runner_app
 from omnigent.runner.app import ResolvedSpec
 from omnigent.spec.types import SkillSpec
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 @pytest.fixture(autouse=True)
 def _isolate_claude_config_dir(monkeypatch: pytest.MonkeyPatch) -> None:

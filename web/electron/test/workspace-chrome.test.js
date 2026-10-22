@@ -102,7 +102,7 @@ describe("registerWorkspaceChromeHide", () => {
         "after did-finish-load fired. Likely the event name was changed (it must stay",
         "'did-finish-load', the full-document-load event), the listener was not registered,",
         "or the injection was dropped. Without this, the Databricks workspace top-nav/switcher",
-        "stays visible in the desktop window and users can navigate out of Xvaw.",
+        "stays visible in the desktop window and users can navigate out of Xwav.",
       ].join(" "),
     );
   });

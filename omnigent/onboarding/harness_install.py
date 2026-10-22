@@ -329,7 +329,7 @@ _HARNESS_INSTALL: dict[str, HarnessInstallSpec] = {
         status_args=("auth", "status"),
         install_hint=_DEVIN_INSTALL_HINT,
         install_command=("bash", "-c", _DEVIN_INSTALL_HINT),
-        auth_hint="run `devin auth login` (Xvaw stores no Devin credential)",
+        auth_hint="run `devin auth login` (Xwav stores no Devin credential)",
     ),
 }
 

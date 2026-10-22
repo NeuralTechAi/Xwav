@@ -1,8 +1,8 @@
 /**
- * Sole owner of the editor-beside Xvaw `WebviewPanel` AND the resolved
+ * Sole owner of the editor-beside Xwav `WebviewPanel` AND the resolved
  * server target that drives its render.
  *
- * The panel hosts the running LOCAL Xvaw server in a single static <iframe>
+ * The panel hosts the running LOCAL Xwav server in a single static <iframe>
  * (panel/host.ts). There is no in-panel routing or messaging: the framed app
  * owns its own navigation. This is the ONLY `createWebviewPanel` call in the
  * codebase.
@@ -41,7 +41,7 @@ export class EditorPanelController {
     }
     const panel = vscode.window.createWebviewPanel(
       "omnigent",
-      "Xvaw",
+      "Xwav",
       vscode.ViewColumn.Beside,
       {
         enableScripts: true,
@@ -57,7 +57,7 @@ export class EditorPanelController {
       }
     });
     this.render(panel.webview);
-    this.output.appendLine("[xvaw] opened editor-beside panel");
+    this.output.appendLine("[xwav] opened editor-beside panel");
   }
 
   /** Whether the editor panel is currently open. */

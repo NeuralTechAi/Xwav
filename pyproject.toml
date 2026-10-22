@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "omnigent"
 # Keep in sync with omnigent/version.py's VERSION constant.
 version = "0.20.0.dev0"
-description = "Xvaw: your agents, one workspace — built on Omnigent"
+description = "Xwav: your agents, one workspace — built on Omnigent"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
@@ -407,10 +407,11 @@ dev = [
 # Unified entry point. `omnigent` is the click-based CLI that absorbs
 # the legacy argparse commands from `omnigent/inner/cli.py` plus the
 # omnigent `ap` subcommands. See designs/UNIFICATION.md § CLI
-# absorption. Xvaw adds a branded CLI alias while retaining the upstream
+# absorption. Xwav adds a branded CLI alias while retaining the upstream
 # `omnigent` and `omni` entry points for compatibility.
 omnigent = "omnigent.cli:main"
 omni = "omnigent.cli:main"
+xwav = "omnigent.cli:main"
 xvaw = "omnigent.cli:main"
 
 [tool.uv]
@@ -457,6 +458,7 @@ where = ["."]
 include = ["omnigent*"]
 
 [tool.setuptools.package-data]
+"omnigent.native_skills" = ["*.json", "skills/**/*"]
 "omnigent.db" = ["alembic.ini"]
 "omnigent.db.migrations" = ["script.py.mako"]
 "omnigent.resources.examples" = ["*.yaml", "*.sh", "debby/**/*", "polly/**/*"]

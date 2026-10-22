@@ -190,7 +190,7 @@ def test_web_search_advertised_with_bare_model_on_claude_sdk(
     # Guard the guard: the Omnigent MCP relay must be alive, otherwise a
     # missing web_search would prove nothing about provider inference.
     assert any(n.startswith("mcp__omnigent__") for n in names), (
-        f"no Xvaw MCP tools advertised at all — relay broken? tools: {sorted(names)}"
+        f"no Xwav MCP tools advertised at all — relay broken? tools: {sorted(names)}"
     )
     assert "mcp__omnigent__web_search" in names, (
         "web_search builtin (search_provider: duckduckgo) is absent from the "

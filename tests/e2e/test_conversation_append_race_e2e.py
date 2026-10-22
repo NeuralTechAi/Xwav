@@ -231,7 +231,7 @@ def test_concurrent_appends_against_live_omnigent_server_db_no_collision(
         t.join(timeout=60.0)
 
     assert errors == [], (
-        f"Concurrent appends against the live Xvaw server's SQLite "
+        f"Concurrent appends against the live Xwav server's SQLite "
         f"DB raised {len(errors)} error(s); first: {errors[0]!r}. "
         f"The cross-process / cross-engine lock escalation "
         f"regressed — the user-reported 2026-04-30 IntegrityError "

@@ -51,9 +51,9 @@ class BrowserNavigateTool(Tool):
     def description(cls) -> str:
         """:returns: Human-readable description of the tool."""
         return (
-            "Open or navigate the Xvaw desktop app's embedded "
+            "Open or navigate the Xwav desktop app's embedded "
             "browser pane to a URL. Auto-opens the pane if it isn't "
-            "open yet. Requires the Xvaw desktop window to be "
+            "open yet. Requires the Xwav desktop window to be "
             "running — fails cleanly otherwise. After a load settles, "
             "call browser_snapshot to inspect what's on the page."
         )

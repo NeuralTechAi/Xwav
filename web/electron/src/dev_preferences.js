@@ -2,7 +2,7 @@
 
 const { execFileSync } = require("node:child_process");
 
-const DEV_DOMAIN = "ai.neuraltech.xvaw.desktop-dev";
+const DEV_DOMAIN = "ai.neuraltech.xwav.desktop-dev";
 
 /** Electron's unpackaged macOS binary has its own bundle ID. Read our dev
  * domain explicitly so local defaults can be used without repackaging it. */

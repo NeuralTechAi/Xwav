@@ -793,6 +793,10 @@ def codex_skill_sources(
     shared = home / ".agents" / "skills"
     if shared.is_dir():
         sources.append(shared)
+    from omnigent.native_skills import native_skill_root
+
+    if native_skill_root().is_dir():
+        sources.append(native_skill_root())
     return sources
 
 
@@ -844,7 +848,9 @@ def select_codex_skill_dirs(
         names = [n for n in skills_filter if n in available]
     else:
         return {}
-    return {n: available[n] for n in names}
+    from omnigent.native_skills import deduplicate_native_skill_dirs
+
+    return deduplicate_native_skill_dirs({n: available[n] for n in names})
 
 
 def _is_linked_skill_dir(skill_dir: Path) -> bool:
@@ -2212,7 +2218,7 @@ def _databricks_codex_config_overrides(
         "model_supports_reasoning_summaries=true",
         (
             "model_providers.omnigent_databricks="
-            '{name="Xvaw Databricks",'
+            '{name="Xwav Databricks",'
             f"base_url={json.dumps(base_url)},"
             'auth={command="sh",'
             f'args=["-c",{auth_command_json}],'
@@ -2273,7 +2279,7 @@ def _provider_codex_config_overrides(
     overrides.append(f'model_provider="{provider_name}"')
     overrides.append(
         f"model_providers.{provider_name}="
-        '{name="Xvaw Provider",'
+        '{name="Xwav Provider",'
         f"base_url={json.dumps(base_url)},"
         'auth={command="sh",'
         f'args=["-c",{auth_command_json}],'
@@ -2298,7 +2304,7 @@ def _brokered_codex_config_overrides(
         "model_supports_reasoning_summaries=true",
         (
             f"model_providers.{provider_name}="
-            '{name="Xvaw Brokered",'
+            '{name="Xwav Brokered",'
             f"base_url={json.dumps(base_url)},"
             'env_key="OPENAI_API_KEY",'
             'wire_api="responses"}'
@@ -4805,7 +4811,7 @@ class CodexExecutor(Executor):
                     # silently selecting a ``databricks-*`` default.
                     raise OSError(
                         "CodexExecutor(gateway=True) with a gateway base URL requires a "
-                        "model: the Xvaw producer must resolve one before spawning."
+                        "model: the Xwav producer must resolve one before spawning."
                     )
                 effective_model = model
             # ``DATABRICKS_HOST`` is read by the Databricks ``databricks auth

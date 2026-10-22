@@ -1099,7 +1099,7 @@ async def test_ensure_local_codex_resume_rollout_rejects_unsafe_thread_id(
         :returns: Never returns.
         """
         del request
-        raise AssertionError("unsafe thread id should be rejected before Xvaw fetch")
+        raise AssertionError("unsafe thread id should be rejected before Xwav fetch")
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:

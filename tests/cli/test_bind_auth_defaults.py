@@ -47,7 +47,7 @@ def _stderr(capsys: pytest.CaptureFixture[str]) -> str:
 def test_loopback_enables_single_user(host: str, capsys: pytest.CaptureFixture[str]) -> None:
     """A loopback bind with no explicit auth gets the single-user marker.
 
-    The default ``xvaw server`` on loopback is a local single-user
+    The default ``xwav server`` on loopback is a local single-user
     runtime — no proxy to inject identity — so it keeps the no-login
     ``"local"`` header-mode fallback.
     """

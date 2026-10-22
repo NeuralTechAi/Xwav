@@ -123,7 +123,7 @@ describe("loopback callback response", () => {
       );
       assert.equal(response.status, 200);
       assert.doesNotMatch(response.body, /Signed in/i);
-      assert.match(response.body, /Return to Xvaw/i);
+      assert.match(response.body, /Return to Xwav/i);
       assert.equal(result.value.tokens.access_token, "exchanged");
       // The browser flow and its preflight must agree on the one fixed redirect.
       assert.equal(new URL(calls[0].url).pathname, "/oidc/v1/authorize");

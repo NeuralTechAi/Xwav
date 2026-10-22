@@ -1,6 +1,6 @@
 """Interactive harness & credential configuration for the CLI.
 
-Everything behind ``omnigent config`` / ``xvaw setup`` and the first-run
+Everything behind ``omnigent config`` / ``xwav setup`` and the first-run
 ``configure harnesses`` picker: detecting installed provider CLIs, prompting for
 API keys, installing SDK harnesses, and writing the results to global config.
 Extracted from :mod:`omnigent.cli` to keep that module under the repo's
@@ -299,7 +299,7 @@ def _run_configure_databricks() -> None:
 
     Shells out to ``ucode configure`` to authenticate workspaces and set
     up harnesses (Claude SDK, Codex, OpenAI Agents, Pi). After setup,
-    Xvaw reads ``~/.ucode/state.json`` to pick per-harness model
+    Xwav reads ``~/.ucode/state.json`` to pick per-harness model
     defaults and base URLs.
 
     :returns: None.
@@ -323,7 +323,7 @@ def _run_configure_databricks() -> None:
             "see the command output above for details."
         )
 
-    click.echo("ucode configuration complete. Xvaw will use state.json for harness setup.")
+    click.echo("ucode configuration complete. Xwav will use state.json for harness setup.")
 
 
 def _warn_missing_harness_dependencies() -> None:
@@ -1074,7 +1074,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         # Ask only for the workspace URL — never a profile name. The flow
         # below authenticates that one workspace and runs `ucode configure`
         # against it, scoped to the harness the user drilled into. This is
-        # the one place Xvaw triggers a Databricks CLI / ucode login;
+        # the one place Xwav triggers a Databricks CLI / ucode login;
         # it never happens on a bare `run`, so a user who only wants their
         # own provider is never routed through Databricks unexpectedly.
         from omnigent.onboarding.configure_models import family_label
@@ -1211,13 +1211,13 @@ def _adopt_detected_providers() -> list[str]:
 def _promote_global_auth_to_provider() -> str | None:
     """Backfill a databricks providers entry from an existing global ``auth:`` block.
 
-    Older ``xvaw setup`` runs configured Databricks only via the top-level
+    Older ``xwav setup`` runs configured Databricks only via the top-level
     ``auth: {type: databricks}`` block — which ``configure harnesses`` does not
     read — so the readout showed no Databricks provider (and an ambient CLI
     login as the default) even though routing used Databricks. This promotes
     that block into a first-class ``kind: databricks`` providers entry the next
     time ``configure harnesses`` opens, so existing configs self-heal without
-    re-running ``xvaw setup``.
+    re-running ``xwav setup``.
 
     Becomes the default only for families with no existing **provider** default —
     mirroring routing precedence (explicit provider default > ``auth:`` block),
@@ -2173,7 +2173,7 @@ def _manage_qwen_harness() -> None:
     to launch ``qwen`` for ``/auth`` — it does **not** pretend to run a ``qwen
     login``
     (there isn't one). Storing/injecting an OpenAI-compatible key *through
-    Xvaw* is deferred (see docs/QWEN_FOLLOWUPS.md, Provider Injection).
+    Xwav* is deferred (see docs/QWEN_FOLLOWUPS.md, Provider Injection).
 
     Like the CLI-backed harnesses, a missing CLI gates the drill-in — there's
     nothing to configure for a harness you can't run.
@@ -2251,11 +2251,11 @@ def _manage_qwen_harness() -> None:
 
 
 def _print_goose_auth_help() -> None:
-    """Print Goose's configuration options (Xvaw manages no Goose credential)."""
+    """Print Goose's configuration options (Xwav manages no Goose credential)."""
     from omnigent.onboarding.interactive import console
 
     console.print(
-        "\n  [bold]Configure Goose[/bold] (Xvaw stores no Goose credential):\n"
+        "\n  [bold]Configure Goose[/bold] (Xwav stores no Goose credential):\n"
         "    • Interactive: run [bold]goose configure[/bold] to pick a provider "
         "and store its key (keyring or ~/.config/goose/config.yaml)\n"
         "    • Env override: set [bold]GOOSE_PROVIDER[/bold] + [bold]GOOSE_MODEL[/bold] "
@@ -2301,7 +2301,7 @@ def _show_acp_cli_harness(name: str) -> None:
     """Show install + sign-in instructions for one builtin ACP CLI harness.
 
     These harnesses own their credentials (``OWN_AUTH``) and install out-of-band,
-    so there is nothing for Xvaw to store or run on the user's behalf — the
+    so there is nothing for Xwav to store or run on the user's behalf — the
     drill-in reports what it can and names the two commands. Read-only: it
     changes no config, which is why it's a display rather than a manage loop.
 
@@ -2334,10 +2334,10 @@ def _show_acp_cli_harness(name: str) -> None:
 def _manage_goose_harness() -> None:
     """Run the level-2 loop for Goose: ensure the CLI, then guide ``goose configure``.
 
-    Goose owns its own auth (keyring / ``~/.config/goose/config.yaml``) — Xvaw
+    Goose owns its own auth (keyring / ``~/.config/goose/config.yaml``) — Xwav
     stores no Goose credential — so, like the Qwen drill-in, this reports
     best-effort configuration status and offers to launch ``goose configure``; it
-    does not store a key through Xvaw. A missing CLI gates the drill-in
+    does not store a key through Xwav. A missing CLI gates the drill-in
     (nothing to configure for a harness you can't run); Goose ships out-of-band
     (brew / curl, no npm package), so we show its install hint rather than
     auto-installing. Serves both ``goose-native`` (TUI) and the headless
@@ -2392,13 +2392,13 @@ def _manage_goose_harness() -> None:
 
 
 def _print_acp_examples() -> None:
-    """Print example ACP-agent commands (Xvaw stores no credential)."""
+    """Print example ACP-agent commands (Xwav stores no credential)."""
     from omnigent.onboarding.interactive import console
 
     console.print(
         "\n  [bold]Custom ACP agents[/bold] — connect any agent that speaks the "
         "Agent Client Protocol ([underline]agentclientprotocol.com[/underline]).\n"
-        "  Xvaw stores no credential — log into each agent via its own CLI first.\n\n"
+        "  Xwav stores no credential — log into each agent via its own CLI first.\n\n"
         "  Example commands to paste:\n"
         "    • Gemini CLI     [bold]gemini --experimental-acp[/bold]\n"
         "    • Qwen Code      [bold]qwen --acp[/bold]\n"
@@ -2532,7 +2532,7 @@ def _import_openclaw_agents() -> None:
                 f"    • [bold]{escape(entry.name)}[/bold] → "
                 f"[dim]{escape(entry.command)}[/dim]{suffix}"
             )
-        console.print("  [dim]Xvaw stores only these launch commands, not credentials.[/dim]")
+        console.print("  [dim]Xwav stores only these launch commands, not credentials.[/dim]")
 
         if not click.confirm("Import coding agents from OpenClaw?", default=True):
             console.print("  [yellow]Skipped OpenClaw import.[/yellow]")
@@ -2548,7 +2548,7 @@ def _manage_acp_agent(slug: str) -> None:
     """Per-agent drill-in for one configured ACP agent: remove it.
 
     Reached by selecting the agent's own row in the configure-harnesses overview.
-    A single-shot menu (Remove / Back) — Xvaw stores no credential, so there
+    A single-shot menu (Remove / Back) — Xwav stores no credential, so there
     is nothing else to manage per agent yet.
 
     :param slug: The agent's slug (see :func:`omnigent.onboarding.acp_auth.slugify`).
@@ -2577,7 +2577,7 @@ def _manage_hermes_harness() -> None:
     """Run the level-2 loop for Hermes: install the CLI, then configure it.
 
     Hermes owns its own auth via ``hermes model`` (interactive provider/model
-    picker) and is installed via a curl script from Nous Research — Xvaw
+    picker) and is installed via a curl script from Nous Research — Xwav
     stores no Hermes credential. A missing CLI offers to run the vendor
     installer; when installed, the drill-in offers to launch ``hermes model``
     for provider configuration.
@@ -2661,7 +2661,7 @@ def _manage_kiro_harness() -> None:
     """Run the level-2 loop for Kiro: ensure the CLI is installed and signed in.
 
     Kiro owns its own auth via ``kiro-cli login`` (Builder ID / social login /
-    Identity Center) and is installed via Kiro's curl installer — Xvaw stores
+    Identity Center) and is installed via Kiro's curl installer — Xwav stores
     no Kiro credential. A missing CLI gates the drill-in; when installed, the
     drill-in offers to launch ``kiro-cli login`` to sign in. Mirrors
     :func:`_manage_hermes_harness`.
@@ -2721,7 +2721,7 @@ def _manage_devin_harness() -> None:
     Devin ships a real login (``devin auth login``, browser or manual token) and
     — unlike most native CLIs here — a genuine status probe (``devin auth status``
     exits 0 only while logged in), so this drill-in can report the live auth
-    state and offer sign-out. Xvaw stores no Devin credential: the CLI writes
+    state and offer sign-out. Xwav stores no Devin credential: the CLI writes
     its own credential file and reads it back at spawn.
 
     Like the other CLI-backed harnesses, a missing CLI gates the drill-in —
@@ -2791,7 +2791,7 @@ def _manage_devin_harness() -> None:
 def _print_kimi_auth_help() -> None:
     """Print Kimi Code's authentication options.
 
-    Kimi authenticates against Moonshot AI's backend rather than an Xvaw
+    Kimi authenticates against Moonshot AI's backend rather than an Xwav
     credential. Membership accounts use ``kimi login`` (OAuth). Pay-per-use
     accounts are rejected by OAuth ("unable to verify your membership
     benefits"), so they configure an API-key provider instead — and which one
@@ -2805,7 +2805,7 @@ def _print_kimi_auth_help() -> None:
       ``https://api.kimi.com/coding/v1`` to ``~/.kimi-code/config.toml``.
 
     Both are covered below so a user on either platform can complete auth.
-    Xvaw stores no kimi credential and cannot thread one per spawn, so all
+    Xwav stores no kimi credential and cannot thread one per spawn, so all
     of this lives in the kimi CLI's own config.
     """
     from omnigent.onboarding.interactive import console
@@ -2835,7 +2835,7 @@ def _print_kimi_auth_help() -> None:
         '            type = "kimi"\n'
         '            base_url = "https://api.kimi.com/coding/v1"\n'
         '            api_key = "sk-…"[/dim]\n'
-        "    • Xvaw stores no kimi credential and cannot thread one per "
+        "    • Xwav stores no kimi credential and cannot thread one per "
         "spawn — configure it once in the kimi CLI\n"
     )
 
@@ -3556,8 +3556,8 @@ def _print_opencode_auth_help() -> None:
         "      stored in ~/.local/share/opencode/auth.json.\n"
         "    • Provider env vars (OPENAI_API_KEY / ANTHROPIC_API_KEY / …) are auto-detected.\n"
         "    • Databricks gateway: set an agent ``profile`` (configured under Claude / Codex);\n"
-        "      Xvaw synthesizes opencode's per-session provider config from it.\n"
-        "  Xvaw stores no OpenCode credential of its own.\n"
+        "      Xwav synthesizes opencode's per-session provider config from it.\n"
+        "  Xwav stores no OpenCode credential of its own.\n"
         f"  [dim]Tip:[/dim] 'Set default model' picks which model "
         f"`{cli_invocation(name='omni')} opencode` launches on\n"
         "  (otherwise OpenCode uses its built-in default, opencode/big-pickle)."
@@ -3571,7 +3571,7 @@ def _manage_opencode_harness() -> None:
     ``~/.local/share/opencode/auth.json``) or ambient provider env vars — so,
     like the Goose / Qwen drill-ins, this reports which providers OpenCode can
     reach and offers to launch its native login; it never stores a key through
-    Xvaw. (For the Databricks-gateway path the agent's ``profile`` is
+    Xwav. (For the Databricks-gateway path the agent's ``profile`` is
     synthesized into opencode's per-session config instead — set under
     Claude / Codex.)
 
@@ -3622,7 +3622,7 @@ def _manage_opencode_harness() -> None:
             return
 
     # OpenCode owns its provider auth (``opencode auth login`` → auth.json) or
-    # ambient env keys; Xvaw stores nothing. Report what's reachable and
+    # ambient env keys; Xwav stores nothing. Report what's reachable and
     # offer to run its native login — like the Goose/Qwen drill-ins.
     status: str | None = None
     while True:
@@ -3695,7 +3695,7 @@ def _repair_conflicting_provider_defaults() -> bool:
 def _run_configure_harnesses_interactive() -> None:
     """Run the interactive model/credential three-level picker.
 
-    Invoked by ``xvaw setup --no-internal-beta`` and the bare-``run``
+    Invoked by ``xwav setup --no-internal-beta`` and the bare-``run``
     first-run path, so both drive the identical flow.
     Opening it backfills a legacy databricks ``auth:`` block into a real
     provider and adopts any ambient-detected credential — announcing the
@@ -3785,16 +3785,16 @@ def _run_configure_harnesses_interactive() -> None:
     _ANTIGRAVITY = "\x00antigravity"
     # Sentinel marking the Qwen Code row — like Antigravity/Cursor it is not a
     # provider family (its v1 auth is the CLI's own env vars / ``/auth`` flow,
-    # not an Xvaw credential), so it dispatches to its own drill-in.
+    # not an Xwav credential), so it dispatches to its own drill-in.
     _QWEN = "\x00qwen"
-    # Sentinel marking the OpenCode row — native-server harness with no Xvaw
+    # Sentinel marking the OpenCode row — native-server harness with no Xwav
     # credential of its own (it routes through the bound agent's Databricks
     # gateway profile or ambient provider env), so it dispatches to its own
     # binary-install/info drill-in.
     _OPENCODE = "\x00opencode"
     # Sentinel marking the Goose row — like Qwen/Antigravity/Cursor it is not a
     # provider family (Goose owns its own auth via ``goose configure``, not an
-    # Xvaw credential), so it dispatches to its own drill-in.
+    # Xwav credential), so it dispatches to its own drill-in.
     _GOOSE = "\x00goose"
     # Sentinel marking the Hermes row — like Goose it owns its own auth via
     # ``hermes model`` and is installed via a curl installer.

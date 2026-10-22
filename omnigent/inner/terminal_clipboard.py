@@ -185,13 +185,13 @@ def _main() -> int:
         if option == "-Prefer" and args and args.pop(0) == "txt":
             continue
         print(
-            "Xvaw terminal copying supports plain text on the general clipboard.",
+            "Xwav terminal copying supports plain text on the general clipboard.",
             file=sys.stderr,
         )
         return 2
     payload = sys.stdin.buffer.read(MAX_CLIPBOARD_BYTES + 1)
     if not payload:
-        print("Xvaw terminal copying does not support clearing the clipboard.", file=sys.stderr)
+        print("Xwav terminal copying does not support clearing the clipboard.", file=sys.stderr)
         return 1
     if _copy_to_terminal(sys.argv[1], payload):
         return 0

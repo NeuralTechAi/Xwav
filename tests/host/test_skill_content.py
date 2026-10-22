@@ -7,6 +7,8 @@ import pytest
 
 from omnigent.host.skill_content import MAX_SKILL_CONTENT_BYTES, read_skill_content
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 def test_plain_plugin_and_private_diagnostics(tmp_path, monkeypatch, caplog):
     monkeypatch.setattr(Path, "home", lambda: tmp_path)

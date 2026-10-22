@@ -9899,7 +9899,7 @@ async def test_native_send_rechecks_runtime_after_upload(
         json={"type": "message", "data": {"role": "user", "content": content}},
     )
     assert response.status_code == 409, response.text
-    assert "Update Xvaw" in response.text
+    assert "Update Xwav" in response.text
     assert runner.post_json_calls == []
     assert len(file_conv_store.appended_items) == 1 + int(retained_history)
 

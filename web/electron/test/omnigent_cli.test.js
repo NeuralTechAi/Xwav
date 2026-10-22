@@ -35,7 +35,7 @@ describe("cliCommandParts", () => {
     assert.deepEqual(cliCommandParts("/bin/omnigent"), {
       executable: "/bin/omnigent",
       prefixArgs: [],
-      displayName: "xvaw",
+      displayName: "xwav",
     });
     assert.deepEqual(
       cliCommandParts({
@@ -185,12 +185,15 @@ describe("candidatePaths", () => {
     assert.ok(paths.includes("/usr/local/bin/omni"));
   });
 
-  it("prefers the Xvaw launcher while retaining the legacy aliases", () => {
+  it("prefers the Xwav launcher while retaining the legacy aliases", () => {
     const paths = candidatePaths();
-    const xvaw = paths.indexOf("/opt/homebrew/bin/xvaw");
+    const xwav = paths.indexOf("/opt/homebrew/bin/xwav");
+    const previous = paths.indexOf("/opt/homebrew/bin/xvaw");
     const og = paths.indexOf("/opt/homebrew/bin/omnigent");
     const omni = paths.indexOf("/opt/homebrew/bin/omni");
-    assert.ok(xvaw !== -1 && og !== -1 && omni !== -1 && xvaw < og && og < omni);
+    assert.ok(
+      xwav !== -1 && og !== -1 && omni !== -1 && xwav < previous && previous < og && og < omni,
+    );
   });
 });
 

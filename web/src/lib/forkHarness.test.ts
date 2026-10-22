@@ -53,7 +53,7 @@ describe("isNativeHarness", () => {
     ["agy-native", true],
     ["native-agy", true],
     // qwen-native rebuilds qwen's on-disk chat recording from the copied
-    // Xvaw items, so it carries fork/switch history (both spellings).
+    // Xwav items, so it carries fork/switch history (both spellings).
     ["qwen-native", true],
     ["native-qwen", true],
     ["claude-sdk", false],
@@ -90,7 +90,7 @@ describe("forkTargetCarriesHistory", () => {
 
   // Native targets carry from ANY source: the runner clones the source's
   // native transcript when the source is same-family native, else rebuilds
-  // the target's on-disk transcript from the copied Xvaw items. The
+  // the target's on-disk transcript from the copied Xwav items. The
   // codex-native rebuild includes the session_meta fields codex ≥ 0.133
   // requires plus the event_msg mirrors it rebuilds visible turns from
   // (verified against codex 0.136.0), so cross-family forks into

@@ -2330,6 +2330,8 @@ def _parse_skills_filter(raw: object) -> str | list[str]:
 def discover_host_skills(
     agent_root: Path,
     skills_filter: str | list[str],
+    *,
+    include_native: bool = True,
 ) -> list[SkillSpec]:
     """
     Discover host-scope skills from ``.claude/skills/`` and
@@ -2402,7 +2404,9 @@ def discover_host_skills(
             file=dest,
         )
 
-    return skills
+    from omnigent.native_skills import merge_native_skills
+
+    return merge_native_skills(skills, skills_filter) if include_native else skills
 
 
 # How many grouping levels ``_discover_skills`` descends below ``skills/``:

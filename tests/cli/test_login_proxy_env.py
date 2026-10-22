@@ -1,4 +1,4 @@
-"""``xvaw login`` behavior under a proxy-configured environment.
+"""``xwav login`` behavior under a proxy-configured environment.
 
 The login flow probes ``GET /v1/me`` and drives the detected auth flow with
 plain httpx calls. Those calls must follow the repo's loopback convention

@@ -86,7 +86,7 @@ _CRASH_MARKERS = (
 _POST_PROBE_MARKERS = (
     "Connecting",
     "Launching your agent",
-    "Xvaw session:",
+    "Xwav session:",
     "No provider credentials",
 )
 

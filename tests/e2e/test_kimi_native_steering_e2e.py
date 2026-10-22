@@ -684,7 +684,7 @@ def test_midturn_steer_is_applied_not_queued(
             "Mid-turn steer was QUEUED, not applied to the running turn: Kimi's queue-pane "
             f"affordance {_QUEUE_AFFORDANCE!r} reappeared for kimi {version_str} within the "
             f"{absence_window:.1f}s absence window (measured calibration repaint latency "
-            f"{repaint_latency:.2f}s). Xvaw committed the steer with Enter and never sent "
+            f"{repaint_latency:.2f}s). Xwav committed the steer with Enter and never sent "
             f"the CLI's Ctrl-S steer key.\nPane:\n{last_pane}"
         )
         # Absence is only trustworthy if we actually saw the pane throughout the window.

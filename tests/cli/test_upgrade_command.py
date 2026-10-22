@@ -834,9 +834,9 @@ def test_upgrade_failure_message_reports_a_destroyed_install(
     assert "your previous install is intact" not in message
     assert "no longer installed" in message
     # Actionable recovery, preserving the extras this install had.
-    assert "--repo https://github.com/NeuralTechAi/Xvaw.git --extra databricks" in message
-    assert "xvaw login" in message
-    assert "XVAW_SKIP_WEB_UI=true" in message
+    assert "--repo https://github.com/NeuralTechAi/Xwav.git --extra databricks" in message
+    assert "xwav login" in message
+    assert "XWAV_SKIP_WEB_UI=true" in message
 
 
 def test_upgrade_failure_message_confirms_a_surviving_install(

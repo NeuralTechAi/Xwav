@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Xvaw installer.
+# Xwav installer.
 #
 # Installs `omnigent[databricks]` from PyPI with uv and the Databricks CLI,
 # wires up PATH, and points you at first-run. The wheel bundles the web UI, so the
@@ -76,7 +76,7 @@ init_style() {
 # Skipped off a TTY (use_terminal_ui) so piped/CI installs stay clean.
 print_banner() {
   use_terminal_ui || return 0
-  printf '\n%s  ≋≋≋  Xvaw%s\n' "$MAGENTA" "$RESET"
+  printf '\n%s  ≋≋≋  Xwav%s\n' "$MAGENTA" "$RESET"
   printf '%s  Your agents. One workspace.%s\n\n' "$DIM" "$RESET"
 }
 
@@ -513,13 +513,13 @@ install_omnigent() {
     else
       target="$INSTALL_URL"
     fi
-    step "Installing Xvaw from source${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
+    step "Installing Xwav from source${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
   elif [ -n "$VERSION" ]; then
     target="${PACKAGE_NAME}${extras_suffix}==${VERSION}"
-    step "Installing Xvaw $VERSION${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
+    step "Installing Xwav $VERSION${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
   else
     target="${PACKAGE_NAME}${extras_suffix}"
-    step "Installing Xvaw${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
+    step "Installing Xwav${extras_suffix:+ $extras_suffix} (Python $PYTHON_VERSION)"
   fi
   # --force so re-running upgrades instead of no-op'ing; -q hides uv's
   # "Installed N executables" summary (the package also ships an `omni` alias).
@@ -660,7 +660,7 @@ maybe_add_bin_to_path() {
       step "PATH is already configured in $profile"
       return
     fi
-    fail "$profile already has an Xvaw installer block. Update it manually to: $path_line"
+    fail "$profile already has an Xwav installer block. Update it manually to: $path_line"
   fi
 
   if ! prompt_yes_no "Add $bin_dir to PATH in $profile?"; then
@@ -712,7 +712,7 @@ verify_omnigent() {
   fi
 
   if [ -z "$cli_path" ]; then
-    fail "Xvaw installed, but the omnigent command was not found."
+    fail "Xwav installed, but the omnigent command was not found."
   fi
 
   "$cli_path" --help >/dev/null
@@ -737,9 +737,9 @@ print_next_steps() {
     command_prefix="PATH=\"$bin_dir:\$PATH\" "
   fi
 
-  printf '\n%sXvaw installed successfully.%s\n\n' "$BOLD" "$RESET"
+  printf '\n%sXwav installed successfully.%s\n\n' "$BOLD" "$RESET"
   printf 'Start chatting — first run sets up a model and a local web UI:\n'
-  printf '  %s%sxvaw%s\n\n' "$command_prefix" "$MAGENTA" "$RESET"
+  printf '  %s%sxwav%s\n\n' "$command_prefix" "$MAGENTA" "$RESET"
   printf 'Or launch a specific coding harness:\n'
   printf '  %somnigent claude          # Claude Code\n' "$command_prefix"
   printf '  %somnigent codex           # Codex\n\n' "$command_prefix"
@@ -748,10 +748,10 @@ print_next_steps() {
   printf 'Uninstall the CLI but keep local history and credentials:\n'
   printf '  %somnigent uninstall --yes\n\n' "$command_prefix"
   if has_databricks_extra; then
-    printf 'Connect to a Databricks-hosted Xvaw server:\n'
-    printf '  %sxvaw login <workspace-url>/omnigent\n\n' "$command_prefix"
+    printf 'Connect to a Databricks-hosted Xwav server:\n'
+    printf '  %sxwav login <workspace-url>/omnigent\n\n' "$command_prefix"
     printf '%sDatabricks dependencies and CLI are installed. To use a workspace\n' "$DIM"
-    printf 'as your model provider, select Databricks in xvaw setup.%s\n' "$RESET"
+    printf 'as your model provider, select Databricks in xwav setup.%s\n' "$RESET"
   fi
 }
 

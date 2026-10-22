@@ -40,10 +40,10 @@ def _wait_while_workspace_is_served(server: str) -> None:
 
 def main() -> int:
     """Run the foreground host command and normalize permanent failures."""
-    parser = argparse.ArgumentParser(description="Xvaw host service")
+    parser = argparse.ArgumentParser(description="Xwav host service")
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--server", help="Remote Xvaw server URL.")
-    mode.add_argument("--local", action="store_true", help="Run a local Xvaw server.")
+    mode.add_argument("--server", help="Remote Xwav server URL.")
+    mode.add_argument("--local", action="store_true", help="Run a local Xwav server.")
     args = parser.parse_args()
 
     from omnigent.cli import cli

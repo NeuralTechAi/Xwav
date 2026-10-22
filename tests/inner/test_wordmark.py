@@ -26,7 +26,7 @@ def test_wordmark_uses_brand_color() -> None:
 def test_every_letter_in_omnigent_has_a_glyph() -> None:
     """The glyph map covers every letter rendered, and only symbols."""
 
-    for char in "xvaw":
+    for char in "xwav":
         assert char in wordmark._GLYPHS
     # The art is symbol-only — no letters or digits leak into the rows.
     assert all(not any(c.isalnum() for c in line) for line in wordmark.WORDMARK_LINES)
@@ -73,7 +73,7 @@ def test_render_compact_includes_name() -> None:
     console = Console(no_color=True, width=120, file=_StringFile())
     wordmark.render_compact(console, subtitle="0.4.2")
     out = console.file.getvalue()  # type: ignore[attr-defined]
-    assert "Xvaw" in out
+    assert "Xwav" in out
     assert "0.4.2" in out
     assert "≋" in out
 

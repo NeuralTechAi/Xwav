@@ -558,10 +558,10 @@ def test_claude_native_agent_addresses_comments_without_tool_guidance(
         assert post_statuses.get(comment1_id) == "addressed", (
             f"Comment 1 still has status {post_statuses.get(comment1_id)!r} "
             f"after {_COMMENT_POLL_TIMEOUT_S}s; expected 'addressed'. "
-            f"If 'draft', the update_comment relay call did not reach the Xvaw server."
+            f"If 'draft', the update_comment relay call did not reach the Xwav server."
         )
         assert post_statuses.get(comment2_id) == "addressed", (
             f"Comment 2 still has status {post_statuses.get(comment2_id)!r} "
             f"after {_COMMENT_POLL_TIMEOUT_S}s; expected 'addressed'. "
-            f"If 'draft', the update_comment relay call did not reach the Xvaw server."
+            f"If 'draft', the update_comment relay call did not reach the Xwav server."
         )

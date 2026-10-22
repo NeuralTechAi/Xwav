@@ -11,6 +11,8 @@ from omnigent.spec.types import SkillSpec
 from omnigent.tools.base import ToolContext
 from omnigent.tools.builtins import LoadSkillTool
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 @pytest.fixture()
 def skill_with_resources(tmp_path: Path) -> SkillSpec:

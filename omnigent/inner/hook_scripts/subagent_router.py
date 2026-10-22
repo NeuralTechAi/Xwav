@@ -625,7 +625,7 @@ def _no_spawn_tool_instruction(model: str, picked: str) -> str:
     del model
     return (
         f"{_SMART_ROUTING_PREAMBLE} It selected {picked} for this sub-task, which "
-        "your built-in spawn tool cannot launch, and this session holds no Xvaw "
+        "your built-in spawn tool cannot launch, and this session holds no Xwav "
         "tool that can start one either. This is not an error and the sub-task is "
         "approved — do the work yourself on your current model instead of spawning, "
         "then continue."

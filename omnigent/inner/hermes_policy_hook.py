@@ -143,9 +143,9 @@ def main() -> None:
     if action == "POLICY_ACTION_DENY":
         out: dict[str, str] = {"decision": "block"}
         if reason:
-            out["reason"] = f"Tool '{tool_name}' denied by Xvaw policy: {reason}"
+            out["reason"] = f"Tool '{tool_name}' denied by Xwav policy: {reason}"
         else:
-            out["reason"] = f"Tool '{tool_name}' denied by Xvaw policy"
+            out["reason"] = f"Tool '{tool_name}' denied by Xwav policy"
         json.dump(out, sys.stdout)
     elif action == "POLICY_ACTION_ASK":
         # The server resolves ASK by parking the HTTP request until the

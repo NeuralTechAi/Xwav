@@ -471,7 +471,7 @@ def test_forwarder_logs_unsupported_codex_server_request(
         :param request: HTTP request sent by the forwarder.
         :returns: Never returns.
         """
-        raise AssertionError(f"unexpected Xvaw request: {request.method} {request.url}")
+        raise AssertionError(f"unexpected Xwav request: {request.method} {request.url}")
 
     async def run() -> None:
         """

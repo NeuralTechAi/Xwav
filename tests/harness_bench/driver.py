@@ -314,7 +314,7 @@ class SdkInprocDriver:
         )
 
     async def run_mcp_tool_turn(self) -> TurnResult:
-        return TurnResult(error="Xvaw MCP relay is not observable on sdk-inproc")
+        return TurnResult(error="Xwav MCP relay is not observable on sdk-inproc")
 
     async def run_fork_turn(self, marker: str) -> ForkResult:
         return ForkResult(error="session fork is not observable on sdk-inproc")

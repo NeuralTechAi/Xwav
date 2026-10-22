@@ -86,7 +86,7 @@ export function ImportSessionsPanel() {
     return (
       <p className="text-sm text-muted-foreground" data-testid="import-no-hosts">
         None of your machines are online. Start one with{" "}
-        <code className="rounded bg-muted px-1 py-0.5 font-mono">xvaw host</code> from your
+        <code className="rounded bg-muted px-1 py-0.5 font-mono">xwav host</code> from your
         terminal, then return here.
       </p>
     );

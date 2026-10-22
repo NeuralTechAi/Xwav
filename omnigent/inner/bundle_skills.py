@@ -17,6 +17,7 @@ from pathlib import Path
 
 from omnigent.spec.skill_sources import (
     _claude_code_skills,
+    _claude_plugin_skills,
     select_claude_portable_skills,
     skill_source_context_from_env,
 )
@@ -157,12 +158,19 @@ def claude_agents_skill_args(
         skills_filter=skills_filter,
         bundle_dir=roots[1] if len(roots) > 1 else None,
     )
-    skills = _claude_code_skills(ctx, ".agents")
-    if not skills:
+    from omnigent.native_skills import discover_native_skills, merge_native_skills
+    from omnigent.spec.parser import _discover_skills
+
+    portable = _claude_code_skills(ctx, ".agents")
+    if not portable and not discover_native_skills(skills_filter):
         return []
-    skills = select_claude_portable_skills(
-        skills, _claude_code_skills(replace(ctx, is_native=True, skills_filter="all"))
-    )
+    native_ctx = replace(ctx, is_native=True, skills_filter="all")
+    reserved = _claude_code_skills(native_ctx) + _claude_plugin_skills(native_ctx)
+    if ctx.bundle_dir is not None:
+        reserved.extend(_discover_skills(ctx.bundle_dir / "skills", skipped=[]))
+    existing = portable + reserved
+    skills = portable + merge_native_skills(existing, skills_filter)[len(existing) :]
+    skills = select_claude_portable_skills(skills, reserved)
     if not skills:
         return []
     target = overlay / ".claude" / "skills"

@@ -49,6 +49,8 @@ from omnigent.models.model_catalog import ModelEntry
 from omnigent.models.model_metadata import ModelMetadata, ModelWireAPI
 from omnigent.runtime.harnesses._scaffold import PolicyVerdictPayload
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 def _cancel_all_tasks(loop):
     """Cancel and drain leftover tasks, the way :func:`asyncio.run` does.

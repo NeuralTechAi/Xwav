@@ -38,16 +38,16 @@ export function LocalIntroStep({
   onBack,
   onInstall,
 }: {
-  /** CLI installed → "Start"/"Open Xvaw"; missing → "Install Xvaw". */
+  /** CLI installed → "Start"/"Open Xwav"; missing → "Install Xwav". */
   installed?: boolean;
-  /** The local server is stopped, so the action boots it ("Start Xvaw"). */
+  /** The local server is stopped, so the action boots it ("Start Xwav"). */
   startsLocal?: boolean;
   onBack: () => void;
   onInstall: () => void;
 }) {
   return (
     <div className="flex h-full flex-col px-2 pb-1 pt-8">
-      <OnboardingHeading>Set up Xvaw locally</OnboardingHeading>
+      <OnboardingHeading>Set up Xwav locally</OnboardingHeading>
 
       <p className="flex-1 text-base text-muted-foreground max-w-sm mx-auto text-center">
         Use Claude Code, Codex, Cursor, and other local harnesses from one UI. Keep history and

@@ -26,22 +26,22 @@ function openPresetDropdown() {
 describe("ServerSelectorV2", () => {
   it("starts on the landing step", () => {
     render(<ServerSelectorV2 setup={makeSetup()} />);
-    expect(screen.getByRole("heading", { name: "Meet Xvaw" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Meet Xwav" })).toBeInTheDocument();
   });
 
   it("Get started locally shows the local intro (not install yet)", () => {
     render(<ServerSelectorV2 setup={makeSetup()} />);
     fireEvent.click(screen.getByRole("button", { name: /get started locally/i }));
     // Local/Cloud switcher was replaced by a single local intro; install starts
-    // only after clicking Install Xvaw.
-    expect(screen.getByRole("heading", { name: /set up xvaw locally/i })).toBeInTheDocument();
+    // only after clicking Install Xwav.
+    expect(screen.getByRole("heading", { name: /set up xwav locally/i })).toBeInTheDocument();
     expect(screen.queryByText(/starting the local server/i)).not.toBeInTheDocument();
   });
 
-  it("Install Xvaw from the local intro starts the install", () => {
+  it("Install Xwav from the local intro starts the install", () => {
     render(<ServerSelectorV2 setup={makeSetup()} />);
     fireEvent.click(screen.getByRole("button", { name: /get started locally/i }));
-    fireEvent.click(screen.getByRole("button", { name: /install xvaw/i }));
+    fireEvent.click(screen.getByRole("button", { name: /install xwav/i }));
     expect(screen.getByText(/starting the local server/i)).toBeInTheDocument();
   });
 
@@ -50,12 +50,12 @@ describe("ServerSelectorV2", () => {
       <ServerSelectorV2 setup={makeSetup({ recentServers: ["https://team.example.com/"] })} />,
     );
     expect(screen.getByText(/^Recents$/)).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Meet Xvaw" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Meet Xwav" })).not.toBeInTheDocument();
   });
 
   it("an installed CLI alone doesn't make a returning user", () => {
     render(<ServerSelectorV2 setup={makeSetup({ installed: true })} />);
-    expect(screen.getByRole("heading", { name: "Meet Xvaw" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Meet Xwav" })).toBeInTheDocument();
   });
 
   it.each([true, false])(
@@ -98,7 +98,7 @@ describe("ServerSelectorV2", () => {
         })}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Open Xvaw" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Xwav" }));
     await waitFor(() =>
       expect(onConnect).toHaveBeenCalledWith("https://team.example.com/", expect.any(Function)),
     );
@@ -132,13 +132,13 @@ describe("ServerSelectorV2", () => {
         })}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Meet Xvaw" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Meet Xwav" })).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("Could not load");
   });
 
   it("a returning user who cleared every server starts on the landing", () => {
     render(<ServerSelectorV2 setup={makeSetup({ connectedBefore: true })} />);
-    expect(screen.getByRole("heading", { name: "Meet Xvaw" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Meet Xwav" })).toBeInTheDocument();
   });
 
   it("Join your team advances to the server-select step", () => {
@@ -147,7 +147,7 @@ describe("ServerSelectorV2", () => {
     expect(screen.getByLabelText("Server URL")).toBeInTheDocument();
   });
 
-  it("a local install that's down reads 'Start Xvaw' and boots it", async () => {
+  it("a local install that's down reads 'Start Xwav' and boots it", async () => {
     const onConnect = vi.fn().mockResolvedValue({});
     const onStartLocal = vi.fn().mockResolvedValue({ ok: true });
     render(
@@ -163,13 +163,13 @@ describe("ServerSelectorV2", () => {
       />,
     );
     expect(await screen.findAllByText("Not running")).toHaveLength(2);
-    fireEvent.click(screen.getByRole("button", { name: "Start Xvaw" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start Xwav" }));
     expect(screen.getByText(/starting the local server/i)).toBeInTheDocument();
     await waitFor(() => expect(onStartLocal).toHaveBeenCalledOnce());
     expect(onConnect).not.toHaveBeenCalled();
   });
 
-  it("a local install that's up reads 'Open Xvaw' and opens the exact URL", async () => {
+  it("a local install that's up reads 'Open Xwav' and opens the exact URL", async () => {
     const onConnect = vi.fn().mockResolvedValue({});
     const onStartLocal = vi.fn().mockResolvedValue({ ok: true });
     render(
@@ -182,8 +182,8 @@ describe("ServerSelectorV2", () => {
         })}
       />,
     );
-    expect(await screen.findByText("Xvaw server")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Open Xvaw" }));
+    expect(await screen.findByText("Xwav server")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open Xwav" }));
     await waitFor(() =>
       expect(onConnect).toHaveBeenCalledWith("http://localhost:6767/", expect.any(Function)),
     );
@@ -204,7 +204,7 @@ describe("ServerSelectorV2", () => {
         })}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Install Xvaw" }));
+    fireEvent.click(screen.getByRole("button", { name: "Install Xwav" }));
     await waitFor(() => expect(onStartLocal).toHaveBeenCalledOnce());
     expect(onInstallCli).toHaveBeenCalledOnce();
   });
@@ -227,8 +227,8 @@ describe("ServerSelectorV2", () => {
         })}
       />,
     );
-    expect(await screen.findByText("Xvaw server")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Open Xvaw" }));
+    expect(await screen.findByText("Xwav server")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open Xwav" }));
     await waitFor(() => expect(onStartLocal).toHaveBeenCalledOnce());
     expect(onConnect).not.toHaveBeenCalled();
   });
@@ -249,7 +249,7 @@ describe("ServerSelectorV2", () => {
           })}
         />,
       );
-      fireEvent.click(screen.getByRole("button", { name: "Open Xvaw" }));
+      fireEvent.click(screen.getByRole("button", { name: "Open Xwav" }));
       await waitFor(() => expect(onConnect).toHaveBeenCalledWith(url, expect.any(Function)));
       expect(onStartLocal).not.toHaveBeenCalled();
     },
@@ -258,11 +258,11 @@ describe("ServerSelectorV2", () => {
   it("the local intro reads 'Start' when stopped and 'Open' when running", () => {
     const { unmount } = render(<ServerSelectorV2 setup={makeSetup({ installed: true })} />);
     fireEvent.click(screen.getByRole("button", { name: /get started locally/i }));
-    expect(screen.getByRole("button", { name: "Start Xvaw" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start Xwav" })).toBeInTheDocument();
     unmount();
     render(<ServerSelectorV2 setup={makeSetup({ installed: true, localServerRunning: true })} />);
     fireEvent.click(screen.getByRole("button", { name: /get started locally/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Open Xvaw" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Xwav" }));
     expect(screen.getByText(/connecting to the local server/i)).toBeInTheDocument();
   });
 
@@ -336,7 +336,7 @@ describe("ServerSelectorV2", () => {
     await waitFor(() => expect(getRunnerOptions).toHaveBeenCalledTimes(2));
     expect(laptop).toBeChecked();
     expect(screen.queryByRole("radio", { name: "Arca" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Open Xvaw" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Xwav" }));
     await waitFor(() =>
       expect(onConnect).toHaveBeenCalledWith("https://typed.example.com/", expect.any(Function)),
     );
@@ -367,7 +367,7 @@ describe("ServerSelectorV2", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: /join your team \(team\)/i }));
-    fireEvent.click(await screen.findByRole("button", { name: "Open Xvaw" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open Xwav" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("unreachable");
   });
 
@@ -398,7 +398,7 @@ describe("ServerSelectorV2", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: /join your team \(team\)/i }));
-    fireEvent.click(await screen.findByRole("button", { name: "Open Xvaw" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open Xwav" }));
     await waitFor(() =>
       expect(onConnect).toHaveBeenCalledWith("https://team.example.com/", expect.any(Function)),
     );
@@ -409,13 +409,13 @@ describe("ServerSelectorV2", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /join your team \(team\)/i }));
     fireEvent.click(await screen.findByRole("button", { name: "Back" }));
-    expect(screen.getByRole("heading", { name: "Meet Xvaw" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Meet Xwav" })).toBeInTheDocument();
   });
 
   async function installFromRunnerStep(
     over: Partial<ServerSelectorV2Setup>,
     pick?: string | RegExp,
-    action: string | RegExp = /(install|open) xvaw/i,
+    action: string | RegExp = /(install|open) xwav/i,
   ) {
     render(
       <ServerSelectorV2
@@ -565,7 +565,7 @@ describe("ServerSelectorV2", () => {
         })}
       />,
     );
-    return screen.getByRole("button", { name: /open xvaw/i });
+    return screen.getByRole("button", { name: /open xwav/i });
   }
 
   it("a direct connect shows its sign-in phase and Cancelling…, then goes idle", async () => {
@@ -669,7 +669,7 @@ describe("ServerSelectorV2", () => {
       },
       /my laptop/i,
       // Nothing is installed, so the action only opens.
-      "Open Xvaw",
+      "Open Xwav",
     );
     await waitFor(() => expect(onConnect).toHaveBeenCalledOnce());
     expect(onConnectRunner).toHaveBeenCalledWith("https://team.example.com/", "local");
@@ -693,7 +693,7 @@ describe("ServerSelectorV2", () => {
     await installFromRunnerStep(
       { installed: false, onInstallCli, onConnectRunner, onConnect },
       undefined,
-      "Install Xvaw",
+      "Install Xwav",
     );
     await waitFor(() => expect(calls).toEqual(["install", "runner", "connect"]));
     expect(onConnectRunner).toHaveBeenCalledWith("https://team.example.com/", "local");
@@ -846,7 +846,7 @@ describe("onboarding parity", () => {
         onConnect: vi.fn().mockResolvedValue(result),
       });
       render(<ServerSelectorV2 setup={setup} />);
-      fireEvent.click(screen.getByRole("button", { name: "Install Xvaw" }));
+      fireEvent.click(screen.getByRole("button", { name: "Install Xwav" }));
       fireEvent.click(await screen.findByRole("button", { name: "Continue anyway" }));
       await screen.findByText(message);
       expect(setup.onConnect).toHaveBeenCalledWith("http://localhost:6767/", expect.any(Function));
@@ -862,7 +862,7 @@ describe("onboarding parity", () => {
     });
     render(<ServerSelectorV2 setup={setup} />);
     fireEvent.click(screen.getByRole("button", { name: /get started locally/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Install Xvaw" }));
+    fireEvent.click(screen.getByRole("button", { name: "Install Xwav" }));
     await screen.findByText("Installer failed");
     expect(screen.queryByRole("button", { name: "Continue anyway" })).not.toBeInTheDocument();
   });
@@ -874,10 +874,10 @@ describe("onboarding parity", () => {
       .mockReturnValueOnce(true);
     const setup = makeSetup({ recentServers: ["http://team.example.com/"] });
     render(<ServerSelectorV2 setup={setup} />);
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Open Xvaw" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Open Xwav" })));
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining("unencrypted HTTP"));
     expect(setup.onConnect).not.toHaveBeenCalled();
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Open Xvaw" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Open Xwav" })));
     expect(setup.onConnect).toHaveBeenCalledWith("http://team.example.com/", expect.any(Function));
   });
 
@@ -893,7 +893,7 @@ describe("onboarding parity", () => {
     });
     render(<ServerSelectorV2 setup={setup} />);
     fireEvent.click(screen.getByRole("button", { name: /join your team/i }));
-    fireEvent.click(await screen.findByRole("button", { name: "Open Xvaw" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open Xwav" }));
     await screen.findByText("Connection cancelled.");
     expect(setup.onConnectRunner).not.toHaveBeenCalled();
     expect(setup.onConnect).not.toHaveBeenCalled();
@@ -909,7 +909,7 @@ describe("onboarding parity", () => {
       const confirm = vi.spyOn(window, "confirm");
       const setup = makeSetup({ installed: true, recentServers: [url] });
       render(<ServerSelectorV2 setup={setup} />);
-      fireEvent.click(screen.getByRole("button", { name: "Open Xvaw" }));
+      fireEvent.click(screen.getByRole("button", { name: "Open Xwav" }));
       await waitFor(() => expect(setup.onConnect).toHaveBeenCalledOnce());
       expect(confirm).not.toHaveBeenCalled();
     },
@@ -922,7 +922,7 @@ describe("onboarding parity", () => {
       recentServers: ["http://localhost:6767/"],
     });
     render(<ServerSelectorV2 setup={setup} />);
-    fireEvent.click(screen.getByRole("button", { name: "Install Xvaw" }));
+    fireEvent.click(screen.getByRole("button", { name: "Install Xwav" }));
     expect(screen.getByRole("link", { name: "Installation instructions" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Continue anyway" }));
     await waitFor(() => expect(setup.onConnect).toHaveBeenCalledOnce());

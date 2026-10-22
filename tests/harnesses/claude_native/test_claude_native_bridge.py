@@ -6463,7 +6463,7 @@ async def test_channel_server_relays_active_omnigent_tools(
             tools=[
                 {
                     "name": "sys_custom",
-                    "description": "Test-only active Xvaw tool.",
+                    "description": "Test-only active Xwav tool.",
                     "parameters": {
                         "type": "object",
                         "properties": {"value": {"type": "string"}},
@@ -6487,7 +6487,7 @@ async def test_channel_server_relays_active_omnigent_tools(
         assert custom_tools == [
             {
                 "name": "sys_custom",
-                "description": "Test-only active Xvaw tool.",
+                "description": "Test-only active Xwav tool.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {"value": {"type": "string"}},
@@ -6604,7 +6604,7 @@ def test_call_relay_tool_returns_mcp_error_on_read_timeout(
     # The result is a well-formed MCP error result, NOT a raised exception.
     assert result["isError"] is True
     error_text = json.loads(result["content"][0]["text"])["error"]
-    assert "failed to call Xvaw tool relay" in error_text
+    assert "failed to call Xwav tool relay" in error_text
 
 
 @pytest.mark.asyncio
@@ -7025,7 +7025,7 @@ async def test_start_tool_relay_accepts_pi_native_bridge_root(
             tools=[
                 {
                     "name": "sys_session_list",
-                    "description": "List Xvaw sessions.",
+                    "description": "List Xwav sessions.",
                     "parameters": {"type": "object", "properties": {}},
                 }
             ],
@@ -7149,7 +7149,7 @@ async def test_start_tool_relay_accepts_antigravity_native_bridge_root(
             tools=[
                 {
                     "name": "sys_session_create",
-                    "description": "Spawn an Xvaw sub-agent session.",
+                    "description": "Spawn an Xwav sub-agent session.",
                     "parameters": {"type": "object", "properties": {}},
                 }
             ],
@@ -7206,7 +7206,7 @@ async def test_start_tool_relay_accepts_opencode_native_bridge_root(
             tools=[
                 {
                     "name": "sys_session_list",
-                    "description": "List Xvaw sessions.",
+                    "description": "List Xwav sessions.",
                     "parameters": {"type": "object", "properties": {}},
                 }
             ],

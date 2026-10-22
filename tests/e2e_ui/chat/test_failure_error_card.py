@@ -160,7 +160,7 @@ def test_provider_auth_recovery_command_copies_to_clipboard(
                 "code": "PROVIDER_AUTH_REQUIRED",
                 "message": "Your Databricks model credential is unavailable or expired.",
                 "title": "Sign in to continue",
-                "cause": "Xvaw could not obtain a model credential for this session.",
+                "cause": "Xwav could not obtain a model credential for this session.",
                 "remediation": "ucode configure",
             },
         },

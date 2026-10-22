@@ -253,7 +253,7 @@ def test_color_palette_applies_persists_and_resets(
 
     # Fresh context → default "Omnigent": the trigger shows it, no override, and
     # nothing persisted.
-    expect(_color_theme_select(page)).to_contain_text("Xvaw")
+    expect(_color_theme_select(page)).to_contain_text("Xwav")
     assert _data_theme(page) is None, "expected no data-theme override on a fresh load"
     assert _stored_palette(page) is None, "expected no persisted palette on a fresh load"
 
@@ -272,9 +272,9 @@ def test_color_palette_applies_persists_and_resets(
 
     # → back to Omnigent (the default): the override is removed and the stored
     # key cleared, since the default reverts to the base brand tokens.
-    _pick_palette(page, "Xvaw")
-    expect(_color_theme_select(page)).to_contain_text("Xvaw")
-    assert _data_theme(page) is None, "<html> kept data-theme after returning to Xvaw"
+    _pick_palette(page, "Xwav")
+    expect(_color_theme_select(page)).to_contain_text("Xwav")
+    assert _data_theme(page) is None, "<html> kept data-theme after returning to Xwav"
     assert _stored_palette(page) is None, "the palette key was not cleared for the default"
 
 
@@ -503,7 +503,7 @@ def test_omnigent_selection_keeps_the_brand_tint(
         "Dark": ["rgba(240, 1, 150, 0.15)", "rgb(249, 168, 212)"],
     }
     _open_appearance(page, base_url)
-    _pick_palette(page, "Xvaw")
+    _pick_palette(page, "Xwav")
     for mode, colors in expected.items():
         _open_appearance(page, base_url)
         _theme_radiogroup(page).get_by_role("radio", name=mode).click()

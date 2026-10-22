@@ -233,7 +233,7 @@ def _recall_marker_in_clone(
     text = poll_marker(client, session_id=fork_id, marker=marker, timeout=180.0)
     assert marker in text, (
         f"{target_harness} clone did not recall {marker!r} (got {text!r}) — the "
-        f"{source_harness} source's Xvaw items were not rebuilt into the "
+        f"{source_harness} source's Xwav items were not rebuilt into the "
         f"clone's native transcript, so it launched fresh without history"
     )
 

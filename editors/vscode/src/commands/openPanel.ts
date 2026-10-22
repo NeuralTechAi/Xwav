@@ -1,17 +1,17 @@
 /**
- * "Xvaw: Open" command.
+ * "Xwav: Open" command.
  *
- * The Xvaw UI renders only in the editor-beside `WebviewPanel`, owned by the
- * shared `EditorPanelController`. `xvaw.open` simply ensures that panel is
+ * The Xwav UI renders only in the editor-beside `WebviewPanel`, owned by the
+ * shared `EditorPanelController`. `xwav.open` simply ensures that panel is
  * open and revealed; the controller owns the singleton and the resolved local
  * server target.
  */
 import * as vscode from "vscode";
 import type { EditorPanelController } from "../panel/EditorPanelController";
 
-export const OPEN_PANEL_COMMAND = "xvaw.open";
+export const OPEN_PANEL_COMMAND = "xwav.open";
 
-/** Register the `xvaw.open` command. Returns the disposable command. */
+/** Register the `xwav.open` command. Returns the disposable command. */
 export function registerOpenPanel(
   context: vscode.ExtensionContext,
   controller: EditorPanelController,
@@ -23,6 +23,12 @@ export function registerOpenPanel(
   const legacyCommand = vscode.commands.registerCommand("omnigent.open", () => {
     controller.ensure();
   });
-  context.subscriptions.push(cmd, legacyCommand);
+  const previousBrandCommand = vscode.commands.registerCommand(
+    "xvaw.open",
+    () => {
+      controller.ensure();
+    },
+  );
+  context.subscriptions.push(cmd, previousBrandCommand, legacyCommand);
   return cmd;
 }

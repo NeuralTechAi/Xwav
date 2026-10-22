@@ -1,4 +1,4 @@
-// Desktop auto-update orchestration for the Xvaw Electron shell.
+// Desktop auto-update orchestration for the Xwav Electron shell.
 //
 // Everything the shell needs to check for, download, and install its own
 // updates via `electron-updater` lives here, behind a small factory API. The
@@ -27,7 +27,7 @@
 /** Update modes persisted in settings.json under `update_mode`. */
 const UPDATE_MODES = new Set(["none", "manual", "start", "default"]);
 const UPDATES_UNAVAILABLE_IN_DEV =
-  "Desktop updates are unavailable in development builds or until Xvaw publishes a release feed.";
+  "Desktop updates are unavailable in development builds or until Xwav publishes a release feed.";
 /** Background re-check cadence for the "default" mode (every 6 hours). */
 const PERIODIC_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
@@ -345,21 +345,21 @@ function createDesktopUpdater({
 
     const copy = {
       download: {
-        message: "Download an Xvaw update?",
+        message: "Download an Xwav update?",
         detail:
-          `${host} wants to download a desktop update for this Xvaw app.\n\n` +
+          `${host} wants to download a desktop update for this Xwav app.\n\n` +
           `Only allow servers you trust.`,
       },
       install: {
-        message: "Restart Xvaw to install an update?",
+        message: "Restart Xwav to install an update?",
         detail:
-          `${host} wants to restart Xvaw and install the downloaded desktop update.\n\n` +
+          `${host} wants to restart Xwav and install the downloaded desktop update.\n\n` +
           `Only allow servers you trust.`,
       },
       config: {
-        message: "Change Xvaw update settings?",
+        message: "Change Xwav update settings?",
         detail:
-          `${host} wants to change how this Xvaw app checks for and installs updates.\n\n` +
+          `${host} wants to change how this Xwav app checks for and installs updates.\n\n` +
           `Only allow servers you trust.`,
       },
     }[action];
@@ -369,7 +369,7 @@ function createDesktopUpdater({
     const { response } = await dialog.showMessageBox(win, {
       type: "warning",
       icon: icon.isEmpty() ? undefined : icon,
-      title: "Xvaw",
+      title: "Xwav",
       message: copy.message,
       detail: copy.detail,
       buttons: ["Don't Allow", "Allow Once"],

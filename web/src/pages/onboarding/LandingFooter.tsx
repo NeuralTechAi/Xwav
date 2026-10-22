@@ -11,13 +11,13 @@ const LINKS: { key: string; label: string; icon: ReactNode; href: string }[] = [
     key: "github",
     label: "GitHub",
     icon: <GithubMono size={16} />,
-    href: "https://github.com/NeuralTechAi/Xvaw",
+    href: "https://github.com/NeuralTechAi/Xwav",
   },
   {
     key: "docs",
     label: "Documentation",
     icon: <GithubMono size={16} />,
-    href: "https://github.com/NeuralTechAi/Xvaw#readme",
+    href: "https://github.com/NeuralTechAi/Xwav#readme",
   },
 ];
 
@@ -40,7 +40,7 @@ export function LandingFooter() {
         •
       </span>
       <span className="whitespace-nowrap px-2 text-base text-muted-foreground">
-        Xvaw · Your agents. One workspace.
+        Xwav · Your agents. One workspace.
       </span>
     </div>
   );

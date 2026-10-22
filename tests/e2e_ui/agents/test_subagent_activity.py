@@ -10,8 +10,8 @@ from playwright.sync_api import Page, expect
 
 from tests.e2e_ui.conftest import seed_committed_turn
 
-_CHILD_TITLE = "Research Xvaw public positioning"
-_CHILD_REPLY = "Xvaw supports CLI, desktop, mobile, and web workflows."
+_CHILD_TITLE = "Research Xwav public positioning"
+_CHILD_REPLY = "Xwav supports CLI, desktop, mobile, and web workflows."
 
 
 @pytest.mark.min_server_version("0.17.0")
@@ -29,7 +29,7 @@ def test_subagent_notices_link_to_child_and_reveal_agents(
     )
     seed_committed_turn(
         parent_id,
-        prompt="Research Xvaw's public positioning.",
+        prompt="Research Xwav's public positioning.",
         reply="I'll delegate the public research to a sub-agent.",
     )
     page.goto(f"{base_url}/c/{parent_id}")

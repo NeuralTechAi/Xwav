@@ -129,7 +129,7 @@ class _RaisesIfCalled:
         """
         del url, json
         raise AssertionError(
-            "evaluate-policy POSTed to Xvaw when it should have short-circuited "
+            "evaluate-policy POSTed to Xwav when it should have short-circuited "
             "(missing bridge state or policy_hook config)."
         )
 

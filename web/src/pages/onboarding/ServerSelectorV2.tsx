@@ -532,6 +532,6 @@ function terminalRunningCopy(
   }
   if (kind === "connect") return { label: "Connecting", hint: "Connecting to the server…" };
   return localServerRunning
-    ? { label: "Opening Xvaw", hint: "Connecting to the local server…" }
-    : { label: "Starting Xvaw", hint: "Starting the local server…" };
+    ? { label: "Opening Xwav", hint: "Connecting to the local server…" }
+    : { label: "Starting Xwav", hint: "Starting the local server…" };
 }

@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 
 DEFAULT_HOST_IMAGE: str = "ghcr.io/omnigent-ai/omnigent-host:latest"
 """Default sandbox image across providers: the official prebaked
-Xvaw host image, published by CI from the ``host`` target of
+Xwav host image, published by CI from the ``host`` target of
 ``deploy/docker/Dockerfile`` (``:latest`` tracks main; ``:sha-<short>``
 pins a commit). It bakes the full omnigent install plus git / tmux /
 curl and the coding-harness CLIs, so sandbox creation skips the

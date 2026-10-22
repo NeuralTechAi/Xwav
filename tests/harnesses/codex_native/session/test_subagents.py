@@ -424,7 +424,7 @@ def test_forwarder_registers_subagent_activity_before_child_events(
     asyncio.run(run())
 
     registrations = _registration_posts(posted, "conv_parent")
-    assert registrations, "subAgentActivity(kind=started) must create an Xvaw child session"
+    assert registrations, "subAgentActivity(kind=started) must create an Xwav child session"
     assert registrations[0]["data"]["thread_id"] == "thread_child"
     child_posts = _transcript_posts(posted, "conv_child")
     assert [post["data"]["item_data"]["content"][0]["text"] for post in child_posts] == [

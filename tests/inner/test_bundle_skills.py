@@ -19,6 +19,8 @@ from omnigent.inner.bundle_skills import (
     ensure_bundle_plugin_manifest,
 )
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 def test_ensure_bundle_plugin_manifest_writes_when_missing(tmp_path: Path) -> None:
     """

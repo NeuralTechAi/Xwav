@@ -560,5 +560,5 @@ def test_main_requires_selected_dependencies_before_reporting_success(
             assert "Databricks" not in r.stdout
         else:
             assert ledger.read_text().splitlines() == [str(bindir / "databricks"), "omnigent"]
-        assert "Xvaw installed successfully" in r.stdout
+        assert "Xwav installed successfully" in r.stdout
         assert f'PATH="{bindir}:$PATH"' in r.stdout

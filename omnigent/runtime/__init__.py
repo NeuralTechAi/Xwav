@@ -419,7 +419,7 @@ def get_harness_process_manager() -> HarnessProcessManager:
     pm = _globals._harness_process_manager
     if pm is None:
         raise RuntimeError(
-            "HarnessProcessManager not initialized — Xvaw lifespan startup "
+            "HarnessProcessManager not initialized — Xwav lifespan startup "
             "must call set_harness_process_manager() before any workflow "
             "dispatches to a non-default harness"
         )

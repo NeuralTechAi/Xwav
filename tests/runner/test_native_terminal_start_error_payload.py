@@ -258,7 +258,7 @@ def test_outdated_pi_cli_surfaces_its_actionable_message() -> None:
     from omnigent.harnesses.pi_native.main import PiNativeCliOutdatedError
 
     remedy = (
-        "The installed Pi CLI (0.83.0) is older than the minimum Xvaw "
+        "The installed Pi CLI (0.83.0) is older than the minimum Xwav "
         "supports (0.84.2). Upgrade with: npm install -g "
         "@earendil-works/pi-coding-agent, then start the session again."
     )

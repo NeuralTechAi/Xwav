@@ -27,7 +27,8 @@
 			<string>ai.omnigent.ios.deeplink</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>xvaw</string>
+				<string>xwav</string>
+                <string>xvaw</string>
 				<string>omnigent</string>
 			</array>
 		</dict>
@@ -41,11 +42,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Xvaw uses the camera when you choose to take a photo for an attachment.</string>
+	<string>Xwav uses the camera when you choose to take a photo for an attachment.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Xvaw uses the microphone for voice dictation in the message composer.</string>
+	<string>Xwav uses the microphone for voice dictation in the message composer.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Xvaw uses speech recognition to turn voice dictation into message text.</string>
+	<string>Xwav uses speech recognition to turn voice dictation into message text.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchScreen</key>

@@ -7,10 +7,11 @@ import * as vscode from "vscode";
 import type { Settings } from "./index";
 
 export function readSettings(): Settings {
-  const cfg = vscode.workspace.getConfiguration("xvaw");
+  const cfg = vscode.workspace.getConfiguration("xwav");
   return {
     serverUrl:
       cfg.get<string>("serverUrl", "") ||
+      vscode.workspace.getConfiguration("xvaw").get<string>("serverUrl", "") ||
       vscode.workspace
         .getConfiguration("omnigent")
         .get<string>("serverUrl", ""),

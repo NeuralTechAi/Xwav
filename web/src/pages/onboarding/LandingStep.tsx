@@ -99,7 +99,7 @@ export function LandingStep({
     <div className="flex min-w-0 flex-1 flex-col gap-2 px-2 pb-1">
       <div className="text-center flex-1 flex flex-col justify-center">
         <h1 className="text-2xl font-normal leading-9 tracking-[-0.03em] text-foreground">
-          Meet Xvaw
+          Meet Xwav
         </h1>
         <p className="mt-1 text-base text-muted-foreground">
           One interface for all your coding agents
@@ -201,7 +201,7 @@ export function LandingStep({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") selectTyped();
                   }}
-                  placeholder="Enter Xvaw server URL"
+                  placeholder="Enter Xwav server URL"
                   aria-label="Server URL"
                   aria-invalid={invalid}
                 />

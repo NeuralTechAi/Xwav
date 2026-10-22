@@ -87,7 +87,7 @@ export function downloadSettings(exported: ExportedSettings): void {
   try {
     const a = document.createElement("a");
     a.href = url;
-    a.download = "xvaw-settings.json";
+    a.download = "xwav-settings.json";
     a.click();
   } finally {
     URL.revokeObjectURL(url);
@@ -109,7 +109,7 @@ export function readSettingsFile(file: File): Promise<ExportedSettings> {
       try {
         const parsed: unknown = JSON.parse(reader.result as string);
         if (!isExportedSettings(parsed)) {
-          reject(new Error("The file doesn't contain valid Xvaw settings."));
+          reject(new Error("The file doesn't contain valid Xwav settings."));
           return;
         }
         resolve(parsed);

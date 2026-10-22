@@ -1099,7 +1099,7 @@ def _ensure_default_native_agents(
 # loop, so the vendor CLI supplies the real behavior; this is just enough to
 # name the role.
 _ACP_AGENT_PROMPT = (
-    "You are a coding agent running inside Xvaw through the Agent Client "
+    "You are a coding agent running inside Xwav through the Agent Client "
     "Protocol. Help the user with software engineering tasks in their workspace: "
     "read and edit files, run commands, investigate, and implement changes. Work "
     "within the current repository, explain what you are doing, and when you finish "
@@ -1899,7 +1899,7 @@ def create_app(
         else None
     )
 
-    app = FastAPI(title="Xvaw Server", lifespan=_lifespan)
+    app = FastAPI(title="Xwav Server", lifespan=_lifespan)
     from omnigent.runtime import telemetry
 
     telemetry.instrument_fastapi_app(app)

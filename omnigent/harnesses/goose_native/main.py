@@ -183,7 +183,7 @@ def run_goose_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Goose requires a resolved Xvaw server URL. The CLI should call "
+            "Goose requires a resolved Xwav server URL. The CLI should call "
             "_ensure_backend before run_goose_native."
         )
     with TemporaryDirectory(prefix="omnigent-goose-native-") as tmpdir:

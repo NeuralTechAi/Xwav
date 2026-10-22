@@ -497,7 +497,7 @@ async def test_legacy_login_opens_upgrade_instructions_and_stops_polling() -> No
         assert "ticket=" not in body["login_url"]
         page = await client.get(body["login_url"])
         assert page.status_code == 200
-        assert "Update Xvaw to sign in" in page.text
+        assert "Update Xwav to sign in" in page.text
         assert "omni upgrade" in page.text
         assert "iOS or Android" in page.text
         assert "Slack integration" in page.text
@@ -629,4 +629,4 @@ async def test_cli_consent_flow_under_base_path(decision: str) -> None:
         legacy = await client.post(f"{base_path}/auth/cli-login")
         upgrade = await client.get(base_path + legacy.json()["login_url"])
         assert upgrade.status_code == 200
-        assert "Update Xvaw to sign in" in upgrade.text
+        assert "Update Xwav to sign in" in upgrade.text

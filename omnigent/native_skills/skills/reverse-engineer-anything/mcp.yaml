@@ -1,0 +1,8 @@
+name: rea
+transport: stdio
+command: npx
+args:
+- -y
+- rea-agents@6.7.0
+- mcp
+description: Local artifact reverse engineering; optional existing native engines

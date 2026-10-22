@@ -21,7 +21,7 @@ LEDGER_NAME = "install_ledger.json"
 BACKFILL_LEDGER_NAME = "install_ledger.backfill.json"
 PROFILE_MARKER_BEGIN = "# >>> Omnigent installer >>>"
 PROFILE_MARKER_END = "# <<< Omnigent installer <<<"
-CONSOLE_SCRIPTS = ["xvaw", "omnigent", "omni"]
+CONSOLE_SCRIPTS = ["xwav", "xvaw", "omnigent", "omni"]
 
 
 def utc_now() -> str:
@@ -423,7 +423,7 @@ def desktop_data_paths() -> list[str]:
     if platform.system() == "Darwin":
         candidates = [
             home / "Library" / folder / app_name
-            for app_name in ("Xvaw", "Omnigent")
+            for app_name in ("Xwav", "Xvaw", "Omnigent")
             for folder in ("Application Support", "Caches", "Logs")
         ]
     else:
@@ -432,7 +432,7 @@ def desktop_data_paths() -> list[str]:
         xdg_state = Path(os.environ.get("XDG_STATE_HOME", home / ".local" / "state"))
         candidates = [
             root / app_name
-            for app_name in ("Xvaw", "Omnigent")
+            for app_name in ("Xwav", "Xvaw", "Omnigent")
             for root in (xdg_config, xdg_cache, xdg_state)
         ]
     return [str(path) for path in candidates if path.exists()]

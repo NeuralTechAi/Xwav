@@ -597,7 +597,7 @@ async def test_relay_executor_routes_through_omnigent_in_omnigent_mode(
             None,
         )
         assert mcp_call is not None, (
-            "No tools/call request reached the Xvaw /mcp endpoint. "
+            "No tools/call request reached the Xwav /mcp endpoint. "
             "The relay executor is bypassing ProxyMcpManager and policy enforcement."
         )
         # Tool name and arguments must be forwarded verbatim.
@@ -605,14 +605,14 @@ async def test_relay_executor_routes_through_omnigent_in_omnigent_mode(
             "Wrong tool name forwarded; policy would be evaluated against the wrong tool."
         )
         assert mcp_call["json"]["params"]["arguments"] == {"status": "pending"}, (
-            "Arguments were not forwarded correctly to Xvaw /mcp."
+            "Arguments were not forwarded correctly to Xwav /mcp."
         )
         # The request URL must be scoped to this session's /mcp endpoint.
         assert session_id in mcp_call["url"], (
             f"AP /mcp request URL {mcp_call['url']!r} does not contain session_id {session_id!r}."
         )
         # The Omnigent response's text content must be parsed back to a dict.
-        assert result == {"items": []}, f"Expected parsed Xvaw response dict, got {result!r}."
+        assert result == {"items": []}, f"Expected parsed Xwav response dict, got {result!r}."
     finally:
         shutil.rmtree(bridge_dir, ignore_errors=True)
 
@@ -857,7 +857,7 @@ async def test_relay_policy_evaluate_truncates_long_upstream_error(
         body = resp.text
         # The actionable prefix + leading cause survive; the tail is elided.
         assert body.startswith(
-            "omnigent policy-eval proxy could not reach the Xvaw server: RequestError: "
+            "omnigent policy-eval proxy could not reach the Xwav server: RequestError: "
         )
         assert body.endswith("...")
         # Bounded well under the raw 5000-char reason.

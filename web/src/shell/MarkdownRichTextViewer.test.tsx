@@ -302,14 +302,14 @@ describe("MarkdownRichTextViewer agent-running warning", () => {
     // Agent turn in flight + editable + not yet dirty → warn before the user edits.
     setupEditHooks({ isDirty: false, hasExternalUpdate: false }, true);
     renderViewer("content");
-    expect(screen.getByText(/Xvaw is still working/)).toBeDefined();
+    expect(screen.getByText(/Xwav is still working/)).toBeDefined();
   });
 
   it("hides the warning when the session is idle", () => {
     // Turn finished — no need to warn any longer.
     setupEditHooks({ isDirty: false, hasExternalUpdate: false }, false);
     renderViewer("content");
-    expect(screen.queryByText(/Xvaw is still working/)).toBeNull();
+    expect(screen.queryByText(/Xwav is still working/)).toBeNull();
   });
 
   it("hides the warning in read-only mode even when session is active", () => {
@@ -325,7 +325,7 @@ describe("MarkdownRichTextViewer agent-running warning", () => {
     vi.mocked(runnerHook.useSessionRunnerOnline).mockReturnValue(undefined);
     vi.mocked(workspaceChangedFiles.useSessionActive).mockReturnValue(true);
     renderViewer("content");
-    expect(screen.queryByText(/Xvaw is still working/)).toBeNull();
+    expect(screen.queryByText(/Xwav is still working/)).toBeNull();
   });
 
   it("hides the warning once the user starts editing (isDirty=true)", () => {
@@ -333,7 +333,7 @@ describe("MarkdownRichTextViewer agent-running warning", () => {
     // of the unsaved-changes banner.
     setupEditHooks({ isDirty: true, hasExternalUpdate: false }, true);
     renderViewer("content");
-    expect(screen.queryByText(/Xvaw is still working/)).toBeNull();
+    expect(screen.queryByText(/Xwav is still working/)).toBeNull();
     // The normal dirty banner is still visible instead.
     expect(screen.getByText(/commenting is available once saved/)).toBeDefined();
   });
@@ -343,7 +343,7 @@ describe("MarkdownRichTextViewer agent-running warning", () => {
     // so only the conflict (more actionable) should show.
     setupEditHooks({ isDirty: true, hasExternalUpdate: true }, true);
     renderViewer("content");
-    expect(screen.queryByText(/Xvaw is still working/)).toBeNull();
+    expect(screen.queryByText(/Xwav is still working/)).toBeNull();
     expect(screen.getByText(/modified externally/)).toBeDefined();
   });
 });

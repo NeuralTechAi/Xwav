@@ -267,7 +267,7 @@ function OmnigentProviders({
 }
 
 /**
- * The Xvaw app for the SAME-ROOT path: a plain component the host renders
+ * The Xwav app for the SAME-ROOT path: a plain component the host renders
  * directly inside its OWN React tree + router. Renders NO `<Router>` (that
  * would throw "Router inside a Router").
  *

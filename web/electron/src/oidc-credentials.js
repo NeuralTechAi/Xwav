@@ -114,11 +114,11 @@ async function signInWithBrowser(serverUrl, { signal, openExternal } = {}) {
       openExternal: openExternal ?? ((url) => shell.openExternal(url)),
       onOpened: () => console.log("[omnigent] oidc sign-in: opened system browser"),
       pages: {
-        received: ["Sign-in received", "Return to Xvaw to finish connecting, then close this tab."],
-        failed: ["Sign-in was not completed", "Close this tab and try connecting again in Xvaw."],
+        received: ["Sign-in received", "Return to Xwav to finish connecting, then close this tab."],
+        failed: ["Sign-in was not completed", "Close this tab and try connecting again in Xwav."],
         incomplete: [
           "Sign-in could not be completed",
-          "Close this tab and try connecting again in Xvaw.",
+          "Close this tab and try connecting again in Xwav.",
         ],
       },
       signal,

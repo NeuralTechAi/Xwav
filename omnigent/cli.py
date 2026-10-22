@@ -58,6 +58,7 @@ from omnigent.cli_invocation import WRAPPER_COMMAND_ENV, cli_invocation
 from omnigent.cli_native import register_native_commands as _register_native_commands
 from omnigent.cli_sandbox import lakebox as _lakebox_alias_group
 from omnigent.cli_sandbox import sandbox as _sandbox_group
+from omnigent.cli_skills import skills as _skills_group
 from omnigent.config import (
     _ignored_project_harness_keys,
     _merge_effective_config,
@@ -442,7 +443,7 @@ def _server_uvicorn_log_config(
     """
     Return Uvicorn logging config with request-duration access logs.
 
-    Uvicorn emits the FastAPI access line itself, so Xvaw standardizes
+    Uvicorn emits the FastAPI access line itself, so Xwav standardizes
     its default and access formatters while preserving handler routing and
     request-duration enrichment.
 
@@ -752,7 +753,7 @@ _HostPayload: TypeAlias = dict[str, _HostJsonValue]
 
 def _effective_global_config_path() -> Path:
     """
-    Return the path to the user-level Xvaw config.
+    Return the path to the user-level Xwav config.
 
     :returns: ``$OMNIGENT_CONFIG_HOME/config.yaml`` when the env
         override is set, otherwise :data:`_GLOBAL_CONFIG_PATH`.
@@ -809,7 +810,7 @@ def _load_global_config() -> dict[str, Any]:  # type: ignore[explicit-any]
     ``auth:`` key holds a nested mapping —
     ``{"type": "databricks", "profile": "oss"}`` or
     ``{"type": "api_key", "api_key": "…"}`` — written by
-    ``xvaw setup`` and used by the runtime to supply executor
+    ``xwav setup`` and used by the runtime to supply executor
     credentials when an agent spec does not declare ``executor.auth``.
 
     :returns: Parsed YAML as a dict, e.g.
@@ -1141,8 +1142,8 @@ def _save_global_config(  # type: ignore[explicit-any]
 
     Creates the ``~/.omnigent/`` directory if it does not exist.
     Values may be plain strings, booleans, or nested mappings (the
-    ``auth:`` block written by ``xvaw setup``, or a ``providers:``
-    block written by ``xvaw setup --no-internal-beta``).
+    ``auth:`` block written by ``xwav setup``, or a ``providers:``
+    block written by ``xwav setup --no-internal-beta``).
 
     By default every key in *settings* **replaces** the existing value
     wholesale (a shallow ``dict.update``). For keys listed in
@@ -1394,7 +1395,7 @@ def _require_existing_sqlite_db(db_uri: str) -> None:
     if not db_path.exists():
         raise click.ClickException(
             f"Database file {str(db_path)!r} does not exist. Check the path in "
-            f"the database URL — db-upgrade upgrades an existing Xvaw "
+            f"the database URL — db-upgrade upgrades an existing Xwav "
             f"database and will not create one."
         )
 
@@ -1673,7 +1674,7 @@ def _validate_agent_policy_functions(  # type: ignore[explicit-any]  # spec type
                     f"{policy.name!r} references function {path!r}, which "
                     f"cannot be resolved from sys.path "
                     f"({type(exc).__name__}: {exc}). Install the trusted callable "
-                    f"package in both the Xvaw CLI and server/runtime environments, "
+                    f"package in both the Xwav CLI and server/runtime environments, "
                     f"or correct the policy path. CLI preflight does not import "
                     f"modules from the workspace directory.",
                 ) from exc
@@ -1700,15 +1701,15 @@ def _format_version() -> str:
     version_str = VERSION
     info = _read_build_info()
     if info is None:
-        return f"xvaw {version_str}"
+        return f"xwav {version_str}"
     epoch, sha = info
     when = datetime.datetime.fromtimestamp(epoch, tz=datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     if sha:
         # Short SHA (first 8 chars) — enough to disambiguate in bug
         # reports without making the line unwieldy.
-        return f"xvaw {version_str} ({sha[:8]}, built {when})"
+        return f"xwav {version_str} ({sha[:8]}, built {when})"
     # _build_info exists but has no SHA (built without git available).
-    return f"xvaw {version_str} (built {when})"
+    return f"xwav {version_str} (built {when})"
 
 
 def _print_version_callback(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
@@ -1903,7 +1904,7 @@ class _OmnigentCLI(click.Group):
         if ui.show_banner():
             from omnigent.version import VERSION
 
-            epilogue = [("Get started", "xvaw setup")]
+            epilogue = [("Get started", "xwav setup")]
             if VERSION:
                 epilogue.insert(0, ("Version", VERSION))
             ui.print_landing(tagline="all your agents, one cli", epilogue=epilogue)
@@ -1992,8 +1993,8 @@ def _finish_cli_profile(profiler: Any, output_path: Path) -> None:  # type: igno
         f"{total_calls:,} calls ({primitive_calls:,} primitive)",
         err=True,
     )
-    _print_rows("Top Xvaw call paths", omnigent_rows)
-    _print_rows("Top Xvaw functions by self time", self_time_rows)
+    _print_rows("Top Xwav call paths", omnigent_rows)
+    _print_rows("Top Xwav functions by self time", self_time_rows)
     click.echo(f"\nFull profile data: {output_path}", err=True)
 
 
@@ -2060,7 +2061,7 @@ def _extract_global_logging_flags(argv: list[str]) -> tuple[list[str], bool, boo
     is_eager=True,
     expose_value=False,
     callback=_set_debug_logging,
-    help="Enable verbose DEBUG logging for Xvaw processes.",
+    help="Enable verbose DEBUG logging for Xwav processes.",
 )
 @click.option(
     "--log-to-stderr",
@@ -2079,7 +2080,7 @@ def _extract_global_logging_flags(argv: list[str]) -> tuple[list[str], bool, boo
     help="Show the version and exit.",
 )
 def cli() -> None:
-    """Xvaw CLI — your agents, one workspace."""
+    """Xwav CLI — your agents, one workspace."""
 
 
 # Names of every subcommand the click group owns. Used by
@@ -2246,7 +2247,7 @@ def main() -> None:
     # dispatch, imports — are all caught. See omnigent/crash_handler.py.
     from omnigent.crash_handler import install_crash_handler
 
-    install_crash_handler(app_name="Xvaw", repo="NeuralTechAi/Xvaw")
+    install_crash_handler(app_name="Xwav", repo="NeuralTechAi/Xwav")
 
     # Operators can force all use through a wrapper (e.g. `isaac omni`) by
     # setting OMNIGENT_REQUIRE_WRAPPER; the wrapper sets OMNIGENT_WRAPPER_BYPASS
@@ -2501,7 +2502,7 @@ _HOST_PID_PATH = data_dir() / "host.pid"
 
 # host.pid records the daemon PID + the "target" it serves: a normalized
 # server URL for remote/explicit targets, or the literal marker ``"local"``
-# for a daemon that owns a local Xvaw server. Daemon reuse is keyed on this
+# for a daemon that owns a local Xwav server. Daemon reuse is keyed on this
 # target (real URLs never collide with the marker).
 _LOCAL_DAEMON_MARKER = "local"
 
@@ -2530,7 +2531,7 @@ def _is_local_server_request(server: str | None) -> bool:
 @dataclass(frozen=True)
 class _HostHttpResult:
     """
-    Decoded Xvaw management HTTP response.
+    Decoded Xwav management HTTP response.
 
     :param status_code: HTTP status code, e.g. ``200``. ``0`` means no
         HTTP response was received because the request failed locally.
@@ -2570,7 +2571,7 @@ class _DaemonSessionsResult:
     """
     Sessions fetched for one daemon target.
 
-    :param base_url: Xvaw server base URL, e.g.
+    :param base_url: Xwav server base URL, e.g.
         ``"https://example.databricksapps.com"``. ``None`` when a
         local daemon's server cannot be discovered.
     :param sessions: Session rows owned by the daemon host id.
@@ -2641,7 +2642,7 @@ def _normalize_daemon_target(server_url: str | None) -> str:
     """
     Normalize a daemon target key.
 
-    :param server_url: Requested Xvaw server URL, e.g.
+    :param server_url: Requested Xwav server URL, e.g.
         ``"https://example.databricksapps.com/"``. ``None`` or empty
         string selects local mode.
     :returns: ``"local"`` for local mode, otherwise the URL without a
@@ -2713,7 +2714,7 @@ def _daemon_host_online(record: _HostDaemonRecord, *, timeout_s: float = 2.0) ->
     Probe whether a daemon's host is currently online on its server.
 
     A daemon process being alive (PID check) does not mean its WebSocket
-    tunnel to the Xvaw server is up: the server only reports the host
+    tunnel to the Xwav server is up: the server only reports the host
     ``online`` while a daemon holds an authenticated tunnel and has
     heartbeated within ``HOST_LIVENESS_TTL_S``. After a server restart,
     an ungraceful daemon death, or a flapping tunnel, the daemon can be a
@@ -2870,7 +2871,7 @@ def _find_daemon_record(target: str) -> _HostDaemonRecord | None:
 
 def _update_daemon_resolved_server_url(target: str, server_url: str) -> None:
     """
-    Record the concrete Xvaw server URL served by a daemon target.
+    Record the concrete Xwav server URL served by a daemon target.
 
     :param target: Normalized target, e.g. ``"local"``.
     :param server_url: Concrete server URL, e.g.
@@ -2950,9 +2951,9 @@ def _daemon_host_identity_changed(record: _HostDaemonRecord) -> bool:
 
 def _terminate_host_unit(record: _HostDaemonRecord, *, reason: str) -> None:
     """
-    Tear down a daemon and, in local mode, the Xvaw server it owns.
+    Tear down a daemon and, in local mode, the Xwav server it owns.
 
-    The ``--local`` daemon spawns its Xvaw server once and never respawns
+    The ``--local`` daemon spawns its Xwav server once and never respawns
     it, so a stale daemon and its server must be replaced as a unit:
     killing only the daemon would strand the server (and vice versa). This
     stops both so the caller can spawn a fresh, correctly-configured pair.
@@ -3371,7 +3372,7 @@ def _foreground_daemon_record(
 
     :param target: Normalized daemon target, e.g.
         ``"https://example.databricksapps.com"`` or ``"local"``.
-    :param server_url: Concrete Xvaw server URL being connected to, e.g.
+    :param server_url: Concrete Xwav server URL being connected to, e.g.
         ``"http://127.0.0.1:8123"``.
     :param host_id: Local host id, e.g. ``"host_abc123"``.
     :returns: Daemon registry record for ``os.getpid()``.
@@ -3669,9 +3670,9 @@ def _load_or_create_host_id() -> str | None:
 def _ensure_host_daemon(server_url: str | None) -> bool:
     """Start or reuse a host daemon for one target.
 
-    :param server_url: Xvaw server URL the daemon connects to, or ``None``
+    :param server_url: Xwav server URL the daemon connects to, or ``None``
         for local mode — the daemon starts (or reuses) a persistent local
-        Xvaw server and connects to that.
+        Xwav server and connects to that.
     :returns: ``True`` when a config (auth source) change tore down this
         target's daemon, whether it was respawned or another URL's daemon now
         serves the workspace — the caller should ask the user to re-run
@@ -3775,10 +3776,10 @@ def _build_host_daemon_env(
     """
     Build the environment for the background host daemon.
 
-    Remote daemons connect to an already-running Xvaw server, so they only
+    Remote daemons connect to an already-running Xwav server, so they only
     need process essentials, TLS trust, and Databricks auth. Local daemons
-    also start the local Xvaw server; that server is the user's local runtime
-    and must inherit Xvaw config plus provider credentials such as
+    also start the local Xwav server; that server is the user's local runtime
+    and must inherit Xwav config plus provider credentials such as
     ``OPENAI_API_KEY`` and ``OPENAI_BASE_URL``. Both modes are allowlisted:
     local mode carries the runtime/provider vars needed by the local server,
     but unrelated shell secrets are not inherited merely because the daemon
@@ -3786,7 +3787,7 @@ def _build_host_daemon_env(
     through :func:`omnigent.host.connect._build_runner_env`, so these
     local-server credentials do not leak into runner subprocesses.
 
-    :param server_url: Xvaw server URL for remote mode, e.g.
+    :param server_url: Xwav server URL for remote mode, e.g.
         ``"https://example.databricksapps.com"``, or a falsey value
         such as ``None`` / ``""`` for local daemon mode.
     :returns: Environment dict for ``subprocess.Popen``.
@@ -3988,16 +3989,16 @@ def _ensure_databricks_server_auth(server: str, *, non_interactive: bool = False
 
 
 def _ensure_backend(server: str | None) -> str:
-    """Ensure the host daemon is running and return the Xvaw server URL.
+    """Ensure the host daemon is running and return the Xwav server URL.
 
     The daemon is the single backend for ``attach`` / ``run`` / ``claude`` /
-    ``codex``: it spawns the runner and, in local mode, the Xvaw server too.
+    ``codex``: it spawns the runner and, in local mode, the Xwav server too.
     The CLI is a pure client of the returned URL.
 
     :param server: ``--server`` value after config fallback. A non-empty
         value targets that (remote or explicit-local) server. ``None`` or
         ``""`` selects local mode: the daemon starts (or reuses) a
-        persistent local Xvaw server and this returns its discovered loopback
+        persistent local Xwav server and this returns its discovered loopback
         URL.
     :returns: A concrete base URL, e.g. ``"http://127.0.0.1:8123"`` or the
         remote URL passed in.
@@ -4040,7 +4041,7 @@ def _ensure_backend(server: str | None) -> str:
             auth_future.result()
             daemon_future.result()
         return server
-    # Local mode: the daemon spawns (or reuses) a persistent local Xvaw server.
+    # Local mode: the daemon spawns (or reuses) a persistent local Xwav server.
     # On a cold start this is the longest silent gap between the user pressing
     # Enter and any output, so render a spinner whose label tracks the step.
     # It clears on context exit — before any auth-mode-change echo below and
@@ -4059,7 +4060,7 @@ def _ensure_backend(server: str | None) -> str:
 def _exit_for_auth_mode_change(base_url: str) -> None:
     """Tell the user the server was restarted in a new mode, then exit clean.
 
-    The local Xvaw server bakes its auth posture (header vs accounts, cookie
+    The local Xwav server bakes its auth posture (header vs accounts, cookie
     secret) at boot, so an ``OMNIGENT_AUTH_ENABLED`` flip restarts it
     via :func:`_ensure_host_daemon`. Continuing the *same* command across
     that restart is brittle — the in-flight session/credential/terminal
@@ -4068,7 +4069,7 @@ def _exit_for_auth_mode_change(base_url: str) -> None:
     a clean single-mode start. When the new mode is accounts and no admin
     exists yet, point the user at the one-time setup URL.
 
-    :param base_url: The freshly-restarted Xvaw server URL, e.g.
+    :param base_url: The freshly-restarted Xwav server URL, e.g.
         ``"http://127.0.0.1:6767"``.
     :returns: Never returns — raises ``SystemExit(0)``.
     :raises SystemExit: Always, with code 0 (a clean, expected stop).
@@ -4098,9 +4099,9 @@ def _exit_for_auth_mode_change(base_url: str) -> None:
 def _discover_local_server_url(
     timeout: float = _LOCAL_SERVER_DISCOVER_TIMEOUT_S,
 ) -> str:
-    """Poll until the daemon-started local Xvaw server is reachable.
+    """Poll until the daemon-started local Xwav server is reachable.
 
-    In local mode the daemon owns the Xvaw server; the CLI discovers its URL
+    In local mode the daemon owns the Xwav server; the CLI discovers its URL
     via the local-server pidfile + ``/health`` rather than starting it
     itself.
 
@@ -4128,13 +4129,13 @@ def _discover_local_server_url(
                 tail_path, tail = tail_info
                 detail = f"\n  Server log: {tail_path}\n\n  Last 50 lines:\n{tail}"
             raise LocalServerStartupError(
-                "The local daemon exited before its Xvaw server became ready. "
+                "The local daemon exited before its Xwav server became ready. "
                 f"See logs under {process_log_dir_reference('host')} and "
                 f"{process_log_dir_reference('server')}." + detail
             )
         time.sleep(0.2)
     raise LocalServerStartupError(
-        f"Timed out after {timeout:.0f}s waiting for the local Xvaw server to "
+        f"Timed out after {timeout:.0f}s waiting for the local Xwav server to "
         f"start. See {process_log_dir_reference('server')} for details."
     )
 
@@ -4172,7 +4173,7 @@ def _start_cli_runner_process(
 
     The runner always connects back over the WebSocket tunnel. Local
     ``omnigent server`` passes its loopback URL; ``run --server``
-    passes the remote Xvaw server URL.
+    passes the remote Xwav server URL.
 
     For remote Databricks-fronted servers, the runner subprocess
     authenticates via the stored ``omnigent login`` record (or
@@ -4489,7 +4490,7 @@ def server(
     background: bool,
     base_path: str | None,
 ) -> None:
-    """Start the Xvaw server, or manage the background server.
+    """Start the Xwav server, or manage the background server.
 
     Bare ``omnigent server`` runs the server in the FOREGROUND (Ctrl-C to
     stop) — for deploys / Docker. Pass ``--background`` to spawn it as a
@@ -4924,7 +4925,7 @@ def server(
         server_config=title_server_config,
     )
 
-    click.echo(f"Starting Xvaw server on {host}:{port}")
+    click.echo(f"Starting Xwav server on {host}:{port}")
     click.echo(f"  database:  {_display_db_uri(db_uri)}")
     click.echo(f"  artifacts: {art_loc}")
     click.echo(f"  log:       {_display_path(server_log_path)}")
@@ -5008,11 +5009,11 @@ def server(
 
 
 def _stop_local_server_and_daemon(*, force: bool) -> bool:
-    """Stop the background Xvaw server and the local host daemon that owns it.
+    """Stop the background Xwav server and the local host daemon that owns it.
 
     Stops the local-mode host daemon first (the daemon spawns its server
     once and never respawns it, so leaving it alive would only have it
-    reconnect-flap against a dead server), then the detached Xvaw server
+    reconnect-flap against a dead server), then the detached Xwav server
     recorded in ``~/.omnigent/local_server.pid``. Best-effort and
     idempotent — a missing daemon or server is a no-op.
 
@@ -5089,7 +5090,7 @@ def server_start() -> None:
     help="SIGKILL the local host daemon if it does not exit on SIGTERM.",
 )
 def server_stop(force: bool) -> None:
-    """Stop the background Xvaw server and the local host daemon.
+    """Stop the background Xwav server and the local host daemon.
 
     Stops the local host daemon first, then the detached server recorded
     in ``~/.omnigent/local_server.pid`` — its web UI and sessions become
@@ -5109,7 +5110,7 @@ def server_stop(force: bool) -> None:
 @server.command("status")
 @click.option("--json", "json_output", is_flag=True, help="Emit JSON.")
 def server_status(json_output: bool) -> None:
-    """Show whether the background Xvaw server is running.
+    """Show whether the background Xwav server is running.
 
     Reports the recorded pid/port, URL, live-session count, and whether a
     local host daemon is attached. Reads ``~/.omnigent/local_server.pid``
@@ -5155,7 +5156,7 @@ def server_status(json_output: bool) -> None:
 
 
 @cli.command("start")
-@click.option("--server", default=None, help="Xvaw server URL to host on.")
+@click.option("--server", default=None, help="Xwav server URL to host on.")
 @click.option(
     "--no-open",
     is_flag=True,
@@ -5175,7 +5176,7 @@ def server_status(json_output: bool) -> None:
     ),
 )
 def start(server: str | None, no_open: bool, non_interactive: bool) -> None:
-    """Start Xvaw on this machine, in the background.
+    """Start Xwav on this machine, in the background.
 
     The on switch, and the counterpart of ``omnigent stop``: brings up the
     local server (web UI / history) and registers this machine as a host, then
@@ -5187,7 +5188,7 @@ def start(server: str | None, no_open: bool, non_interactive: bool) -> None:
     ``omnigent host stop``). Sign-in happens here, in your terminal, before the
     daemon detaches.
 
-    :param server: Xvaw server URL to host on, e.g.
+    :param server: Xwav server URL to host on, e.g.
         ``"https://example.databricksapps.com"``. ``None`` falls back to
         config; empty string forces local mode.
     :param no_open: When ``True``, skip automatically opening the host web UI.
@@ -5211,7 +5212,7 @@ def start(server: str | None, no_open: bool, non_interactive: bool) -> None:
     help="Continue past failures and SIGKILL daemons that do not exit on SIGTERM.",
 )
 def stop(force: bool) -> None:
-    """Stop everything Xvaw is running on this machine.
+    """Stop everything Xwav is running on this machine.
 
     The off switch, and the counterpart of ``omnigent start``: stops every host
     daemon (local and remote-targeted) and the detached background server.
@@ -5493,7 +5494,7 @@ def doctor(
     if json_output:
         click.echo(json.dumps(payload, indent=2, sort_keys=True))
     elif ledger is None:
-        click.echo("No Xvaw install detected; no ledger written.")
+        click.echo("No Xwav install detected; no ledger written.")
     elif apply_changes:
         click.echo(f"Wrote backfill ledger to {backfill_ledger_path()}.")
     else:
@@ -5527,7 +5528,7 @@ def uninstall(
     no_backup: bool,
     assume_inferred: bool,
 ) -> None:
-    """Uninstall Xvaw from this machine."""
+    """Uninstall Xwav from this machine."""
     from omnigent.install_ledger import resolve_uninstall_ledger
 
     ledger = resolve_uninstall_ledger()
@@ -5555,13 +5556,13 @@ def uninstall(
                         "backups": [],
                         "summary": {"done": 0, "skipped": 0, "failed": 0, "reported": 0},
                         "exit_code": 3,
-                        "error": "no Xvaw install detected",
+                        "error": "no Xwav install detected",
                     },
                     indent=2,
                 )
             )
             raise SystemExit(3)
-        click.echo("No Xvaw install detected; nothing to uninstall.", err=True)
+        click.echo("No Xwav install detected; nothing to uninstall.", err=True)
         raise SystemExit(3)
 
     script_path = _uninstall_script_path()
@@ -5984,7 +5985,7 @@ def upgrade(
     target_version: str | None,
     dry_run: bool,
 ) -> None:
-    """Upgrade Xvaw to the latest release.
+    """Upgrade Xwav to the latest release.
 
     Detects how omnigent was installed (uv tool / pipx), checks the
     configured index for a newer release and — unless ``--check`` — drains
@@ -6220,7 +6221,7 @@ cli.add_command(upgrade, name="update")
 def _bundle(source: Path) -> bytes:
     """
     Produce a tar.gz bundle from a directory or standalone
-    Xvaw YAML file, or pass through an existing tarball.
+    Xwav YAML file, or pass through an existing tarball.
 
     Environment variable references (``${VAR}``) in
     ``config.yaml`` and ``tools/mcp/*.yaml`` are expanded
@@ -6230,7 +6231,7 @@ def _bundle(source: Path) -> bytes:
     resolve.
 
     :param source: Path to an agent image directory,
-        standalone Xvaw YAML file, or an existing
+        standalone Xwav YAML file, or an existing
         ``.tar.gz`` bundle file.
     :returns: The gzipped tarball bytes.
     :raises OmnigentError: If a required env var is
@@ -6738,7 +6739,7 @@ def debby(run_args: tuple[str, ...]) -> None:
 )
 @click.argument("run_args", nargs=-1, type=click.UNPROCESSED)
 def copilot(run_args: tuple[str, ...]) -> None:
-    """Launch GitHub Copilot with Xvaw.
+    """Launch GitHub Copilot with Xwav.
 
     Shorthand for ``omnigent run --harness copilot``; every ``run`` option is forwarded."""
     _run_harness_shorthand("copilot", run_args)
@@ -6762,11 +6763,11 @@ def resume(
     # Click uses the docstring as --help text — keep param docs in
     # comments so they don't leak into CLI output.
     #
-    # :param target: Optional Xvaw conversation id, e.g.
+    # :param target: Optional Xwav conversation id, e.g.
     #     ``"conv_abc123"``. None falls through to the picker.
-    # :param server: Remote Xvaw server URL (optional in id mode;
+    # :param server: Remote Xwav server URL (optional in id mode;
     #     required in picker mode).
-    """Resume an Xvaw conversation, auto-dispatching by runtime.
+    """Resume an Xwav conversation, auto-dispatching by runtime.
 
     \b
     With CONV_ID: looks up the conversation and dispatches to the
@@ -6842,7 +6843,7 @@ class _SessionImportResult:
     "--server",
     default=None,
     help=(
-        "Xvaw server URL. Defaults to the configured server, an existing "
+        "Xwav server URL. Defaults to the configured server, an existing "
         "local server, or a newly started local server."
     ),
 )
@@ -6860,7 +6861,7 @@ def import_session_command(
 ) -> None:
     """Import chats from supported local coding harnesses.
 
-    The source transcript is converted to ordinary Xvaw items and stored
+    The source transcript is converted to ordinary Xwav items and stored
     as a normal session. Qwen, Kiro, and Kimi currently preserve visible
     messages but not native tool activity; OpenCode and Pi preserve exported
     tool activity. Use --session for one chat or --last for a bounded batch. A
@@ -6978,7 +6979,7 @@ def import_session_command(
             return _SessionImportResult(
                 sid,
                 "unreachable",
-                message=f"Could not reach the Xvaw server: {exc}",
+                message=f"Could not reach the Xwav server: {exc}",
                 raw_exc=exc,
             )
 
@@ -7167,7 +7168,7 @@ def _render_usage(report: dict[str, Any], limit: int) -> None:  # type: ignore[e
     "--server",
     default=None,
     help=(
-        "Xvaw server URL. Defaults to the configured server, or a local server already running."
+        "Xwav server URL. Defaults to the configured server, or a local server already running."
     ),
 )
 @click.option(
@@ -7178,7 +7179,7 @@ def _render_usage(report: dict[str, Any], limit: int) -> None:  # type: ignore[e
     help="Emit the raw usage report as JSON instead of the table.",
 )
 def usage(limit: int, server: str | None, as_json: bool) -> None:
-    """Show your Xvaw usage and costs.
+    """Show your Xwav usage and costs.
 
     The summary is sourced from the per-user daily cost rollup, which
     attributes spend to the UTC calendar day it occurred on — so the
@@ -7230,7 +7231,7 @@ def usage(limit: int, server: str | None, as_json: bool) -> None:
 @cli.group("session", invoke_without_command=True)
 @click.pass_context
 def session(ctx: click.Context) -> None:
-    """Manage Xvaw sessions.
+    """Manage Xwav sessions.
 
     \b
     Examples:
@@ -7262,7 +7263,7 @@ def session(ctx: click.Context) -> None:
     "--server",
     default=None,
     help=(
-        "Xvaw server URL. Defaults to the configured server, or a local server already running."
+        "Xwav server URL. Defaults to the configured server, or a local server already running."
     ),
 )
 def session_export(session_id: str, output: str | None, server: str | None) -> None:
@@ -7423,7 +7424,7 @@ def _import_item_payload(item: Mapping[str, object]) -> dict[str, object]:
     "--server",
     default=None,
     help=(
-        "Xvaw server URL. Defaults to the configured server, or a local server already running."
+        "Xwav server URL. Defaults to the configured server, or a local server already running."
     ),
 )
 def session_import(input_path: str, title: str | None, server: str | None) -> None:
@@ -7617,7 +7618,7 @@ _RUN_HARNESS_HELP = (
     f"Harness to use: {_HARNESS_CHOICES_HELP}. Without AGENT, launches that harness directly."
 )
 _FROM_OPENCLAW_HELP = (
-    "Launch one agent from the OpenClaw/acpx registry without saving it to Xvaw config."
+    "Launch one agent from the OpenClaw/acpx registry without saving it to Xwav config."
 )
 _MODEL_HELP = "Model to use for the agent."
 _PROMPT_HELP = "Send this as the first message when the REPL starts."
@@ -7652,30 +7653,30 @@ _LOG_HELP = "Write a JSON dump of the conversation to ~/.omnigent/logs/ on exit.
 
 _DEFAULT_HARNESS_PROMPTS = {
     "claude-sdk": (
-        "You are Claude Code, running through Xvaw. Help the user with software engineering tasks."
+        "You are Claude Code, running through Xwav. Help the user with software engineering tasks."
     ),
     "codex": (
-        "You are Codex, running through Xvaw. Help the user with software engineering tasks."
+        "You are Codex, running through Xwav. Help the user with software engineering tasks."
     ),
     "cursor": (
-        "You are Cursor, running through Xvaw. Help the user with software engineering tasks."
+        "You are Cursor, running through Xwav. Help the user with software engineering tasks."
     ),
     "kimi": (
-        "You are Kimi Code, running through Xvaw. Help the user with software engineering tasks."
+        "You are Kimi Code, running through Xwav. Help the user with software engineering tasks."
     ),
     "qwen": (
-        "You are Qwen Code, running through Xvaw. Help the user with software engineering tasks."
+        "You are Qwen Code, running through Xwav. Help the user with software engineering tasks."
     ),
     "goose": (
-        "You are Goose, running through Xvaw. Help the user with software engineering tasks."
+        "You are Goose, running through Xwav. Help the user with software engineering tasks."
     ),
 }
-_DEFAULT_HARNESS_PROMPT = "You are a helpful coding agent running through Xvaw."
+_DEFAULT_HARNESS_PROMPT = "You are a helpful coding agent running through Xwav."
 
 # Harnesses whose auto-generated launcher YAML should include an
 # ``os_env`` block.  This triggers the workflow's ``ToolManager``
 # to inject ``sys_os_*`` tools into the request so file/shell
-# operations route through the Xvaw dispatch path (runner
+# operations route through the Xwav dispatch path (runner
 # visibility, timeouts, error recovery) instead of the harness's
 # internal built-in tools.
 # Membership is tested on the canonical id, so "acp" covers every
@@ -7688,7 +7689,7 @@ _OS_ENV_HARNESSES: frozenset[str] = frozenset(
 
 def _validate_harness(harness: str) -> None:
     """
-    Fail fast when *harness* is not a supported Xvaw harness.
+    Fail fast when *harness* is not a supported Xwav harness.
 
     :param harness: Harness id from ``--harness``, e.g.
         ``"claude-sdk"``.
@@ -7707,7 +7708,7 @@ def _default_harness_prompt(harness: str) -> str:
     Return the lightweight generated-agent instructions for *harness*.
 
     :param harness: Supported harness id.
-    :returns: Prompt text for the generated Xvaw YAML.
+    :returns: Prompt text for the generated Xwav YAML.
     """
     return _DEFAULT_HARNESS_PROMPTS.get(harness, _DEFAULT_HARNESS_PROMPT)
 
@@ -7742,16 +7743,16 @@ def _materialize_harness_launcher_file(
     acp_agent: AcpAgentEntry | None = None,
 ) -> Path:
     """
-    Create a temporary standalone Xvaw YAML for no-AGENT ``run``.
+    Create a temporary standalone Xwav YAML for no-AGENT ``run``.
 
-    The generated file uses the single-file Xvaw YAML shape
+    The generated file uses the single-file Xwav YAML shape
     (``name`` / ``prompt`` / ``executor``), not native AP
     ``config.yaml``. Passing this file to ``run_chat`` exercises the
     same compat adapter as ``omnigent run examples/foo.yaml``.
 
     Harnesses listed in :data:`_OS_ENV_HARNESSES` get an ``os_env``
     block so the workflow injects ``sys_os_*`` tools into the
-    request — routing file/shell operations through the Xvaw
+    request — routing file/shell operations through the Xwav
     dispatch path rather than the harness's internal built-ins.
 
     :param harness: Supported harness id to launch, e.g.
@@ -8041,7 +8042,7 @@ def _dispatch_native_terminal_harness(
 
     ``run --harness cursor-native`` (and the claude/codex/pi equivalents)
     must NOT go through the materialized-launcher REPL: that drives an
-    Xvaw turn per message — which persists its own user item — *while*
+    Xwav turn per message — which persists its own user item — *while*
     the harness forwarder mirrors the same message back from the TUI's
     transcript, recording every user message twice. These harnesses are
     terminal-mirror sessions whose turns originate in the TUI, so dispatch
@@ -8203,7 +8204,7 @@ def _smart_routing_decision(*, server: str, harness: str) -> ArmedSession:
     *harness*'s own first-message hook picks the model once the user types,
     which is what the stderr line reports.
 
-    :param server: Resolved Xvaw server base URL.
+    :param server: Resolved Xwav server base URL.
     :param harness: Canonical native harness to bind, e.g. ``"codex-native"``.
     :returns: The armed session to attach the wrapper to.
     :raises click.ClickException: When Smart Routing is unavailable.
@@ -8255,7 +8256,7 @@ def _reject_agent_with_native_terminal_harness(harness: str) -> None:
 
     A ``*-native`` harness mirrors an external CLI's own TUI; the agent spec's
     prompt/tools are never consulted, and driving it through the REPL would
-    double-record every message (Xvaw turn + forwarder mirror). So an
+    double-record every message (Xwav turn + forwarder mirror). So an
     explicit AGENT path combined with a native terminal harness has no coherent
     meaning — fail loud and point at the dedicated subcommand.
 
@@ -8300,7 +8301,7 @@ def _dispatch_run(
     """
     Route ``omnigent run`` to the right impl.
 
-    The click path always drives the Xvaw server-backed REPL. With
+    The click path always drives the Xwav server-backed REPL. With
     ``--server <url>``, use that server URL instead of starting a
     local server. (``omnigent attach`` is a separate attach-only
     client and does NOT route through here.)
@@ -8314,7 +8315,7 @@ def _dispatch_run(
     :param prompt: ``-p`` / ``--prompt`` value.
     :param system_prompt: ``--system-prompt`` value.
     :param server: Server URL from ``--server`` or config. With a local
-        target, this is the Xvaw server used for upload/session setup; with
+        target, this is the Xwav server used for upload/session setup; with
         no target and explicit ``--server``, this is the direct server.
     :param resume_picker: True when ``--resume`` / ``-r`` is set with
         no value (interactive picker).
@@ -8445,7 +8446,7 @@ def _dispatch_run(
             raise click.ClickException(_missing_run_agent_message())
         # ``*-native`` terminal harnesses launch their own TUI wrapper instead of
         # the materialized-launcher REPL — the REPL would double-record every
-        # user message (Xvaw turn + forwarder mirror). Returns False for
+        # user message (Xwav turn + forwarder mirror). Returns False for
         # non-native harnesses, which fall through to the launcher below.
         if _dispatch_native_terminal_harness(
             harness=harness,
@@ -8485,7 +8486,7 @@ def _dispatch_run(
         _validate_harness(harness)
         # A ``*-native`` harness IS its own TUI agent — pairing it with an AGENT
         # spec is meaningless, and routing it through the REPL would double-record
-        # every message (Xvaw turn + forwarder mirror, same as the no-AGENT
+        # every message (Xwav turn + forwarder mirror, same as the no-AGENT
         # path above). Reject rather than silently launch the broken surface.
         _reject_agent_with_native_terminal_harness(harness)
 
@@ -8582,10 +8583,10 @@ def _dispatch_run(
 
 def _resolve_attach_server(server: str | None, configured_server: str | None) -> str | None:
     """
-    Resolve the Xvaw server URL ``attach`` should join.
+    Resolve the Xwav server URL ``attach`` should join.
 
     Resolution order: an explicit ``--server`` value, then the configured
-    ``server`` default, then a local Xvaw server already running in the
+    ``server`` default, then a local Xwav server already running in the
     background. ``attach`` never starts a server, so this returns ``None``
     when none of those is available and the caller fails loud.
 
@@ -8630,7 +8631,7 @@ def _require_live_conversation(
     ``GET /v1/sessions/{id}`` and raises on a transport failure or any
     non-200 status.
 
-    :param base_url: Xvaw server base URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param base_url: Xwav server base URL, e.g. ``"http://127.0.0.1:6767"``.
     :param conversation_id: Conversation id to attach to, e.g.
         ``"conv_abc123"``.
     :raises click.ClickException: When the server is unreachable or the
@@ -8744,7 +8745,7 @@ def attach(
 # `run` absorbs the legacy ``omnigent run`` subcommand. With an AGENT
 # argument it opens the interactive REPL on a freshly started session;
 # without AGENT it can launch a built-in harness directly via ``--harness``.
-# Both paths route through the same Xvaw server+REPL dispatcher.
+# Both paths route through the same Xwav server+REPL dispatcher.
 @cli.command()
 @click.argument("target", required=False, metavar="[AGENT]")
 @click.option(
@@ -8853,7 +8854,7 @@ def run(
     debug_events: bool,
     register_host: bool,
 ) -> None:
-    """Start a session with an Xvaw agent.
+    """Start a session with an Xwav agent.
 
     AGENT may be an agent YAML file or an agent directory. Without AGENT,
     pass ``--server`` to connect directly to a server, or pass
@@ -9002,7 +9003,7 @@ def run(
     auto_open_setting = _resolve_auto_open_conversation_setting(_global_cfg)
     auto_open_conversation = auto_open_setting if auto_open_setting is not None else prompt is None
 
-    # NOTE: the host daemon + Xvaw server are ensured inside ``run_chat``'s
+    # NOTE: the host daemon + Xwav server are ensured inside ``run_chat``'s
     # non-URL branch (a URL ``target`` connects directly). ``--host`` is now
     # redundant (the daemon is always ensured) and kept only as a no-op.
     del register_host
@@ -9138,7 +9139,7 @@ class _HostGroup(click.Group):
 
 
 def _prompt_stop_local_server() -> None:
-    """Ask whether to also stop the detached local Xvaw server after exit.
+    """Ask whether to also stop the detached local Xwav server after exit.
 
     The local-mode host daemon spawns a detached, persistent local AP
     server (:func:`ensure_local_omnigent_server`) that survives the daemon's exit
@@ -9270,7 +9271,7 @@ def _background_registration_timeout(
     log_detail = _background_host_log_detail(record.log_path)
     if not server_responded and transport_error is not None:
         exc = click.ClickException(
-            f"Could not reach the Xvaw server at {target} within "
+            f"Could not reach the Xwav server at {target} within "
             f"{_BACKGROUND_HOST_REGISTRATION_GRACE_S:.0f}s ({transport_error}). "
             "Check that the server is running and that your `server` config "
             f"points at the right URL.{log_detail}"
@@ -9371,7 +9372,7 @@ def _maybe_open_host_web_ui(
     except OSError:
         opened = False
     if not opened:
-        click.echo(f"Open the Xvaw web UI: {web_url}", err=True)
+        click.echo(f"Open the Xwav web UI: {web_url}", err=True)
 
 
 def _run_background_host(
@@ -9393,9 +9394,9 @@ def _run_background_host(
     spawn — otherwise the daemon would die in the background with an opaque
     redirect error.
 
-    :param server: Resolved Xvaw server URL, e.g.
+    :param server: Resolved Xwav server URL, e.g.
         ``"https://example.databricksapps.com"``. ``None`` or ``""`` selects
-        local mode (the daemon starts or reuses a local Xvaw server).
+        local mode (the daemon starts or reuses a local Xwav server).
     :param stop_command: Command to echo for stopping this daemon, e.g.
         ``"omnigent stop"`` — each entry point suggests the teardown that
         matches how it was invoked.
@@ -9404,7 +9405,7 @@ def _run_background_host(
     :param no_open: When ``True``, skip automatically opening the host web UI.
     :raises click.ClickException: If the daemon cannot be spawned, exits
         immediately, fails to register, or (local mode) never serves its local
-        Xvaw server.
+        Xwav server.
     """
     if server:
         _ensure_databricks_server_auth(server, non_interactive=non_interactive)
@@ -9569,7 +9570,7 @@ def host(
 
     :param ctx: Click invocation context. ``ctx.invoked_subcommand`` is
         set when a management subcommand such as ``"status"`` is running.
-    :param server: Remote Xvaw server URL, e.g.
+    :param server: Remote Xwav server URL, e.g.
         ``"https://example.databricksapps.com"``. ``None`` falls back
         to config; empty string selects local mode.
     :param background: When ``True``, spawn the daemon detached and return
@@ -9609,7 +9610,7 @@ def host(
     from omnigent.host.connect import run_host_process
 
     # ``host`` IS the daemon (foreground). With no server URL, start (or
-    # reuse) the local Xvaw server here and connect to it; otherwise connect to
+    # reuse) the local Xwav server here and connect to it; otherwise connect to
     # the given remote/local URL. Unlike the background commands, we do not
     # spawn a second daemon via ``_ensure_host_daemon``.
     target = _normalize_daemon_target(server)
@@ -9705,10 +9706,10 @@ def _resolve_host_server(server: str | None) -> str | None:
 
 def _daemon_base_url(record: _HostDaemonRecord) -> str | None:
     """
-    Resolve the Xvaw server URL for a daemon record.
+    Resolve the Xwav server URL for a daemon record.
 
     :param record: Daemon registry record to inspect.
-    :returns: Xvaw server URL, e.g. ``"http://127.0.0.1:8123"``, or
+    :returns: Xwav server URL, e.g. ``"http://127.0.0.1:8123"``, or
         ``None`` when a local daemon's server cannot be discovered.
     """
     if record.mode == "local":
@@ -9832,9 +9833,9 @@ def _host_http_json(
     host_id: str | None = None,
 ) -> _HostHttpResult:
     """
-    Send one management request to an Xvaw server.
+    Send one management request to an Xwav server.
 
-    :param base_url: Xvaw server base URL, e.g.
+    :param base_url: Xwav server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param method: HTTP method, e.g. ``"GET"`` or ``"POST"``.
     :param path: Request path beginning with ``/``, e.g.
@@ -9902,7 +9903,7 @@ def _host_http_json(
 
 def _host_error_text(body: _HostJsonObject | str) -> str:
     """
-    Extract a concise error string from an Xvaw response body.
+    Extract a concise error string from an Xwav response body.
 
     :param body: Response body decoded by :func:`_host_http_json`.
     :returns: Human-readable error text.
@@ -10007,7 +10008,7 @@ def _fetch_session_pages(
     """
     Fetch every available session page from a server.
 
-    :param base_url: Xvaw server base URL, e.g.
+    :param base_url: Xwav server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param connected_only: When ``True``, ask the server for connected
         sessions only.
@@ -10088,7 +10089,7 @@ def _sessions_for_daemon(
         return _DaemonSessionsResult(
             base_url=None,
             sessions=[],
-            error="local Xvaw server is not reachable",
+            error="local Xwav server is not reachable",
             unreachable=_local_server_confirmed_dead(),
         )
     host_id = record.host_id or _load_existing_host_id()
@@ -10121,7 +10122,7 @@ def _runner_online_map(
     """
     Resolve live runner connectivity for sessions.
 
-    :param base_url: Xvaw server base URL, e.g.
+    :param base_url: Xwav server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param sessions: Session rows containing ``runner_id`` values.
     :returns: Map of ``runner_id`` to ``True`` / ``False``. ``None``
@@ -10169,7 +10170,7 @@ def _annotate_sessions_with_runner_online(
     """
     Add ``runner_online`` to session rows.
 
-    :param base_url: Xvaw server base URL, e.g.
+    :param base_url: Xwav server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param sessions: Session rows returned by ``GET /v1/sessions``.
     :returns: Copies of the session rows with ``runner_online`` added.
@@ -10221,7 +10222,7 @@ def _add_daemon_host_status(
     base_url = payload.get("server_url")
     host_id = payload.get("host_id")
     if not isinstance(base_url, str):
-        payload["error"] = "local Xvaw server is not reachable"
+        payload["error"] = "local Xwav server is not reachable"
         return
     if not isinstance(host_id, str) or not host_id:
         payload["error"] = "host id is not available in local config"
@@ -10365,7 +10366,7 @@ def _host_truncate(text: _HostJsonValue, *, max_chars: int) -> str:
     """
     Truncate long text from the right for compact terminal display.
 
-    :param text: Value to truncate, e.g. an Xvaw error message.
+    :param text: Value to truncate, e.g. an Xwav error message.
     :param max_chars: Maximum display width, e.g. ``96``.
     :returns: The original text if it fits, otherwise a right-truncated
         string ending in an ellipsis.
@@ -10717,7 +10718,7 @@ def host_enable(
     except HostServiceError as exc:
         raise click.ClickException(str(exc)) from exc
 
-    click.echo(f"Enabled the Xvaw host user service for {_host_display_url(target)}.")
+    click.echo(f"Enabled the Xwav host user service for {_host_display_url(target)}.")
     click.echo(f"Service definition: {_display_path(service.path)}")
     if service.log_path is not None:
         click.echo(f"Service output: {_display_path(service.log_path)}")
@@ -10737,7 +10738,7 @@ def host_disable() -> None:
     for record in _list_daemon_records():
         if not _pid_alive(record.pid):
             _delete_daemon_record(record)
-    click.echo("Disabled the Xvaw host user service.")
+    click.echo("Disabled the Xwav host user service.")
     click.echo(f"Removed service definition: {_display_path(service.path)}")
 
 
@@ -10803,9 +10804,9 @@ def _stop_session_on_server(
     session_id: str,
 ) -> None:
     """
-    Stop one Xvaw session via the server lifecycle event API.
+    Stop one Xwav session via the server lifecycle event API.
 
-    :param base_url: Xvaw server base URL, e.g.
+    :param base_url: Xwav server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param session_id: Session id, e.g. ``"conv_abc123"``.
     :raises click.ClickException: If the server rejects the stop event.
@@ -11094,7 +11095,7 @@ def host_stop(
         # web UI / history survive). Point users at the full stop so a wedged
         # server doesn't look like it survived a restart.
         click.echo(
-            "This stops hosting only — the local Xvaw server (web UI / history) "
+            "This stops hosting only — the local Xwav server (web UI / history) "
             f"stays up. Run `{cli_invocation()} stop` to stop it too."
         )
 
@@ -11116,7 +11117,7 @@ def host_stop_session(
     :param ctx: Click context carrying group-level options.
     :param session_ids: Session ids to stop, e.g.
         ``["conv_abc123", "conv_def456"]``.
-    :param server: Xvaw server URL that owns the sessions, e.g.
+    :param server: Xwav server URL that owns the sessions, e.g.
         ``"https://example.databricksapps.com"``. ``None`` falls back
         to config/local discovery.
     :param force: Continue after individual stop failures.
@@ -11128,7 +11129,7 @@ def host_stop_session(
         resolved_server = local_server_url_if_healthy()
         if resolved_server is None:
             raise click.ClickException(
-                "No server was supplied and no local Xvaw server is reachable."
+                "No server was supplied and no local Xwav server is reachable."
             )
     for session_id in session_ids:
         try:
@@ -11204,7 +11205,7 @@ def host_reset_id(yes: bool) -> None:
 
 @cli.command(hidden=True)
 def version() -> None:
-    """Print the installed Xvaw version."""
+    """Print the installed Xwav version."""
     print(_format_version())
 
 
@@ -11531,7 +11532,7 @@ def _slack_daemon() -> IntegrationDaemon:
 @cli.group("integration", invoke_without_command=True)
 @click.pass_context
 def integration(ctx: click.Context) -> None:
-    """Run and manage Xvaw chat integrations.
+    """Run and manage Xwav chat integrations.
 
     \b
     Available integrations:
@@ -11603,7 +11604,7 @@ def slack(ctx: click.Context, background: bool) -> None:
     # Foreground: inherit stdio, block until the bot exits (Ctrl-C). Config
     # comes from the inherited environment only (no .env loading — matches
     # `omni server`), so the child inherits our cwd; nothing to special-case.
-    click.echo("Starting the Xvaw Slack bot (foreground). Press Ctrl-C to stop.")
+    click.echo("Starting the Xwav Slack bot (foreground). Press Ctrl-C to stop.")
     result = subprocess.run(_slack_argv(), env=os.environ.copy(), check=False)
     raise SystemExit(result.returncode)
 
@@ -11632,7 +11633,7 @@ def _start_slack_background() -> None:
             message += f"\nLast log lines:\n{tail}"
         message += f"\nFull log: {_display_path(Path(record.log_path))}"
         raise click.ClickException(message)
-    click.echo(f"Started the Xvaw Slack bot in the background (pid {record.pid}).")
+    click.echo(f"Started the Xwav Slack bot in the background (pid {record.pid}).")
     click.echo(f"Logs: {_display_path(Path(record.log_path))}")
     click.echo("Stop it with: omni integration slack stop")
 
@@ -11656,7 +11657,7 @@ def slack_stop() -> None:
     if record is None:
         click.echo("Slack bot: not running.")
         return
-    click.echo(f"Stopped the Xvaw Slack bot (pid {record.pid}).")
+    click.echo(f"Stopped the Xwav Slack bot (pid {record.pid}).")
 
 
 @slack.command("logs")
@@ -11684,7 +11685,7 @@ def slack_logs(follow: bool) -> None:
 
 @cli.group("config", cls=_ConfigGroup)
 def config_grp() -> None:
-    """Get, set, and view Xvaw defaults and credentials.
+    """Get, set, and view Xwav defaults and credentials.
 
     Defaults (auto_open_conversation, default_agent, harness, model,
     server) are used by ``omnigent run``. Project-level config
@@ -11726,7 +11727,7 @@ def config_list() -> None:
 )
 @click.argument("settings", nargs=-1, required=True, metavar="KEY=VALUE...")
 def config_set(is_global: bool, settings: tuple[str, ...]) -> None:
-    """Set one or more Xvaw defaults.
+    """Set one or more Xwav defaults.
 
     Without ``--global``, pairs are written to ``.omnigent/config.yaml``
     in the current directory (project-level, like ``.git/config``); with
@@ -11771,7 +11772,7 @@ def config_set(is_global: bool, settings: tuple[str, ...]) -> None:
 )
 @click.argument("keys", nargs=-1, required=True, metavar="KEY...")
 def config_unset(is_global: bool, keys: tuple[str, ...]) -> None:
-    """Remove one or more Xvaw defaults.
+    """Remove one or more Xwav defaults.
 
     :param is_global: When ``True``, remove from ``~/.omnigent/config.yaml``;
         when ``False``, from ``.omnigent/config.yaml`` in cwd.
@@ -11797,7 +11798,7 @@ def config_unset(is_global: bool, keys: tuple[str, ...]) -> None:
 )
 def setup(internal_beta: bool) -> None:
     """
-    Launch the Xvaw first-time setup flow.
+    Launch the Xwav first-time setup flow.
 
     By default this runs the standard model/credential picker — choose a
     provider for each harness and set your defaults, then start a session
@@ -11914,7 +11915,7 @@ if _sandbox_providers():
 # Operator-only maintenance commands, grouped under ``omnigent debug``
 # so they stay out of the everyday surface.
 #
-# ``db-upgrade`` runs manual schema operations on an Xvaw tracking
+# ``db-upgrade`` runs manual schema operations on an Xwav tracking
 # database. Mirrors ``mlflow db upgrade`` (``mlflow/db.py``) so the
 # workflow is familiar to anyone who's bumped an MLflow database before.
 # The server initializes a fresh database on first boot and attempts to
@@ -11930,7 +11931,7 @@ _AGENT_SERVER_OPTION = click.option(
     "--server",
     default=None,
     help=(
-        "Xvaw server URL. Defaults to the configured server, or a local server already running."
+        "Xwav server URL. Defaults to the configured server, or a local server already running."
     ),
 )
 
@@ -12251,7 +12252,7 @@ def agent_list(server: str | None) -> None:
     with _agent_api_client(server) as client:
         rows = _list_agents(client)
     if not rows:
-        click.echo("No agents yet. Install one with: xvaw agent add <path>")
+        click.echo("No agents yet. Install one with: xwav agent add <path>")
         return
     table = _host_table("Your agents")
     table.add_column("Name", style="bold", overflow="fold")
@@ -12315,7 +12316,7 @@ def debug() -> None:
 @click.argument("url")
 def debug_db_upgrade(url: str) -> None:
     """
-    Upgrade the schema of an Xvaw tracking database to the
+    Upgrade the schema of an Xwav tracking database to the
     latest supported version.
 
     URL is a SQLAlchemy database URL, e.g.
@@ -13002,7 +13003,7 @@ def _resolve_server_url(server: str) -> ServerUrl:
                 except OSError as exc:
                     raise click.ClickException(
                         "Could not persist the workspace routing selector. "
-                        "Check that the Xvaw data directory is writable, then retry."
+                        "Check that the Xwav data directory is writable, then retry."
                     ) from exc
         else:
             resolved = ServerUrl.from_api_base(api_base)
@@ -13134,7 +13135,7 @@ def _workspace_hosted_profile_org_id(
     workspace_host: str,
     profile_name: str | None = None,
 ) -> str | None:
-    """Return the CLI-recorded workspace id for workspace-hosted Xvaw."""
+    """Return the CLI-recorded workspace id for workspace-hosted Xwav."""
     from omnigent.util.server_url import is_workspace_hosted_url
 
     if not is_workspace_hosted_url(server):
@@ -13173,7 +13174,7 @@ def _databricks_host_needs_org_selector(workspace_host: str) -> bool:
 
 
 def _databricks_login(server: str, workspace_host: str, org_id: str | None = None) -> None:
-    """Log in to a Databricks-fronted Xvaw server.
+    """Log in to a Databricks-fronted Xwav server.
 
     Covers both Databricks Apps deployments and workspace-hosted
     omnigent (``https://<workspace>/api/2.0/omnigent``). Reuses an
@@ -13479,7 +13480,7 @@ def _remember_default_server(server: str) -> None:
 @cli.command("login")
 @click.argument("server_url")
 def login(server_url: str) -> None:
-    """Authenticate with a remote Xvaw server.
+    """Authenticate with a remote Xwav server.
 
     Probes the server's auth mode and runs the matching flow:
 
@@ -13549,7 +13550,7 @@ def login(server_url: str) -> None:
     if probe.status_code == 401:
         import contextlib as _contextlib
 
-        # 401 with non-JSON body — probably not an Xvaw server.
+        # 401 with non-JSON body — probably not an Xwav server.
         # Suppress: we fall through to the OIDC path below which has
         # its own clearer error message.
         with _contextlib.suppress(ValueError):
@@ -13571,12 +13572,12 @@ def login(server_url: str) -> None:
         return
 
     if probe.status_code != 401:
-        # Not an Xvaw auth answer (an env proxy's block page, a gateway
+        # Not an Xwav auth answer (an env proxy's block page, a gateway
         # error): falling into the OIDC ticket flow would blame the wrong
         # endpoint, so fail on the probe itself.
         raise click.ClickException(
             f"Unexpected response from {server}/v1/me: HTTP {probe.status_code}. "
-            "This is not an Xvaw auth answer; the server may be erroring, "
+            "This is not an Xwav auth answer; the server may be erroring, "
             "or something other than the server may have replied."
             f"{_proxy_interference_hint(server)}"
         )
@@ -14315,15 +14316,15 @@ def _bundled_brain_fallback_applies(run_args: tuple[str, ...]) -> bool:
 def _reject_reserved_devin_resume_args(devin_args: tuple[str, ...]) -> None:
     """Reject Devin-owned resume/session flags in passthrough args.
 
-    Xvaw owns resume: it maps a conversation id to Devin's own session id
+    Xwav owns resume: it maps a conversation id to Devin's own session id
     and passes ``--resume <devin_session_id>`` itself, so a user-supplied
     ``--resume``/``-c`` would fight it and reattach the wrong session. Same for
-    ``--config``/``--export``, which carry the Xvaw hook wiring.
+    ``--config``/``--export``, which carry the Xwav hook wiring.
     """
     reserved = {"--resume", "-r", "--continue", "-c", "--config", "--export"}
     if any(arg == flag or arg.startswith(f"{flag}=") for arg in devin_args for flag in reserved):
         raise click.UsageError(
-            "Devin resume/config flags are reserved for Xvaw handling; use "
+            "Devin resume/config flags are reserved for Xwav handling; use "
             "`omnigent devin --resume [CONVERSATION]` instead."
         )
 
@@ -14333,7 +14334,7 @@ def _reject_reserved_kiro_resume_args(kiro_args: tuple[str, ...]) -> None:
     reserved = {"--resume", "--resume-id", "--resume-picker"}
     if any(arg == flag or arg.startswith(f"{flag}=") for arg in kiro_args for flag in reserved):
         raise click.UsageError(
-            "Kiro resume flags are reserved for Xvaw resume handling; use "
+            "Kiro resume flags are reserved for Xwav resume handling; use "
             f"`{cli_invocation()} kiro --resume [CONVERSATION]` instead."
         )
 
@@ -14350,7 +14351,7 @@ def _reject_reserved_codex_transport_args(codex_args: tuple[str, ...]) -> None:
     reserved = reserved_codex_transport_arg(codex_args)
     if reserved is not None:
         raise click.UsageError(
-            f"{reserved!r} is reserved for Xvaw, which starts Codex's app-server "
+            f"{reserved!r} is reserved for Xwav, which starts Codex's app-server "
             f"and attaches the TUI itself. Drop it from `{cli_invocation()} codex`, "
             "or run `codex app-server` directly for a standalone app-server."
         )
@@ -14441,6 +14442,9 @@ def _run_harness_shorthand(harness: str, run_args: tuple[str, ...]) -> None:
 # omnigent.cli_native; register them on the group here, at module bottom, so the
 # shared launch helpers their bodies close over are already defined.
 _register_native_commands(cli)
+
+
+cli.add_command(_skills_group)
 
 
 if __name__ == "__main__":

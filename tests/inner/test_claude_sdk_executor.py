@@ -28,6 +28,8 @@ from omnigent.inner.executor import (
     TurnComplete,
 )
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 class _SDKClient:
     """Quiet SDK lifecycle; scenarios override the interactions they exercise."""
@@ -4775,7 +4777,7 @@ class TestToolCallPolicyGate(unittest.TestCase):
             )
 
             self.assertIsInstance(result, PermissionResultDeny)
-            self.assertIn("Unexpected Xvaw TOOL_CALL policy verdict", result.message)
+            self.assertIn("Unexpected Xwav TOOL_CALL policy verdict", result.message)
 
         _run(_t())
 

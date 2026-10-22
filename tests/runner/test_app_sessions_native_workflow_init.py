@@ -2797,7 +2797,7 @@ async def test_session_stream_emits_heartbeat_on_idle() -> None:
         heartbeats = [e for e in collected if e.get("type") == "session.heartbeat"]
         assert len(heartbeats) >= 1, f"Expected at least 1 session.heartbeat, got {collected}"
         assert collected[0] == {"type": "session.heartbeat"}, (
-            "The first stream frame must be the ready heartbeat. Xvaw waits "
+            "The first stream frame must be the ready heartbeat. Xwav waits "
             "for this before forwarding fast no-replay user input."
         )
     finally:

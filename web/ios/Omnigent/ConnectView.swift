@@ -32,7 +32,7 @@ struct ConnectView: View {
           .frame(height: 80)
           .padding(.bottom, 12)
 
-        Text("Enter the URL of the Xvaw server.")
+        Text("Enter the URL of the Xwav server.")
           .font(.system(size: 14))
           .lineSpacing(2)
           .multilineTextAlignment(.center)
@@ -151,7 +151,7 @@ struct ConnectView: View {
         .frame(width: 44, height: 44)
         .contentShape(Rectangle())
     }
-    .accessibilityLabel("About Xvaw")
+    .accessibilityLabel("About Xwav")
   }
 
   private var visibleRecentServers: [String] {
@@ -236,8 +236,8 @@ private enum InfoLink: Identifiable {
 
   var url: URL {
     switch self {
-    case .website: URL(string: "https://github.com/NeuralTechAi/Xvaw")!
-    case .docs: URL(string: "https://github.com/NeuralTechAi/Xvaw#readme")!
+    case .website: URL(string: "https://github.com/NeuralTechAi/Xwav")!
+    case .docs: URL(string: "https://github.com/NeuralTechAi/Xwav#readme")!
     case .privacy: URL(string: "https://omnigent.ai/privacy")!
     }
   }

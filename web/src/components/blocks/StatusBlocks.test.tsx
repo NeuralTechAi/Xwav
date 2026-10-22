@@ -792,7 +792,7 @@ describe("ErrorBanner", () => {
           "Terminal diagnostics:",
           "pid: 42",
           "",
-          "Last captured output: unavailable. The process exited before Xvaw captured a pane snapshot.",
+          "Last captured output: unavailable. The process exited before Xwav captured a pane snapshot.",
         ].join("\n")}
         source="execution"
         code="required_terminal_exited"

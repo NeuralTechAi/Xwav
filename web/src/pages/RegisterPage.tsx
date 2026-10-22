@@ -79,7 +79,7 @@ export function RegisterPage() {
     <>
       <div className="space-y-1 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
-        <p className="text-ui text-muted-foreground">You were invited to join this Xvaw server.</p>
+        <p className="text-ui text-muted-foreground">You were invited to join this Xwav server.</p>
       </div>
 
       {missingInvite ? (

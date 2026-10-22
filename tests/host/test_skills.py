@@ -18,6 +18,8 @@ from omnigent.host.skills import HostSkillDiscovery
 from omnigent.spec import load
 from omnigent.spec.skill_sources import resolve_session_skills
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 def _skill(name: str, *, hidden: bool = False) -> str:
     return (

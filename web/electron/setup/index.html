@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Xvaw — Connect</title>
+    <title>Xwav — Connect</title>
     <style>
       /* Design tokens lifted from web/src/index.css (:root and .dark) so
          this bundled page matches the web UI it hands off to. */
@@ -270,7 +270,7 @@
       #start-local:hover:not(:disabled) {
         background: color-mix(in srgb, var(--primary) 90%, transparent);
       }
-      /* Settings gear (top-right) — opens the Xvaw CLI modal. no-drag so it's
+      /* Settings gear (top-right) — opens the Xwav CLI modal. no-drag so it's
          clickable over the drag strip. */
       .gear-btn {
         position: fixed;
@@ -422,8 +422,8 @@
       type="button"
       id="cli-gear"
       class="gear-btn"
-      aria-label="Configure the Xvaw CLI"
-      title="Configure the Xvaw CLI"
+      aria-label="Configure the Xwav CLI"
+      title="Configure the Xwav CLI"
       hidden
     >
       <svg
@@ -450,9 +450,9 @@
           srcset="../../platform-assets/logos/omnigents-logo-reverse.svg"
           media="(prefers-color-scheme: dark)"
         />
-        <img class="logo" src="../../platform-assets/logos/omnigents-logo.svg" alt="Xvaw" />
+        <img class="logo" src="../../platform-assets/logos/omnigents-logo.svg" alt="Xwav" />
       </picture>
-      <p class="sub">Run an Xvaw server on this machine, or connect to an existing one.</p>
+      <p class="sub">Run an Xwav server on this machine, or connect to an existing one.</p>
       <div id="local-section">
         <!-- Always enabled: when the CLI is missing this opens the settings
              modal (install / set path) instead of failing to start. -->
@@ -496,10 +496,10 @@
       </div>
     </div>
 
-    <!-- Xvaw CLI settings, opened from the gear. Hidden by default. -->
+    <!-- Xwav CLI settings, opened from the gear. Hidden by default. -->
     <div class="modal-overlay" id="cli-modal" hidden>
-      <div class="modal" role="dialog" aria-modal="true" aria-label="Xvaw CLI settings">
-        <p class="modal-title">Xvaw CLI</p>
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Xwav CLI settings">
+        <p class="modal-title">Xwav CLI</p>
         <p class="cli-note" id="cli-status"></p>
         <p class="cli-note" id="cli-managed" hidden>
           Managed by your organization. Host enrollment uses <code>isaac omni</code>.
@@ -507,16 +507,16 @@
         <div id="cli-install" hidden>
           <p>
             <a
-              href="https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally"
+              href="https://github.com/NeuralTechAi/Xwav#run-this-fork-locally"
               target="_blank"
               rel="noreferrer"
-              >Install the Xvaw CLI ↗</a
+              >Install the Xwav CLI ↗</a
             >
           </p>
           <p>Already installed it? Re-detect, or set the path below.</p>
           <button type="button" id="cli-redetect">Re-detect</button>
         </div>
-        <p id="cli-path-label">Path to the Xvaw CLI</p>
+        <p id="cli-path-label">Path to the Xwav CLI</p>
         <div class="path-row" id="cli-path-row">
           <input
             id="cli-path"
@@ -833,8 +833,8 @@
         cliStatus.textContent = installed
           ? status.version
             ? `Found: ${status.version}`
-            : "Xvaw CLI found."
-          : "Xvaw CLI not found.";
+            : "Xwav CLI found."
+          : "Xwav CLI not found.";
         cliPathInput.placeholder = status.path || "/path/to/omni";
         // Draw the eye to the (otherwise quiet) gear when the CLI is missing,
         // unless policy disabled the gear entirely.
@@ -859,7 +859,7 @@
         if (result && result.accepted) {
           cliPathNote.textContent = result.version
             ? `Found: ${result.version}`
-            : "Found the Xvaw CLI.";
+            : "Found the Xwav CLI.";
           // Clear the value so the field reverts to showing the (now-updated)
           // resolved path as its placeholder.
           cliPathInput.value = "";
@@ -867,7 +867,7 @@
           return true;
         }
         cliPathNote.className = "cli-note bad";
-        cliPathNote.textContent = "That path is not a runnable Xvaw CLI.";
+        cliPathNote.textContent = "That path is not a runnable Xwav CLI.";
         return false;
       }
 
@@ -923,7 +923,7 @@
           if (!cliInstalled) {
             if (cliCustomizationDisabled) {
               err.textContent =
-                "The Xvaw CLI was not found. CLI customization is disabled by your organization.";
+                "The Xwav CLI was not found. CLI customization is disabled by your organization.";
             } else {
               openCliModal();
             }

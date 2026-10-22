@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { XvawIcon } from "@/components/icons/XvawIcon";
+import { XwavIcon } from "@/components/icons/XwavIcon";
 import { withBasePath } from "@/lib/basePath";
 import { useAppName, useLogoUrl } from "@/lib/branding";
 import { authenticatedFetch } from "@/lib/identity";
@@ -86,7 +86,7 @@ function acquireLogo(path: string, generation: number): BlobUrlHandle {
 }
 
 function FallbackLogo({ className }: { className?: string; variant: "eyes" | "icon" }) {
-  return <XvawIcon className={className} />;
+  return <XwavIcon className={className} />;
 }
 
 function EmbeddedBrandLogo({
@@ -153,8 +153,8 @@ function StandaloneBrandLogo({
 
 /**
  * The app's brand logo: the operator's custom logo when configured, else the
- * Xvaw mark. `variant` picks the logo variant and matching fallback —
- * `"eyes"` (hero) → `main`/`XvawIcon`, `"icon"` (indicators) → `loading`/`XvawIcon`.
+ * Xwav mark. `variant` picks the logo variant and matching fallback —
+ * `"eyes"` (hero) → `main`/`XwavIcon`, `"icon"` (indicators) → `loading`/`XwavIcon`.
  */
 export function BrandLogo({
   className,

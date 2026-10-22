@@ -94,10 +94,10 @@ export function maybeMockSetup(params: URLSearchParams): ServerSelectorV2Setup |
       // stream finishes — so the warm-up beat shows an empty terminal first.
       return new Promise<{ ok: boolean; error?: string }>((resolve) => {
         const lines = [
-          "Installing uv (required by the Xvaw installer)…",
-          "Installing the Xvaw CLI…",
-          "Building and installing Xvaw from source…",
-          "Installed Xvaw",
+          "Installing uv (required by the Xwav installer)…",
+          "Installing the Xwav CLI…",
+          "Building and installing Xwav from source…",
+          "Installed Xwav",
         ];
         let i = 0;
         const timer = setInterval(() => {
@@ -129,7 +129,7 @@ export function maybeMockSetup(params: URLSearchParams): ServerSelectorV2Setup |
               "Host is running",
             ]
           : [
-              `$ xvaw host --server ${url}`,
+              `$ xwav host --server ${url}`,
               "Signing in to the server if needed…",
               "Connected this laptop.",
             ];

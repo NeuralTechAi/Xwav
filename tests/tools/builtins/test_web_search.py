@@ -739,7 +739,7 @@ def test_keenable_sends_x_keenable_title_header(tool_ctx: ToolContext) -> None:
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
     headers = mock_post.call_args.kwargs["headers"]
-    assert headers["X-Keenable-Title"] == "Xvaw"
+    assert headers["X-Keenable-Title"] == "Xwav"
 
 
 def test_keenable_http_error_returns_error_string(tool_ctx: ToolContext) -> None:

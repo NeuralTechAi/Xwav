@@ -1580,7 +1580,7 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
     assert meta["cwd"] == str(workspace.resolve())
     assert codeword in body, (
         "Built rollout must carry the source conversation's text from the "
-        "copied Xvaw items; missing it means history was not seeded."
+        "copied Xwav items; missing it means history was not seeded."
     )
 
 

@@ -41,11 +41,11 @@ def test_warnings_and_errors_go_to_stderr(capsys: pytest.CaptureFixture[str]) ->
 def test_status_lines_go_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:
     """Normal status (step/success/info) prints to stdout."""
 
-    ui.step("Installing Xvaw")
+    ui.step("Installing Xwav")
     ui.success("Verified omnigent")
     ui.info("Using ~/.omnigent")
     captured = capsys.readouterr()
-    assert "Installing Xvaw" in captured.out
+    assert "Installing Xwav" in captured.out
     assert "✓ Verified omnigent" in captured.out
     assert captured.err == ""
 

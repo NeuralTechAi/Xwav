@@ -215,7 +215,7 @@ def load_secret(name: str) -> str | None:
             f"could not read secret {name!r} from the OS keyring "
             f"({keyring_error_name}); no file-backed secret is available. "
             "Check that a keyring backend is available and unlocked, then restart "
-            "the Xvaw host from the same desktop session. On Linux, check "
+            "the Xwav host from the same desktop session. On Linux, check "
             "DBUS_SESSION_BUS_ADDRESS and XDG_RUNTIME_DIR.",
             code=ErrorCode.INVALID_INPUT,
         ) from None

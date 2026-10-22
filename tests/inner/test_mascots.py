@@ -12,8 +12,8 @@ from omnigent.inner.mascots import (
 )
 
 
-def test_random_mascot_lines_returns_xvaw_waves() -> None:
-    """The TUI mascot uses the Xvaw wave art."""
+def test_random_mascot_lines_returns_xwav_waves() -> None:
+    """The TUI mascot uses the Xwav wave art."""
 
     lines = random_mascot_lines()
 

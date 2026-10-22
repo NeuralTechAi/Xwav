@@ -404,7 +404,7 @@ def test_mcp_tool_turn_skips_non_mcp_native_relay() -> None:
 
     result = driver._drive_mcp_tool_turn()
 
-    assert result.error and "no Xvaw MCP bridge" in result.error
+    assert result.error and "no Xwav MCP bridge" in result.error
     assert client.posted_events == []
 
 

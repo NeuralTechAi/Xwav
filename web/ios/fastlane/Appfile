@@ -1,4 +1,4 @@
-app_identifier("ai.neuraltech.xvaw.ios")  # The bundle identifier of the app
+app_identifier("ai.neuraltech.xwav.ios")  # The bundle identifier of the app
 team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]
 
 # App Store Connect team — only needed if the Apple ID belongs to multiple teams.

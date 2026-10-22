@@ -11,6 +11,8 @@ from omnigent.spec.skill_sources import (
     resolve_harness_skills,
 )
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 def _write_skill(skills_dir: Path, name: str, *, user_invocable: bool | None = None) -> None:
     """

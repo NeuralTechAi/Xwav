@@ -21,7 +21,7 @@ from tests.harness_bench.verdict import Applicability, Priority, ProbeResult, Ve
 
 class OmnigentMcpProbe(CapabilityProbe):
     name = "omnigent_mcp"
-    title = "Xvaw MCP"
+    title = "Xwav MCP"
     priority = Priority.P1
     applies_to = Applicability.NATIVE
 
@@ -34,7 +34,7 @@ class OmnigentMcpProbe(CapabilityProbe):
         if matched:
             return ProbeResult(
                 Verdict.SUPPORTED,
-                note=f"called {TARGET_OMNIGENT_MCP_TOOL} through the Xvaw MCP relay",
+                note=f"called {TARGET_OMNIGENT_MCP_TOOL} through the Xwav MCP relay",
                 detail=detail,
             )
         infra = infra_failure_reason(result)
@@ -45,11 +45,11 @@ class OmnigentMcpProbe(CapabilityProbe):
         if result.timed_out:
             return ProbeResult(
                 Verdict.SKIPPED,
-                note=(f"timed out before calling {TARGET_OMNIGENT_MCP_TOOL} through Xvaw MCP"),
+                note=(f"timed out before calling {TARGET_OMNIGENT_MCP_TOOL} through Xwav MCP"),
                 detail=detail,
             )
         return ProbeResult(
             Verdict.SKIPPED,
-            note=(f"model did not call {TARGET_OMNIGENT_MCP_TOOL} through the Xvaw MCP relay"),
+            note=(f"model did not call {TARGET_OMNIGENT_MCP_TOOL} through the Xwav MCP relay"),
             detail=detail,
         )

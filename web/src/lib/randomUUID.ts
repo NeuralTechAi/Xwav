@@ -2,7 +2,7 @@
 //
 // `crypto.randomUUID` is only defined in a secure context (HTTPS, or the
 // `localhost` / `127.0.0.1` / `*.localhost` loopback exceptions). A self-hosted
-// Xvaw served over plain `http` on an intranet host or IP is NOT a secure
+// Xwav served over plain `http` on an intranet host or IP is NOT a secure
 // context, so calling `crypto.randomUUID()` there throws
 // ("crypto.randomUUID is not a function") and breaks whatever path depends on
 // it (e.g. the composer's send stable-id). Prefer the native implementation,

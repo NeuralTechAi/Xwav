@@ -182,7 +182,7 @@ def run_qwen_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "qwen requires a resolved Xvaw server URL. The CLI should call "
+            "qwen requires a resolved Xwav server URL. The CLI should call "
             "_ensure_backend before run_qwen_native."
         )
     with TemporaryDirectory(prefix="omnigent-qwen-native-") as tmpdir:

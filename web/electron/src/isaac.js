@@ -2,7 +2,7 @@
 
 /**
  * Locate Databricks' internal `isaac` launcher for desktop host enrollment.
- * GUI-launched Electron inherits a minimal PATH, so mirror the Xvaw/Arca
+ * GUI-launched Electron inherits a minimal PATH, so mirror the Xwav/Arca
  * resolver pattern: PATH first, then well-known macOS install locations.
  */
 

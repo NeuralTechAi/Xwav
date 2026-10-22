@@ -6,7 +6,7 @@
  * Arca is Databricks' internal sandbox CLI: each user has one EC2 dev
  * instance, `arca ssh <args...>` passes the args through to ssh against it
  * (starting the instance first when needed). Connecting that instance as an
- * Xvaw host means running, over `arca ssh`:
+ * Xwav host means running, over `arca ssh`:
  *
  *   isaac omni host --server <url> --background --non-interactive
  *
@@ -14,7 +14,7 @@
  * on Arca instances.)
  *
  * The remote daemon then opens the ordinary outbound host tunnel using the
- * Arca box's own Xvaw OAuth grant; generic Arca sign-in is not sufficient.
+ * Arca box's own Xwav OAuth grant; generic Arca sign-in is not sufficient.
  * `--background` exits 0 only once the daemon registered with the server,
  * and `--non-interactive` fails loud instead of dangling on a browser
  * login — both are what make the exit code a trustworthy signal here.
@@ -639,7 +639,7 @@ async function runArcaExtend(mode, deps = {}) {
 }
 
 /**
- * Start connecting the user's Arca instance to `serverUrl` as an Xvaw
+ * Start connecting the user's Arca instance to `serverUrl` as an Xwav
  * host, streaming the command's live output. Built for the connect console:
  * the caller shows `command` to the user, pipes `onOutput` chunks into a
  * terminal pane, and may `cancel()` (window closed). The promise never
@@ -815,7 +815,7 @@ function startArcaLogin(serverUrl, deps = {}) {
 }
 
 /**
- * Connect the user's Arca instance to `serverUrl` as an Xvaw host. Thin
+ * Connect the user's Arca instance to `serverUrl` as an Xwav host. Thin
  * non-streaming wrapper over {@link startArcaConnect}; never rejects.
  *
  * @param {string} serverUrl The window's connected server URL.

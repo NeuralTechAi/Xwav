@@ -267,7 +267,7 @@ function SupportedSwitchHostDialog({
 
         {noTargets ? (
           <p className="text-xs text-muted-foreground" data-testid="switch-host-no-targets">
-            No other hosts are online. Connect one with <code>xvaw host</code> and try again.
+            No other hosts are online. Connect one with <code>xwav host</code> and try again.
           </p>
         ) : (
           <>

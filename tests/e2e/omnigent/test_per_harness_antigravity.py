@@ -167,7 +167,7 @@ def _antigravity_skip_reason(omnigent_python: Path) -> str | None:
         # The probe itself failed to import the onboarding module — treat as a
         # missing/installation-broken prerequisite and skip with the detail.
         return (
-            "antigravity prerequisite probe failed in the Xvaw venv "
+            "antigravity prerequisite probe failed in the Xwav venv "
             f"(exit {probe.returncode}): {probe.stderr.strip()[:400]!r}"
         )
     flags = probe.stdout.strip()
@@ -176,7 +176,7 @@ def _antigravity_skip_reason(omnigent_python: Path) -> str | None:
     if not have_sdk:
         return (
             "antigravity prerequisite missing: the 'google.antigravity' SDK is "
-            "not importable in the Xvaw venv (install the 'antigravity' "
+            "not importable in the Xwav venv (install the 'antigravity' "
             "extra: pip install 'omnigent[antigravity]')."
         )
     if not have_key:

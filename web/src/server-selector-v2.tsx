@@ -17,7 +17,7 @@ import { maybeMockSetup } from "./pages/onboarding/mockSetup";
 import "./index.css";
 
 const DEFAULT_URL = "http://localhost:6767";
-const CLOUD_DOCS_URL = "https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally";
+const CLOUD_DOCS_URL = "https://github.com/NeuralTechAi/Xwav#run-this-fork-locally";
 
 /** The `omnigentSetup` preload bridge (see electron/src/preload.js). */
 interface OmnigentSetup {
@@ -284,8 +284,8 @@ export function BridgeSetupApp({
                 return {
                   ok: false,
                   error:
-                    "The installer finished but the Xvaw CLI still isn't detected. " +
-                    "Try opening a new terminal, or follow the source-install instructions at https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally.",
+                    "The installer finished but the Xwav CLI still isn't detected. " +
+                    "Try opening a new terminal, or follow the source-install instructions at https://github.com/NeuralTechAi/Xwav#run-this-fork-locally.",
                 };
               }
               return { ok: result?.ok === true, error: result?.error };

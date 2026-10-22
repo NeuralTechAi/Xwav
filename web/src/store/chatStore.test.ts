@@ -1595,7 +1595,7 @@ describe("chatStore — switchTo", () => {
   // ``isNativeTerminalSession`` gates the optimistic-bubble clear; the companion
   // ``nativeVendorOwnsModel`` hides the composer model/effort chip for native
   // wrappers whose model is chosen inside the vendor TUI (qwen/goose/pi/cursor/
-  // opencode) — claude/codex keep it (they expose an Xvaw model picker).
+  // opencode) — claude/codex keep it (they expose an Xwav model picker).
   it.each([
     ["claude-code-native-ui", true, false],
     ["codex-native-ui", true, false],
@@ -6071,7 +6071,7 @@ describe("chatStore — send (file attachments)", () => {
       text: "summarize these photos",
       files: [zip],
       stableId: expect.any(String),
-      // A 415 carries no Xvaw error code: the message was never sent.
+      // A 415 carries no Xwav error code: the message was never sent.
       serverRefused: false,
     });
     const error = state.blocks.at(-1) as { type: string; message: string };
@@ -6204,7 +6204,7 @@ describe("chatStore — delivered-but-unacked send", () => {
     expect(useChatStore.getState().pendingUserMessages).toEqual([]);
   });
 
-  it("marks the draft server-refused when the POST is answered with an Xvaw error", async () => {
+  it("marks the draft server-refused when the POST is answered with an Xwav error", async () => {
     useChatStore.setState({
       conversationId: "conv_existing",
       abortController: new AbortController(),
@@ -16279,7 +16279,7 @@ describe("chatStore — live delta streaming (claude-native)", () => {
   it("does not double-render pi-native text when the harness response completes before the deltas", async () => {
     // Faithful replay of a real pi-native turn (captured from a live
     // `omnigent pi` server). The harness PiNativeExecutor completes its
-    // Xvaw response the instant it enqueues the user message — so
+    // Xwav response the instant it enqueues the user message — so
     // `response.in_progress` + `response.completed` arrive BEFORE Pi's
     // extension streams the assistant text deltas and the authoritative
     // item. The early `response.completed` (response_end) is the missing

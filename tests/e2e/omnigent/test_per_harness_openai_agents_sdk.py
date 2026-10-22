@@ -117,7 +117,7 @@ def test_per_harness_openai_agents_sdk_one_shot(
         pytest.skip(
             "openai-agents-sdk harness prerequisite missing: "
             "the 'agents' Python package (openai-agents) must be "
-            "installed in the Xvaw venv. Skipping — package absent."
+            "installed in the Xwav venv. Skipping — package absent."
         )
 
     model = f"mock-harness-openai-{uuid.uuid4().hex[:8]}"

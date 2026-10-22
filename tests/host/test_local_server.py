@@ -1091,7 +1091,7 @@ def test_stop_untracked_local_server_noop_when_nothing_listening(
     monkeypatch.setattr(
         local_server,
         "subprocess",
-        _fake_subprocess(raises=AssertionError("lsof consulted despite no Xvaw server")),
+        _fake_subprocess(raises=AssertionError("lsof consulted despite no Xwav server")),
     )
     monkeypatch.setattr(local_server, "_terminate_pid", _raise_if_called)
 

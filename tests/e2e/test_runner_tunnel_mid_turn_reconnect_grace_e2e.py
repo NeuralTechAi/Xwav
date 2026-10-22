@@ -408,7 +408,7 @@ class _ReconnectStack:
         _poll_until(
             self._server_healthy,
             timeout=_HEALTH_TIMEOUT_S,
-            what="the real Xvaw server to become healthy",
+            what="the real Xwav server to become healthy",
         )
         self.proxy = _TunnelIngressProxy("127.0.0.1", self._port)
         proxy_url = f"http://127.0.0.1:{self.proxy.port}"
@@ -526,7 +526,7 @@ class _Replica:
         _poll_until(
             self._healthy,
             timeout=_HEALTH_TIMEOUT_S,
-            what="the second Xvaw replica to become healthy",
+            what="the second Xwav replica to become healthy",
         )
 
     def _healthy(self) -> bool:

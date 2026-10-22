@@ -1,6 +1,6 @@
-# Xvaw for VS Code
+# Xwav for VS Code
 
-A minimal VS Code extension that opens your **running local Xvaw server** inside
+A minimal VS Code extension that opens your **running local Xwav server** inside
 the editor — an editor-beside pane that iframes the same UI you see at
 `http://127.0.0.1:6767`. It is a thin client of the local server's existing HTTP API
 (`server/API.md`); there is nothing new to run on the server side.
@@ -14,10 +14,10 @@ scope for now.
 ## How it works
 
 - On activation the extension discovers a locally running server via
-  `~/.omnigent/local_server.pid` and a `/health` probe (or uses `xvaw.serverUrl`
+  `~/.omnigent/local_server.pid` and a `/health` probe (or uses `xwav.serverUrl`
   when set to a localhost URL).
-- The Xvaw activity-bar view offers an **Open Xvaw** button. The
-  **Xvaw: Open** command (`xvaw.open`) — also on the editor title bar and in the
+- The Xwav activity-bar view offers an **Open Xwav** button. The
+  **Xwav: Open** command (`xwav.open`) — also on the editor title bar and in the
   command palette — opens an editor-beside pane that frames the running server.
 - The iframe path is used for **local** servers only; a local server is loopback and
   needs no auth, so no token ever appears in the iframe URL.
@@ -26,7 +26,7 @@ scope for now.
 
 | Setting | Default | Purpose |
 |---|---|---|
-| `xvaw.serverUrl` | `""` | Manual **localhost** server URL override (e.g. `http://127.0.0.1:6767`); empty = auto-discover. Non-localhost URLs are not supported in this build. |
+| `xwav.serverUrl` | `""` | Manual **localhost** server URL override (e.g. `http://127.0.0.1:6767`); empty = auto-discover. Non-localhost URLs are not supported in this build. |
 
 ## Known limitation
 
@@ -43,7 +43,7 @@ pnpm install --frozen-lockfile
 pnpm run type-check   # tsc --noEmit
 pnpm run test         # vitest run
 pnpm run build        # esbuild -> dist/extension.js
-pnpm run package      # @vscode/vsce package -> xvaw-vscode-<version>.vsix
+pnpm run package      # @vscode/vsce package -> xwav-vscode-<version>.vsix
 ```
 
 Install the resulting `.vsix` via the Extensions view → "Install from VSIX…". The
@@ -54,7 +54,7 @@ Install the resulting `.vsix` via the Extensions view → "Install from VSIX…"
 ```
 src/
 ├── extension.ts        # activate()/deactivate() — wires discovery + panel + command + view
-├── commands/openPanel.ts  # the xvaw.open command
+├── commands/openPanel.ts  # the xwav.open command
 ├── panel/              # EditorPanelController, host.ts (render), iframeHtml.ts, csp.ts
 ├── config/             # settings + localhost server-target resolution
 └── discovery/          # local-server discovery (pidfile / health / liveness)

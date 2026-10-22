@@ -1,6 +1,6 @@
 import { Spinner } from "@/components/ui/spinner";
 
-export function PageLoading({ label = "Loading Xvaw…" }: { label?: string }) {
+export function PageLoading({ label = "Loading Xwav…" }: { label?: string }) {
   return (
     <div
       className="flex min-h-screen items-center justify-center gap-3 bg-background text-muted-foreground"

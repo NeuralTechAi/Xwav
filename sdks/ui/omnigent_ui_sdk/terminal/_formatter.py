@@ -741,7 +741,7 @@ class RichBlockFormatter:
             hint_line += " · " + " · ".join(rest)
         return Panel(
             Text.from_markup(
-                f"[{self.accent}]Xvaw[/{self.accent}]"
+                f"[{self.accent}]Xwav[/{self.accent}]"
                 f"  [{self.muted}]·[/{self.muted}]  [bold]{model}[/bold]\n"
                 f"[{self.muted}]{hint_line}[/{self.muted}]"
             ),

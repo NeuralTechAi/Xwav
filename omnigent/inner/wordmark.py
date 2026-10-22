@@ -1,4 +1,4 @@
-"""The Xvaw wordmark and wave lockup for CLI output.
+"""The Xwav wordmark and wave lockup for CLI output.
 
 A bold "ANSI-Shadow" block-letter ``omnigent`` wordmark — the canonical
 figlet font with one duplicate body row dropped (5 rows), so every letter
@@ -64,7 +64,7 @@ _GLYPHS: dict[str, tuple[str, ...]] = {
     "t": ("████████╗", "╚══██╔══╝", "   ██║   ", "   ██║   ", "   ╚═╝   "),
 }
 
-_WORDMARK_TEXT = "xvaw"
+_WORDMARK_TEXT = "xwav"
 
 
 def _build_wordmark(word: str) -> tuple[str, ...]:
@@ -221,7 +221,7 @@ def _print_epilogue(console: Console, rows: list[tuple[str, str]]) -> None:
 
 def render_compact(console: Console, *, subtitle: str | None = None) -> None:
     """
-    Print the one-line brandmark: ``≋ Xvaw  <subtitle>``.
+    Print the one-line brandmark: ``≋ Xwav  <subtitle>``.
 
     Used as a lightweight branded header on non-interactive commands that
     don't warrant the full lockup (``version``, ``status``, ``upgrade``…).
@@ -232,7 +232,7 @@ def render_compact(console: Console, *, subtitle: str | None = None) -> None:
     """
     line = Text(_INDENT)
     line.append("≋ ", style=WORDMARK_COLOR)
-    line.append("Xvaw", style=f"bold {WORDMARK_COLOR}")
+    line.append("Xwav", style=f"bold {WORDMARK_COLOR}")
     if subtitle:
         line.append(f"  {subtitle}", style="dim")
     console.print(line)

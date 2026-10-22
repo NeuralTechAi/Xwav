@@ -307,7 +307,7 @@ def test_build_host_daemon_env_local_preserves_server_credentials(
     """Local daemon env carries credentials needed by its Omnigent server.
 
     The daemon's local server is the process that performs LLM calls, so
-    stripping ``OPENAI_*`` here makes default persistent ``xvaw run``
+    stripping ``OPENAI_*`` here makes default persistent ``xwav run``
     invocations hang or fail after booting a credential-less server.
     """
     monkeypatch.setenv("PATH", "/usr/bin")
@@ -1534,7 +1534,7 @@ def test_host_reset_id_refuses_when_env_override_pins_identity(
 
     An env override makes the host read its identity from the environment,
     ignoring config.yaml — so writing a fresh id to the file would be
-    ignored by the next `xvaw host`. The command must fail loud (naming
+    ignored by the next `xwav host`. The command must fail loud (naming
     the env vars to unset) rather than print a reset that has no effect.
     """
     import yaml
@@ -1601,7 +1601,7 @@ def test_foreground_connect_local_no_prompt_when_server_absent(
 def test_foreground_connect_reused_server_omits_prompt(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Reusing a server we didn't spawn (e.g. ``xvaw server``) skips the prompt.
+    """Reusing a server we didn't spawn (e.g. ``xwav server``) skips the prompt.
 
     Local mode connecting to a server that was already running must NOT offer
     to stop it on Ctrl-C — the user started it independently, so killing it
@@ -2348,7 +2348,7 @@ def test_host_stop_local_daemon_points_at_full_stop(
     result = CliRunner().invoke(cli_group, ["host", "stop", "--server", ""])
 
     assert result.exit_code == 0, result.output
-    assert "the local Xvaw server (web UI / history)" in result.output
+    assert "the local Xwav server (web UI / history)" in result.output
     assert f"{cli.cli_invocation()} stop" in result.output
 
 
@@ -2381,7 +2381,7 @@ def test_host_stop_remote_daemon_omits_local_server_hint(
     )
 
     assert result.exit_code == 0, result.output
-    assert "the local Xvaw server" not in result.output
+    assert "the local Xwav server" not in result.output
     assert f"{cli.cli_invocation()} stop" not in result.output
 
 
@@ -2953,7 +2953,7 @@ def _fake_run_claude_native_capture(captured: dict[str, object]) -> Any:
 def test_claude_command_routes_server_through_ensure_backend(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``xvaw claude --server ""`` resolves via ``_ensure_backend``.
+    """``xwav claude --server ""`` resolves via ``_ensure_backend``.
 
     The empty/local value must be turned into the concrete daemon-backed URL
     and passed to ``run_claude_native`` — never forwarded raw.
@@ -3126,7 +3126,7 @@ def test_ensure_backend_databricks_preflight_hints_headless(
     with pytest.raises(click.ClickException) as exc:
         _ensure_backend("https://myapp-1234.aws.databricksapps.com")
 
-    assert "xvaw login https://myapp-1234.aws.databricksapps.com" in str(exc.value)
+    assert "xwav login https://myapp-1234.aws.databricksapps.com" in str(exc.value)
     # No browser flow attempted off-TTY.
     assert login_calls == []
 
@@ -3260,7 +3260,7 @@ def test_databricks_preflight_uses_cli_workspace_id_for_workspace_mount(
 def test_databricks_preflight_refresh_handles_duplicate_workspace_profiles(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``xvaw host`` preflight avoids ambiguous host-keyed token lookup.
+    """``xwav host`` preflight avoids ambiguous host-keyed token lookup.
 
     When two ``~/.databrickscfg`` profiles point at the same workspace, the
     Databricks SDK's ``Config(profile=...)`` path can still shell out to
@@ -3400,7 +3400,7 @@ def test_databricks_preflight_non_interactive_overrides_tty(
     with pytest.raises(click.ClickException) as exc:
         cli._ensure_databricks_server_auth(_HOST_DATABRICKS_SERVER, non_interactive=True)
 
-    assert f"xvaw login {_HOST_DATABRICKS_SERVER}" in str(exc.value)
+    assert f"xwav login {_HOST_DATABRICKS_SERVER}" in str(exc.value)
     # The browser login never ran despite the TTY.
     assert login_calls == []
 
@@ -3419,7 +3419,7 @@ def _patch_rejected_credential_preflight(
     Databricks OAuth token gets), and the SDK can mint no fresh token.
 
     :param monkeypatch: Pytest monkeypatch fixture.
-    :param pointer_workspace: Workspace host the stored ``xvaw login``
+    :param pointer_workspace: Workspace host the stored ``xwav login``
         pointer record names, or ``None`` when no record exists.
     :param unauthed_status: Status the credential-less re-probe answers.
     :param unauthed_realm: Whether that re-probe carries the
@@ -3471,7 +3471,7 @@ def test_databricks_preflight_expired_credential_routes_to_reauth_via_pointer_re
 
     The edge rejects an expired bearer with a bare 403 (no OAuth redirect,
     no DatabricksRealm challenge), so the shape classifier alone can't see
-    Databricks — the stored ``xvaw login`` pointer record names the
+    Databricks — the stored ``xwav login`` pointer record names the
     fronting workspace and must route the run to reauth instead of letting
     it die at session-create with the raw ``Invalid access token`` error.
     """
@@ -3486,7 +3486,7 @@ def test_databricks_preflight_expired_credential_routes_to_reauth_via_pointer_re
         cli._ensure_databricks_server_auth(_HOST_DATABRICKS_SERVER, non_interactive=True)
 
     assert "expired or was revoked" in str(exc.value)
-    assert f"xvaw login {_HOST_DATABRICKS_SERVER}" in str(exc.value)
+    assert f"xwav login {_HOST_DATABRICKS_SERVER}" in str(exc.value)
     # The pointer record answered; no credential-less re-probe was needed.
     assert probes == ["authed"]
 
@@ -3496,7 +3496,7 @@ def test_databricks_preflight_expired_credential_routes_to_reauth_via_reprobe(
 ) -> None:
     """Without a pointer record, a credential-less re-probe classifies the edge.
 
-    Ambient workspace-CLI profile credentials (no ``xvaw login`` record)
+    Ambient workspace-CLI profile credentials (no ``xwav login`` record)
     can also go stale; the bare re-probe surfaces the DatabricksRealm
     challenge the stale bearer masked, so the run still routes to reauth.
     """
@@ -3511,7 +3511,7 @@ def test_databricks_preflight_expired_credential_routes_to_reauth_via_reprobe(
         cli._ensure_databricks_server_auth(_HOST_DATABRICKS_SERVER, non_interactive=True)
 
     assert "expired or was revoked" in str(exc.value)
-    assert f"xvaw login {_HOST_DATABRICKS_SERVER}" in str(exc.value)
+    assert f"xwav login {_HOST_DATABRICKS_SERVER}" in str(exc.value)
     assert probes == ["authed", "unauthed"]
 
 
@@ -3662,7 +3662,7 @@ def test_host_non_interactive_flag_forwarded_to_preflight(
 def test_host_non_interactive_flag_positional_shorthand(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """``xvaw host <url> --non-interactive`` parses the flag with the shorthand."""
+    """``xwav host <url> --non-interactive`` parses the flag with the shorthand."""
     preflight = _capture_preflight(monkeypatch)
     _patch_foreground_host(monkeypatch, tmp_path)
 
@@ -3694,7 +3694,7 @@ def test_host_remote_preflight_hints_headless(
     result = CliRunner().invoke(cli_group, ["host", "--server", _HOST_DATABRICKS_SERVER])
 
     assert result.exit_code != 0
-    assert f"xvaw login {_HOST_DATABRICKS_SERVER}" in result.output
+    assert f"xwav login {_HOST_DATABRICKS_SERVER}" in result.output
     # Pre-flight bailed: no browser login and no connect.
     assert login_calls == []
     assert connected == []
@@ -3908,7 +3908,7 @@ def test_resolve_host_server_defaults_scheme_and_accepts_omnigent(
 
     The internal user guide's web URL omits the scheme and ends in
     ``/omnigent``; host must default it to https before expansion, just
-    like ``xvaw login``.
+    like ``xwav login``.
     """
     seen: list[str] = []
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
@@ -3923,7 +3923,7 @@ def test_resolve_host_server_defaults_scheme_and_accepts_omnigent(
 def test_host_command_defaults_scheme_and_accepts_omnigent_web_url(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """``xvaw host --server <ws>/omnigent`` (no scheme) normalizes before connect.
+    """``xwav host --server <ws>/omnigent`` (no scheme) normalizes before connect.
 
     Pasting the guide's web URL (schemeless, ``/omnigent`` suffix) must
     default to https and expand to the API mount, not connect to the raw
@@ -3953,7 +3953,7 @@ def test_host_command_defaults_scheme_and_accepts_omnigent_web_url(
 
 
 def test_resume_command_expands_server_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``xvaw resume <id> --server <workspace>`` expands before dispatch.
+    """``xwav resume <id> --server <workspace>`` expands before dispatch.
 
     Regression: ``resume`` forwarded the bare URL, so its remote picker
     and wrapper-label lookups 404'd against the workspace web app.
@@ -3996,7 +3996,7 @@ def test_resume_command_without_server_skips_expansion(
 
 
 def test_resume_command_defaults_scheme_https(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``xvaw resume --server <ws>/omnigent`` (no scheme) is defaulted to https."""
+    """``xwav resume --server <ws>/omnigent`` (no scheme) is defaulted to https."""
     seen: list[str] = []
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
     captured: dict[str, object] = {}

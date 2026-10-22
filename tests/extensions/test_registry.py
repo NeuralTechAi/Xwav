@@ -320,8 +320,8 @@ def test_records_raising_entry_point(monkeypatch: pytest.MonkeyPatch) -> None:
         ({"version": "not a version"}, "invalid version"),
         ({"extension_api": EXTENSION_API_VERSION + 1}, "extension API"),
         ({"extension_api": True}, "extension API"),
-        ({"requires_omnigent": "definitely-not-a-range"}, "invalid Xvaw requirement"),
-        ({"requires_omnigent": "<0"}, "requires Xvaw"),
+        ({"requires_omnigent": "definitely-not-a-range"}, "invalid Xwav requirement"),
+        ({"requires_omnigent": "<0"}, "requires Xwav"),
     ],
 )
 def test_rejects_invalid_manifest_fields(
@@ -641,7 +641,7 @@ def test_core_compatibility_uses_release_line(
 def test_invalid_running_core_version_has_typed_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(registry, "VERSION", "invalid")
 
-    with pytest.raises(registry.ExtensionValidationError, match="Xvaw has invalid version"):
+    with pytest.raises(registry.ExtensionValidationError, match="Xwav has invalid version"):
         registry.validate_manifest(_manifest())
 
 

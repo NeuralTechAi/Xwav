@@ -437,7 +437,7 @@ def test_cursor_native_cli_exposes_omnigent_mcp_tools(
         mcp_config_path = pwd_dir / ".cursor" / "mcp.json"
         assert mcp_config_path.is_file(), "cursor-native did not write .cursor/mcp.json"
         assert (bridge_dir / "bridge.json").is_file(), "serve-mcp token bridge was not written"
-        assert (bridge_dir / "tool_relay.json").is_file(), "Xvaw tool relay was not started"
+        assert (bridge_dir / "tool_relay.json").is_file(), "Xwav tool relay was not started"
 
         payload = json.loads(mcp_config_path.read_text(encoding="utf-8"))
         server = payload["mcpServers"]["omnigent"]

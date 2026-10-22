@@ -1,6 +1,6 @@
 // Recovering embedded-auth connections when their outer auth session expires.
 //
-// A workspace-hosted Xvaw sits behind the Databricks SSO gate. Some
+// A workspace-hosted Xwav sits behind the Databricks SSO gate. Some
 // deployments answer an expired session with a 3xx redirect to a login page
 // (``/login``, ``/login/sso``, or ``/login.html``); this watches for that raw
 // redirect and reloads the window so the gate can re-challenge.

@@ -755,7 +755,7 @@ async def test_prepare_surfaces_launch_arg_update_failures(w: _Wrapper, daemon: 
 def test_run_native_requires_a_server(w: _Wrapper, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(w.module, "_preflight_local_tools", lambda: None)
 
-    with pytest.raises(click.ClickException, match="requires a resolved Xvaw server URL"):
+    with pytest.raises(click.ClickException, match="requires a resolved Xwav server URL"):
         w.fn("run_{k}_native")(server=None, session_id=None)
 
 

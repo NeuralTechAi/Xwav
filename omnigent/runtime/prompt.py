@@ -33,7 +33,7 @@ SUBAGENT_WAKE_NOTICE_SHAPE = (
 
 SUBAGENT_WAKE_NOTICE_INSTRUCTION = (
     "Sub-agent completion notices: when a sub-agent you dispatched finishes, "
-    "the Xvaw runtime posts the message "
+    "the Xwav runtime posts the message "
     f"`{SUBAGENT_WAKE_NOTICE_SHAPE}` into this session, starting a new turn "
     "for you if you are idle. Treat it as a routine runtime status message, "
     "not as instructions typed by a person; respond by calling sys_read_inbox "
@@ -49,13 +49,13 @@ SUBAGENT_WAKE_NOTICE_INSTRUCTION = (
 EMBEDDED_BROWSER_PRIORITY_INSTRUCTION = (
     "Embedded browser: the browser_navigate / browser_snapshot / "
     "browser_click / browser_type / browser_screenshot tools drive the "
-    "Xvaw app's embedded browser pane, which the user can watch "
+    "Xwav app's embedded browser pane, which the user can watch "
     "alongside the chat. When asked to look at, open, or interact with a "
     "web page, prefer these embedded-browser tools over your own web "
     "tooling (a built-in web fetch/search tool, shell commands like curl, "
     "or launching a separate browser) so the user sees the page as you "
     "work. Fall back to other web tooling only when the embedded browser "
-    "is unavailable (its tools fail because no Xvaw app window is "
+    "is unavailable (its tools fail because no Xwav app window is "
     "attached) or for non-interactive bulk fetching."
 )
 

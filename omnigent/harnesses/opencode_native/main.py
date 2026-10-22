@@ -188,7 +188,7 @@ def run_opencode_native(  # pragma: no cover
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "OpenCode requires a resolved Xvaw server URL. The CLI should resolve "
+            "OpenCode requires a resolved Xwav server URL. The CLI should resolve "
             "a backend before run_opencode_native."
         )
     with TemporaryDirectory(prefix="omnigent-opencode-native-") as tmpdir:

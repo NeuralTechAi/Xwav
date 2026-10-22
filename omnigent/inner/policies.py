@@ -80,7 +80,7 @@ class _PolicySession(Protocol):
 
 
 _POLICY_SYSTEM_PROMPT = (
-    "You are an Xvaw policy evaluator. Return exactly one JSON object and nothing else."
+    "You are an Xwav policy evaluator. Return exactly one JSON object and nothing else."
 )
 
 

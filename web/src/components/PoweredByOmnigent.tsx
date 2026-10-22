@@ -1,8 +1,8 @@
-import { XvawIcon } from "@/components/icons/XvawIcon";
+import { XwavIcon } from "@/components/icons/XwavIcon";
 
 /**
- * Understated "Powered by Xvaw" mark for the landing footer. Always uses
- * the built-in Xvaw mark (not the operator's logo), since it credits the product.
+ * Understated "Powered by Xwav" mark for the landing footer. Always uses
+ * the built-in Xwav mark (not the operator's logo), since it credits the product.
  */
 export function PoweredByOmnigent() {
   return (
@@ -11,8 +11,8 @@ export function PoweredByOmnigent() {
       data-testid="powered-by-omnigent"
     >
       <span>Powered by</span>
-      <XvawIcon className="h-3.5 w-auto opacity-60 transition-opacity duration-300 ease-out group-hover:opacity-100" />
-      <span>Xvaw</span>
+      <XwavIcon className="h-3.5 w-auto opacity-60 transition-opacity duration-300 ease-out group-hover:opacity-100" />
+      <span>Xwav</span>
     </div>
   );
 }

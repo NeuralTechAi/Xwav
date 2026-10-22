@@ -1,4 +1,4 @@
-"""Static terminal mascot art for Xvaw startup banners."""
+"""Static terminal mascot art for Xwav startup banners."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ class MascotPayload(TypedDict):
     color: str
 
 
-# Xvaw wave mark — a compact Braille (U+28xx) silhouette of a
+# Xwav wave mark — a compact Braille (U+28xx) silhouette of a
 # five-point star with two tall carved eyes, rasterized from a star
 # polygon and packed two-dots-wide by four-dots-tall per cell. Replaces
 # the old 29x12 PNG-converted blob with a 9x5 glyph that keeps the welcome
@@ -36,7 +36,7 @@ MASCOT_ART_LINES: tuple[str, ...] = (
 MASCOT_ART_COL_WIDTH = max(len(line) for line in MASCOT_ART_LINES)
 
 # Truecolor hex: must stay in sync with the interactive welcome ``Panel`` border in
-# ``omnigent.cli``. Otto's starfish magenta-pink — the Xvaw brand accent.
+# ``omnigent.cli``. Otto's starfish magenta-pink — the Xwav brand accent.
 MASCOT_ART_COLOR = "#6EE7D2"
 
 
@@ -44,7 +44,7 @@ def random_mascot_color() -> str:
     """
     Return the brand color used for mascot glyphs.
 
-    :returns: Hex color string for the Xvaw accent,
+    :returns: Hex color string for the Xwav accent,
         e.g. ``"#6EE7D2"``.
     """
 
@@ -56,9 +56,9 @@ def random_mascot_lines() -> list[str]:
     Return the startup mascot ASCII art.
 
     The function name is kept for compatibility with the old procedural
-    mascot API, but the TUI now uses the single static Xvaw mascot.
+    mascot API, but the TUI now uses the single static Xwav mascot.
 
-    :returns: The multi-row Xvaw wave mascot art.
+    :returns: The multi-row Xwav wave mascot art.
     """
 
     return list(MASCOT_ART_LINES)

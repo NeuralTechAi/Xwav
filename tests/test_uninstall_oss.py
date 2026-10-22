@@ -177,7 +177,7 @@ def test_uninstall_script_purge_without_target_also_removes_cli(tmp_path: Path) 
     assert uv_log.read_text().strip() == "tool uninstall omnigent"
 
 
-@pytest.mark.parametrize("app_name", ["Omnigent", "Xvaw"])
+@pytest.mark.parametrize("app_name", ["Omnigent", "Xvaw", "Xwav"])
 def test_uninstall_script_purge_uses_unique_backup_paths_for_multiple_trees(
     tmp_path: Path,
     app_name: str,

@@ -46,7 +46,7 @@ function parseOmnigentDeepLink(raw) {
   } catch {
     return null;
   }
-  if (url.protocol !== "xvaw:" && url.protocol !== "omnigent:") return null;
+  if (!["xwav:", "xvaw:", "omnigent:"].includes(url.protocol)) return null;
   // No host → a bare `omnigent://` or `omnigent:`; nothing to connect to.
   if (url.host === "") return null;
   const path = url.pathname;

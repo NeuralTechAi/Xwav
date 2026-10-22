@@ -59,7 +59,7 @@ region = "us-east-1"
 # Turn executor failures carry this prefix; pre-turn rig notices do not.
 _TURN_EXECUTOR_ERROR = "inner executor error"
 # Both claim nothing routes the codex harness, which the ambient config refutes.
-_NO_ROUTE_MARKER = "no Xvaw provider routes the codex harness"
+_NO_ROUTE_MARKER = "no Xwav provider routes the codex harness"
 _NO_PROVIDER_SUMMARY_MARKER = "no provider configured for the codex harness"
 
 

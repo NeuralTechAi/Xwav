@@ -704,7 +704,7 @@ describe("useAvailableAgents", () => {
 
   it("lets a newer upload supersede a same-named user-registered template (builtin: false)", async () => {
     // The regression this guards: a user registers agent A as a template
-    // (e.g. `xvaw server --agent`, builtin: false), then `omnigent run`s
+    // (e.g. `xwav server --agent`, builtin: false), then `omnigent run`s
     // a NEWER agent A whose session-scoped row has a distinct agent_id. The
     // picker must bind the newest (the upload), not the stale template.
     routeFetch({

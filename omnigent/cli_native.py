@@ -114,7 +114,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to claude-native sessions."
         ),
@@ -201,7 +201,7 @@ def register_native_commands(cli: click.Group) -> None:
         claude_args: tuple[str, ...],
     ) -> None:
         # Param docs live in comments — Click uses the docstring for --help.
-        # :param server: Remote Xvaw server URL, or None for local.
+        # :param server: Remote Xwav server URL, or None for local.
         # :param resume: None, picker sentinel, or a conversation id.
         # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
         # :param use_claude_config: When True, skip ucode/Databricks auth and use
@@ -211,7 +211,7 @@ def register_native_commands(cli: click.Group) -> None:
         # :param smart_routing: When True, arm Smart Routing for the session so
         #     the first typed message picks the model.
         # :param claude_args: Pass-through args for ``claude``.
-        """Launch Claude Code with Xvaw.
+        """Launch Claude Code with Xwav.
 
         \b
         Examples:
@@ -262,7 +262,7 @@ def register_native_commands(cli: click.Group) -> None:
         startup_profiler.mark("arguments validated")
 
         # Ensure the host daemon (local when ``--server`` is omitted/empty,
-        # remote otherwise) and resolve the concrete Xvaw server URL. The daemon
+        # remote otherwise) and resolve the concrete Xwav server URL. The daemon
         # owns the runner; the CLI only connects. ``--host`` is now redundant
         # (the daemon is always ensured) and kept only as a no-op for scripts.
         startup_profiler.mark("ensuring backend")
@@ -339,7 +339,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to codex-native sessions."
         ),
@@ -381,7 +381,7 @@ def register_native_commands(cli: click.Group) -> None:
         codex_args: tuple[str, ...],
     ) -> None:
         # Param docs live in comments — Click uses the docstring for --help.
-        # :param server: Remote Xvaw server URL, or None for local.
+        # :param server: Remote Xwav server URL, or None for local.
         # :param resume: None, picker sentinel, or a conversation id.
         # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
         # :param model: Codex model id.
@@ -389,7 +389,7 @@ def register_native_commands(cli: click.Group) -> None:
         # :param smart_routing: When True, arm Smart Routing for the session so
         #     the first typed message picks the model.
         # :param codex_args: Pass-through args for ``codex`` before ``resume``.
-        """Launch Codex with Xvaw.
+        """Launch Codex with Xwav.
 
         \b
         Examples:
@@ -429,7 +429,7 @@ def register_native_commands(cli: click.Group) -> None:
         auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
 
         # Ensure the host daemon (local when ``--server`` is omitted/empty,
-        # remote otherwise) and resolve the concrete Xvaw server URL. Codex follows
+        # remote otherwise) and resolve the concrete Xwav server URL. Codex follows
         # the same ownership model as attach/run/claude: the daemon-spawned runner
         # owns the app-server and TUI; the CLI attaches to the tmux terminal.
         server = _ensure_backend(server)
@@ -485,7 +485,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to opencode-native sessions."
         ),
@@ -507,7 +507,7 @@ def register_native_commands(cli: click.Group) -> None:
         model: str | None,
         opencode_args: tuple[str, ...],
     ) -> None:
-        # :param server: Remote Xvaw server URL, or None for local.
+        # :param server: Remote Xwav server URL, or None for local.
         # :param resume: None, picker sentinel, or a conversation id.
         # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
         # :param model: OpenCode model id pinned on the wrapper spec.
@@ -517,7 +517,7 @@ def register_native_commands(cli: click.Group) -> None:
         # (opencode-native resolves its binary on the runner side; if a spec/env
         # path to thread a client override through is added later, this stays
         # consistent with the other native commands' env/config override model.)
-        """Launch OpenCode with Xvaw.
+        """Launch OpenCode with Xwav.
 
         \b
         Examples:
@@ -588,7 +588,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to pi-native sessions."
         ),
@@ -608,7 +608,7 @@ def register_native_commands(cli: click.Group) -> None:
         session_id: str | None,
         pi_args: tuple[str, ...],
     ) -> None:
-        """Launch Pi with Xvaw.
+        """Launch Pi with Xwav.
 
         \b
         Examples:
@@ -677,7 +677,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to cursor-native sessions."
         ),
@@ -717,7 +717,7 @@ def register_native_commands(cli: click.Group) -> None:
     ) -> None:
         # Param docs live in comments — Click uses the docstring for --help.
         # :param model: Cursor model id passed to cursor-agent as ``--model``.
-        """Launch Cursor with Xvaw.
+        """Launch Cursor with Xwav.
 
         \b
         Examples:
@@ -794,7 +794,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to devin-native sessions."
         ),
@@ -857,7 +857,7 @@ def register_native_commands(cli: click.Group) -> None:
         prompt: str | None,
         devin_args: tuple[str, ...],
     ) -> None:
-        """Launch Devin with Xvaw.
+        """Launch Devin with Xwav.
 
         \b
         Examples:
@@ -933,7 +933,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to kiro-native sessions."
         ),
@@ -983,7 +983,7 @@ def register_native_commands(cli: click.Group) -> None:
         prompt: str | None,
         kiro_args: tuple[str, ...],
     ) -> None:
-        """Launch Kiro with Xvaw.
+        """Launch Kiro with Xwav.
 
         \b
         Examples:
@@ -1063,7 +1063,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to goose-native sessions."
         ),
@@ -1083,7 +1083,7 @@ def register_native_commands(cli: click.Group) -> None:
         session_id: str | None,
         goose_args: tuple[str, ...],
     ) -> None:
-        """Launch Goose with Xvaw.
+        """Launch Goose with Xwav.
 
         \b
         Examples:
@@ -1150,7 +1150,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to hermes-native sessions."
         ),
@@ -1170,7 +1170,7 @@ def register_native_commands(cli: click.Group) -> None:
         session_id: str | None,
         hermes_args: tuple[str, ...],
     ) -> None:
-        """Launch Hermes with Xvaw.
+        """Launch Hermes with Xwav.
 
         \b
         Examples:
@@ -1237,7 +1237,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to antigravity-native sessions."
         ),
@@ -1259,7 +1259,7 @@ def register_native_commands(cli: click.Group) -> None:
         model: str | None,
         antigravity_args: tuple[str, ...],
     ) -> None:
-        """Launch Antigravity (agy) with Xvaw.
+        """Launch Antigravity (agy) with Xwav.
 
         \b
         Examples:
@@ -1341,7 +1341,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to qwen-native sessions."
         ),
@@ -1361,7 +1361,7 @@ def register_native_commands(cli: click.Group) -> None:
         session_id: str | None,
         qwen_args: tuple[str, ...],
     ) -> None:
-        """Launch Qwen Code with Xvaw.
+        """Launch Qwen Code with Xwav.
 
         \b
         Examples:
@@ -1428,7 +1428,7 @@ def register_native_commands(cli: click.Group) -> None:
         flag_value=_RESUME_PICKER_SENTINEL,
         default=None,
         help=(
-            "Resume a prior Xvaw conversation. With a conversation id "
+            "Resume a prior Xwav conversation. With a conversation id "
             "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
             "opens an interactive picker scoped to kimi-native sessions."
         ),
@@ -1448,15 +1448,15 @@ def register_native_commands(cli: click.Group) -> None:
         session_id: str | None,
         kimi_args: tuple[str, ...],
     ) -> None:
-        """Launch Kimi Code with Xvaw.
+        """Launch Kimi Code with Xwav.
 
         Boots Moonshot AI's interactive ``kimi`` TUI
         (https://github.com/MoonshotAI/Kimi-Code) in a runner-owned terminal and
-        attaches your TTY — the native experience, embedded in the Xvaw web
-        UI. No Xvaw provider config is needed: kimi authenticates against its
+        attaches your TTY — the native experience, embedded in the Xwav web
+        UI. No Xwav provider config is needed: kimi authenticates against its
         own backend (``kimi login`` for OAuth, or a Moonshot API key).
 
-        For the headless SDK harness (per-turn ``kimi -p`` behind the Xvaw
+        For the headless SDK harness (per-turn ``kimi -p`` behind the Xwav
         REPL) use ``omnigent run --harness kimi`` instead.
 
         \b

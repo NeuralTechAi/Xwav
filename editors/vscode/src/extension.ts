@@ -1,12 +1,12 @@
 /**
- * Xvaw VS Code extension entry point (minimal iframe-only build).
+ * Xwav VS Code extension entry point (minimal iframe-only build).
  *
  * activate() wires:
  *  - Config / local-server discovery
  *  - A minimal Sessions/home tree view (so the activity-bar icon renders) whose
- *    welcome content offers an "Open Xvaw" button
+ *    welcome content offers an "Open Xwav" button
  *  - EditorPanelController: the single editor-beside iframe surface
- *  - The xvaw.open command
+ *  - The xwav.open command
  */
 import * as vscode from "vscode";
 import { discoverLocalServer, DEFAULT_HEALTH_TIMEOUT_MS } from "./discovery";
@@ -16,7 +16,7 @@ import { EditorPanelController } from "./panel/EditorPanelController";
 import { registerOpenPanel } from "./commands/openPanel";
 
 /** Id of the minimal activity-bar view (declared in package.json contributes.views). */
-const HOME_VIEW_ID = "xvaw.home";
+const HOME_VIEW_ID = "xwav.home";
 
 let output: vscode.OutputChannel | undefined;
 let controller: EditorPanelController | undefined;
@@ -24,7 +24,7 @@ let controller: EditorPanelController | undefined;
 /**
  * A no-op tree provider. A `viewsContainer` only renders its activity-bar icon
  * when it has at least one registered view; this provides that view. The actual
- * call-to-action is the `viewsWelcome` "Open Xvaw" button in package.json.
+ * call-to-action is the `viewsWelcome` "Open Xwav" button in package.json.
  */
 class HomeTreeProvider implements vscode.TreeDataProvider<never> {
   getTreeItem(element: never): vscode.TreeItem {
@@ -36,9 +36,9 @@ class HomeTreeProvider implements vscode.TreeDataProvider<never> {
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  output = vscode.window.createOutputChannel("Xvaw");
+  output = vscode.window.createOutputChannel("Xwav");
   context.subscriptions.push(output);
-  output.appendLine("[xvaw] activating");
+  output.appendLine("[xwav] activating");
 
   // ── Single editor-beside iframe surface ───────────────────────────────────
   controller = new EditorPanelController(context.extensionUri, output);
@@ -48,7 +48,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.registerTreeDataProvider(HOME_VIEW_ID, new HomeTreeProvider()),
   );
 
-  // ── xvaw.open command ──────────────────────────────────────────────────
+  // ── xwav.open command ──────────────────────────────────────────────────
   registerOpenPanel(context, controller);
 
   // ── Resolve the local server at activation ────────────────────────────────
@@ -65,25 +65,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const target = resolution.target;
       controller.setResolved(target);
       output.appendLine(
-        `[xvaw] target: ${target.baseUrl} (hostType=${target.hostType}, source=${target.source})`,
+        `[xwav] target: ${target.baseUrl} (hostType=${target.hostType}, source=${target.source})`,
       );
     } else {
       output.appendLine(
-        `[xvaw] no local server (${resolution.reason}); start \`xvaw server\` or set xvaw.serverUrl to a localhost URL`,
+        `[xwav] no local server (${resolution.reason}); start \`xwav server\` or set xwav.serverUrl to a localhost URL`,
       );
     }
   } catch (err) {
     output.appendLine(
-      `[xvaw] init error: ${err instanceof Error ? err.message : String(err)}`,
+      `[xwav] init error: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
 
-  output.appendLine("[xvaw] ready");
+  output.appendLine("[xwav] ready");
 }
 
 export function deactivate(): void {
   controller?.dispose();
   controller = undefined;
-  output?.appendLine("[xvaw] deactivating");
+  output?.appendLine("[xwav] deactivating");
   output = undefined;
 }

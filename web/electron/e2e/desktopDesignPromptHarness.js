@@ -126,7 +126,7 @@ async function startDesignBackend(tmpDir) {
       ],
       { ...providerEnv, OMNIGENT_WEB_UI_DIST: WEB_UI_DIST },
     );
-    await eventually(() => jsonRequest(`${serverUrl}/health`), "real Xvaw server", 60_000);
+    await eventually(() => jsonRequest(`${serverUrl}/health`), "real Xwav server", 60_000);
 
     const bindingToken = randomBytes(32).toString("hex");
     const runnerId = `runner_token_${createHash("sha256").update(`omnigent-runner:${bindingToken}`).digest("hex").slice(0, 32)}`;
@@ -291,7 +291,7 @@ async function startMacCapture(electronApp, windowId, recordDir) {
       const mediaSourceId = window.getMediaSourceId?.();
       if (mediaSourceId?.startsWith("window:")) return mediaSourceId.split(":")[1];
       const title = window.getTitle();
-      const captureTitle = `Xvaw design prompt regression ${process.pid}`;
+      const captureTitle = `Xwav design prompt regression ${process.pid}`;
       window.setTitle(captureTitle);
       try {
         const sources = await desktopCapturer.getSources({

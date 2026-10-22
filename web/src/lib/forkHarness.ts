@@ -3,11 +3,11 @@
 // in each picker). Three carry mechanisms, all keyed off the TARGET harness —
 // a frontend mirror of the server (omnigent/server/routes/sessions.py):
 //
-//   - SDK (non-native) harnesses replay the Xvaw transcript as LLM
+//   - SDK (non-native) harnesses replay the Xwav transcript as LLM
 //     context — carry on BOTH fork and switch, regardless of source/family.
 //   - Native-REBUILD harnesses (Claude Code, Codex, Pi, Hermes, Qwen Code)
 //     record a resumable on-disk session file the runner rebuilds from the
-//     copied Xvaw items (a same-family native source clones the source
+//     copied Xwav items (a same-family native source clones the source
 //     file instead; cross-family rebuilds, format-agnostic). Mirrors
 //     `_FORK_HISTORY_NATIVE_HARNESSES`.
 //   - PREAMBLE harnesses (Cursor, OpenCode) have no rebuildable local store,
@@ -62,7 +62,7 @@ export function harnessFamily(
  * so the picker doesn't promise history it would drop. All native-antigravity
  * spellings are included (the in-process `antigravity` SDK harness is NOT
  * native); qwen-native rebuilds qwen's on-disk chat recording from the copied
- * Xvaw items (see `write_qwen_session_recording`).
+ * Xwav items (see `write_qwen_session_recording`).
  */
 export function isNativeHarness(harness: string | null | undefined): boolean {
   return (
@@ -87,7 +87,7 @@ export function isNativeHarness(harness: string | null | undefined): boolean {
 
 /**
  * Native harnesses whose runner REBUILDS a resumable on-disk transcript from
- * the copied Xvaw items, so they carry history on BOTH fork and switch.
+ * the copied Xwav items, so they carry history on BOTH fork and switch.
  * Mirrors Python `_FORK_HISTORY_NATIVE_HARNESSES`
  * (`omnigent/server/routes/sessions.py`); both canonical and reversed
  * spellings are listed so a catalog `harness` in either form matches.
@@ -113,7 +113,7 @@ const NATIVE_REBUILD_HARNESSES: ReadonlySet<string> = new Set([
 const PREAMBLE_FORK_HARNESSES: ReadonlySet<string> = new Set([
   "cursor-native",
   "native-cursor",
-  // devin's session store is read-only to Xvaw, so a fork replays its prior
+  // devin's session store is read-only to Xwav, so a fork replays its prior
   // turns as text on the clone's first message rather than seeding a resumable
   // local transcript. Mirrors Python `ForkHistory.PREAMBLE` for devin-native.
   "devin-native",

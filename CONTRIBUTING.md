@@ -1,6 +1,6 @@
-# Contributing to Xvaw
+# Contributing to Xwav
 
-Thanks for your interest in improving Xvaw. Issues and pull requests are
+Thanks for your interest in improving Xwav. Issues and pull requests are
 welcome. For larger changes, open an issue first so we can discuss the approach.
 
 Please don't include secrets, internal URLs, customer data, or private

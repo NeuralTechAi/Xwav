@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "repository": "https://github.com/upstash/context7",
+      "revision": "98fb27dbcbc8fb04227ef4f15a14f623ffdeb9f8",
+      "license": "MIT",
+      "version": "4.4.4",
+      "skills": [
+        "context7-mcp"
+      ],
+      "integration": "optional-mcp",
+      "adaptation": "Xwav runtime setup guidance; runtime dependencies are not bundled"
+    },
+    {
+      "repository": "https://github.com/21st-dev/magic-mcp",
+      "revision": "6b5299e8a83ceffa73d4fc4e148905bb3eeeeb55",
+      "license": "ISC",
+      "version": "0.2.3",
+      "skills": [
+        "21st-ui"
+      ],
+      "integration": "optional-mcp",
+      "adaptation": "Xwav runtime setup guidance; runtime dependencies are not bundled"
+    },
+    {
+      "repository": "https://github.com/usestrix/strix",
+      "revision": "a3c31236bd6305784a501a3102dab0bda83f2317",
+      "license": "Apache-2.0",
+      "version": "1.7.0",
+      "skills": [
+        "penetration-testing-with-strix"
+      ],
+      "integration": "optional-cli",
+      "adaptation": "Xwav runtime setup guidance; runtime dependencies are not bundled"
+    },
+    {
+      "repository": "https://github.com/morluto/rea",
+      "revision": "73be86c39e6c13139e0755c8ff2f8e95751d4a72",
+      "license": "MIT",
+      "version": "6.7.0",
+      "skills": [
+        "reverse-engineer-anything"
+      ],
+      "integration": "optional-mcp",
+      "adaptation": "Xwav runtime setup guidance; runtime dependencies are not bundled"
+    },
+    {
+      "repository": "https://github.com/Graphify-Labs/graphify",
+      "revision": "847a93f3cab5e2c82ea9170014b21cd2c52a4417",
+      "license": "Apache-2.0",
+      "version": "0.9.93",
+      "skills": [
+        "graphify"
+      ],
+      "integration": "optional-mcp",
+      "adaptation": "Xwav runtime setup guidance; runtime dependencies are not bundled"
+    }
+  ]
+}

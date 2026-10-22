@@ -18,10 +18,10 @@ export function CliInstallStep({
     setError(undefined);
     try {
       if (!(await onRecheck?.())) {
-        setError("Xvaw CLI not found. Make sure xvaw is on your PATH, then check again.");
+        setError("Xwav CLI not found. Make sure xwav is on your PATH, then check again.");
       }
     } catch {
-      setError("Could not check for the Xvaw CLI. Please try again.");
+      setError("Could not check for the Xwav CLI. Please try again.");
     } finally {
       setChecking(false);
     }
@@ -29,14 +29,14 @@ export function CliInstallStep({
 
   return (
     <div className="flex h-full flex-col gap-4 px-2 pb-1 pt-8">
-      <OnboardingHeading>Install the Xvaw CLI</OnboardingHeading>
+      <OnboardingHeading>Install the Xwav CLI</OnboardingHeading>
       <p className="text-base text-muted-foreground">
         Automatic installation is unavailable on this platform. Follow the installation instructions
         for your operating system, then return here and check again.
       </p>
       <Button asChild variant="outline">
         <a
-          href="https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally"
+          href="https://github.com/NeuralTechAi/Xwav#run-this-fork-locally"
           target="_blank"
           rel="noreferrer"
         >
@@ -44,7 +44,7 @@ export function CliInstallStep({
         </a>
       </Button>
       <p className="text-sm text-muted-foreground">
-        Check that <code>xvaw --version</code> works in a new terminal.
+        Check that <code>xwav --version</code> works in a new terminal.
       </p>
       {error && (
         <p role="alert" className="text-sm text-destructive">

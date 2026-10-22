@@ -26,7 +26,7 @@ export function SetupTerminalStep({
   onSetupLog,
   onBack,
   onConnectAnyway,
-  runningLabel = "Starting Xvaw",
+  runningLabel = "Starting Xwav",
   runningHint = "Starting the local server…",
   connection = null,
   onCancelConnect,
@@ -42,7 +42,7 @@ export function SetupTerminalStep({
   onBack: () => void;
   /** Open an existing server after setup fails, without installing or starting a runner. */
   onConnectAnyway?: () => void;
-  /** Heading + verb for the run phase ("Starting Xvaw" / "Connecting…"). */
+  /** Heading + verb for the run phase ("Starting Xwav" / "Connecting…"). */
   runningLabel?: string;
   /** Placeholder log line for the run phase until its first line streams. */
   runningHint?: string;
@@ -115,7 +115,7 @@ export function SetupTerminalStep({
         if (canceled || !alive.current) return;
         if (!res.ok) {
           setPhase("failed");
-          setError(res.error ?? "Couldn't install the Xvaw CLI.");
+          setError(res.error ?? "Couldn't install the Xwav CLI.");
           return;
         }
         setLines([]);
@@ -148,11 +148,11 @@ export function SetupTerminalStep({
   const streamed = lines.length > 0;
   const baseLabel =
     phase === "ready"
-      ? "Xvaw is ready"
+      ? "Xwav is ready"
       : phase === "failed"
-        ? "Couldn't set up Xvaw"
+        ? "Couldn't set up Xwav"
         : phase === "installing"
-          ? "Installing the Xvaw CLI"
+          ? "Installing the Xwav CLI"
           : runningLabel;
   const phaseLabel = inProgress ? `${baseLabel}${".".repeat(dots)}` : baseLabel;
   const pendingHint = phase === "installing" ? "Installing the CLI…" : runningHint;
@@ -201,7 +201,7 @@ export function SetupTerminalStep({
         )}
         {phase === "failed" && (
           <div className="text-destructive">
-            <span className="select-none">✕</span> {error ?? "Could not set up Xvaw."}
+            <span className="select-none">✕</span> {error ?? "Could not set up Xwav."}
           </div>
         )}
       </div>

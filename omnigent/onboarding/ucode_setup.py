@@ -127,7 +127,7 @@ def configure_ucode_for_workspace(
             f"`ucode configure` exited with code {result.returncode}; "
             "see the command output above for details."
         )
-    click.echo("ucode configuration complete. Xvaw will use state.json for harness setup.")
+    click.echo("ucode configuration complete. Xwav will use state.json for harness setup.")
 
 
 def ucode_workspace_exists(workspace_url: str) -> bool:

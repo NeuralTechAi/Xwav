@@ -278,7 +278,7 @@ export function ResumeWithDirectoryDialog({
         ) : noOnlineHosts ? (
           <p className="text-sm text-muted-foreground" data-testid="resume-dir-no-hosts">
             None of your machines are online. Start one with{" "}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono">xvaw host</code> from your
+            <code className="rounded bg-muted px-1 py-0.5 font-mono">xwav host</code> from your
             terminal, then reopen this dialog.
           </p>
         ) : showCliFallback ? (
@@ -294,7 +294,7 @@ export function ResumeWithDirectoryDialog({
                 wrapper,
                 harness,
                 // The source's host is offline here. With a host binding the
-                // owner re-registers the host (`xvaw host`); without one
+                // owner re-registers the host (`xwav host`); without one
                 // the runner is relaunched directly via the wrapper's resume
                 // form.
                 state: sourceHostId ? "host_offline" : "local_stranded",

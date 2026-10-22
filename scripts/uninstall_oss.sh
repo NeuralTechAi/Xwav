@@ -581,7 +581,7 @@ remove_tree() {
 }
 
 desktop_paths() {
-  for app_name in Xvaw Omnigent; do
+  for app_name in Xwav Xvaw Omnigent; do
     case "$(uname -s)" in
       Darwin)
         printf '%s\n' \
@@ -700,7 +700,7 @@ emit_json() {
 }
 
 if ! has_shell_install_signal; then
-  record_action anchor omnigent detect failed "" "no Xvaw install detected"
+  record_action anchor omnigent detect failed "" "no Xwav install detected"
   EXIT_CODE=3
   [ "$JSON" = true ] && emit_json
   exit "$EXIT_CODE"

@@ -115,14 +115,14 @@ function rowFor(id: string): HTMLElement {
 }
 
 describe("sidebar highlight while viewing a sub-agent", () => {
-  it("renders the Xvaw name and wave mark in the home link", () => {
+  it("renders the Xwav name and wave mark in the home link", () => {
     mockConversations([]);
     renderAt("/");
 
     const wordmark = screen.getByTestId("sidebar-wordmark");
-    expect(wordmark).toHaveTextContent("Xvaw");
+    expect(wordmark).toHaveTextContent("Xwav");
     expect(wordmark.querySelector("svg")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Xvaw" })).toContainElement(wordmark);
+    expect(screen.getByRole("link", { name: "Xwav" })).toContainElement(wordmark);
   });
 
   it("sits flush to the window edge, no floating margin or border", () => {

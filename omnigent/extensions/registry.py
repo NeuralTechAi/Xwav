@@ -254,7 +254,7 @@ def validate_manifest(manifest: ExtensionManifest) -> None:
         core_range = SpecifierSet(manifest.requires_omnigent)
     except InvalidSpecifier as exc:
         raise ExtensionValidationError(
-            f"extension {manifest.id!r} has invalid Xvaw requirement "
+            f"extension {manifest.id!r} has invalid Xwav requirement "
             f"{manifest.requires_omnigent!r}"
         ) from exc
     try:
@@ -262,10 +262,10 @@ def validate_manifest(manifest: ExtensionManifest) -> None:
         # as its base release so normal ranges also work in development and CI.
         compatibility_version = Version(Version(VERSION).base_version)
     except InvalidVersion as exc:
-        raise ExtensionValidationError(f"Xvaw has invalid version {VERSION!r}") from exc
+        raise ExtensionValidationError(f"Xwav has invalid version {VERSION!r}") from exc
     if not core_range.contains(compatibility_version):
         raise ExtensionValidationError(
-            f"extension {manifest.id!r} requires Xvaw {manifest.requires_omnigent}; "
+            f"extension {manifest.id!r} requires Xwav {manifest.requires_omnigent}; "
             f"running version is {VERSION}"
         )
 

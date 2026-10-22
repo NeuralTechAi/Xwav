@@ -2018,7 +2018,7 @@ describe("NewChatLandingScreen create flow", () => {
     ]);
     renderLanding();
     await waitForWorkspaceSeed();
-    // agy exposes no firing pre-tool hook, so Xvaw cannot re-gate tools
+    // agy exposes no firing pre-tool hook, so Xwav cannot re-gate tools
     // once this is armed — the banner is the only guardrail the user gets.
     expect(screen.queryByTestId("new-chat-landing-agy-skip-banner")).toBeNull();
     pickPermissionOption("skip");

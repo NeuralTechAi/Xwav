@@ -155,7 +155,7 @@ def _generic_host_skills(ctx: SkillSourceContext) -> list[SkillSpec]:
     """Today's behavior: ``discover_host_skills`` over each root."""
     out: list[SkillSpec] = []
     for root in ctx.roots:
-        out.extend(discover_host_skills(root, ctx.skills_filter))
+        out.extend(discover_host_skills(root, ctx.skills_filter, include_native=False))
     return _dedup(out)
 
 
@@ -261,7 +261,13 @@ def resolve_harness_skills(ctx: SkillSourceContext, harness: str | None) -> list
     # is native-only. Tag the context so providers keep the in-process SDK
     # harnesses on their pre-scoping behavior (see ``claude_host_skills``).
     native_ctx = replace(ctx, is_native=is_native_harness(harness))
-    return [s for s in _dedup(provider(native_ctx)) if s.user_invocable]
+    skills = [s for s in _dedup(provider(native_ctx)) if s.user_invocable]
+    # Native vendors without an explicit bridge must only list commands they load.
+    if family == "pi" or (native_ctx.is_native and family not in {"claude", "codex"}):
+        return skills
+    from omnigent.native_skills import merge_native_skills
+
+    return merge_native_skills(skills, ctx.skills_filter)
 
 
 def resolve_session_skills(
@@ -270,14 +276,20 @@ def resolve_session_skills(
     """Use identical precedence and filters for menu discovery and invocation."""
     from omnigent.harness_aliases import canonicalize_harness
 
-    merged = [s for s in spec.skills if s.user_invocable]
+    merged = list(spec.skills)
     seen = {s.name for s in spec.skills}
     seen_dirs = {s.skill_dir.resolve() for s in spec.skills if s.skill_dir is not None}
     harness = canonicalize_harness(spec.executor.harness_kind)
     ctx = skill_source_context_from_env(
         roots=roots, harness=harness, skills_filter=spec.skills_filter, bundle_dir=bundle_dir
     )
+    from omnigent.native_skills import merge_native_skills, native_skill_root
+
+    native_root = native_skill_root().resolve()
     for skill in resolve_harness_skills(ctx, harness):
+        # Reconcile defaults once against bundle and host aliases together.
+        if skill.skill_dir is not None and skill.skill_dir.resolve().is_relative_to(native_root):
+            continue
         if skill.name in seen:
             continue
         if skill.skill_dir is not None and skill.skill_dir.resolve() in seen_dirs:
@@ -286,7 +298,12 @@ def resolve_session_skills(
         if skill.skill_dir is not None:
             seen_dirs.add(skill.skill_dir.resolve())
         merged.append(skill)
-    return merged
+    from omnigent.harness_aliases import is_native_harness
+
+    family = _harness_family(harness)
+    if family != "pi" and (not is_native_harness(harness) or family in {"claude", "codex"}):
+        merged = merge_native_skills(merged, spec.skills_filter)
+    return [skill for skill in merged if skill.user_invocable]
 
 
 def _read_json(path: Path) -> dict[str, object] | None:

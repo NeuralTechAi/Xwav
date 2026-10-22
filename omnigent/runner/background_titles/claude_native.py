@@ -88,7 +88,7 @@ async def generate_background_title(context: BackgroundTitleContext) -> str | No
             except ClaudeNativeHookInterpreterMismatchError:
                 _logger.warning(
                     "background Claude Code title skipped: %s is Windows-native "
-                    "under WSL and cannot run Xvaw's hook command",
+                    "under WSL and cannot run Xwav's hook command",
                     resolved_claude,
                 )
                 return None

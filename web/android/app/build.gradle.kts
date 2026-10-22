@@ -57,7 +57,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "ai.neuraltech.xvaw.android"
+        applicationId = "ai.neuraltech.xwav.android"
         minSdk = 28
         targetSdk = 36
         versionCode = appVersionCode

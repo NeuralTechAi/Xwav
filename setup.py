@@ -118,7 +118,7 @@ class _GenerateBuildInfo(build_py):
         backend-only dev loop or breaking node-less CI:
 
         - Skip if ``web/`` is absent (sdists that don't vendor it).
-        - Skip if ``XVAW_SKIP_WEB_UI=true``. The hardened CI
+        - Skip if ``XWAV_SKIP_WEB_UI=true``. The hardened CI
           runners ship pnpm but have no fast registry mirror
           configured for the lint/test shards, so ``pnpm install``
           crawls against the public registry and hits the 600s
@@ -160,9 +160,18 @@ class _GenerateBuildInfo(build_py):
             return
         # CI opt-out: exact "true" only — this is set by our own
         # workflows, not user-facing config.
-        if os.environ.get("OMNIGENT_SKIP_WEB_UI", os.environ.get("XVAW_SKIP_WEB_UI")) == "true":
+        if (
+            os.environ.get(
+                "OMNIGENT_SKIP_WEB_UI",
+                os.environ.get("XWAV_SKIP_WEB_UI", os.environ.get("XVAW_SKIP_WEB_UI")),
+            )
+            == "true"
+        ):
             return
-        force_raw = os.environ.get("OMNIGENT_BUILD_WEB_UI", os.environ.get("XVAW_BUILD_WEB_UI"))
+        force_raw = os.environ.get(
+            "OMNIGENT_BUILD_WEB_UI",
+            os.environ.get("XWAV_BUILD_WEB_UI", os.environ.get("XVAW_BUILD_WEB_UI")),
+        )
         force = force_raw is not None and force_raw.strip().lower() in (
             "1",
             "true",
@@ -196,7 +205,7 @@ class _GenerateBuildInfo(build_py):
                 "enable pnpm with `corepack enable` (or `npm install -g "
                 "pnpm`), then rerun the install. To deliberately install "
                 "without the web UI (API-only server), set "
-                "XVAW_SKIP_WEB_UI=true."
+                "XWAV_SKIP_WEB_UI=true."
             )
         # A ``pnpm`` on PATH is often a corepack shim, which asks "Do you
         # want to continue? [Y/n]" before fetching the pinned pnpm. That
@@ -234,7 +243,7 @@ class _GenerateBuildInfo(build_py):
                 f"upgrade to Node.js {_MINIMUM_NODE_VERSION_TEXT} or newer and "
                 "retry. To deliberately install "
                 "without the web UI (API-only server), set "
-                "XVAW_SKIP_WEB_UI=true."
+                "XWAV_SKIP_WEB_UI=true."
             ) from exc
 
     def _write_build_info(self) -> None:
@@ -287,7 +296,7 @@ def _require_supported_node() -> str:
             "omnigent build: Node.js not found on PATH, so the web UI "
             f"cannot be built. Node.js {_MINIMUM_NODE_VERSION_TEXT} or newer "
             "is required. Install it from https://nodejs.org/en/download and "
-            "retry, or run with XVAW_SKIP_WEB_UI=true to skip the web UI "
+            "retry, or run with XWAV_SKIP_WEB_UI=true to skip the web UI "
             "build."
         )
     try:
@@ -304,7 +313,7 @@ def _require_supported_node() -> str:
             f"(`node --version` failed: {exc}). Node.js "
             f"{_MINIMUM_NODE_VERSION_TEXT} or newer is required. Install it "
             "from https://nodejs.org/en/download and retry, or run with "
-            "XVAW_SKIP_WEB_UI=true to skip the web UI build."
+            "XWAV_SKIP_WEB_UI=true to skip the web UI build."
         ) from exc
     # ``node --version`` prints ``v22.14.0``.
     version_str = result.stdout.strip().lstrip("v")
@@ -318,14 +327,14 @@ def _require_supported_node() -> str:
             f"{version_str or 'unknown'}. Node.js "
             f"{_MINIMUM_NODE_VERSION_TEXT} or newer is required. Install it "
             "from https://nodejs.org/en/download and retry, or run with "
-            "XVAW_SKIP_WEB_UI=true to skip the web UI build."
+            "XWAV_SKIP_WEB_UI=true to skip the web UI build."
         ) from None
     if version_parts < _MINIMUM_NODE_VERSION:
         raise SystemExit(
             f"omnigent build: Node.js {_MINIMUM_NODE_VERSION_TEXT} or newer "
             f"is required but found Node.js {version_str}. Upgrade from "
             "https://nodejs.org/en/download and retry, or run with "
-            "XVAW_SKIP_WEB_UI=true to skip the web UI build."
+            "XWAV_SKIP_WEB_UI=true to skip the web UI build."
         )
     return version_str
 

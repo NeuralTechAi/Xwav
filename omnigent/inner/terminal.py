@@ -297,7 +297,7 @@ def _tmux_status_option_commands() -> list[list[str]]:
             "set-option",
             "-g",
             "status-left",
-            f"Xvaw: #{{{_TMUX_CONVERSATION_LINK_OPTION}}}",
+            f"Xwav: #{{{_TMUX_CONVERSATION_LINK_OPTION}}}",
         ],
         ["set-option", "-g", "status-left-style", "fg=default,bg=default"],
         ["set-option", "-g", "status-left-length", "200"],
@@ -832,7 +832,7 @@ def _require_supported_tmux() -> None:
         raise TmuxUnavailableError(
             "tmux is not installed or not on PATH. Native terminals need tmux "
             f"{MIN_TMUX_VERSION_HINT} or newer: install it (macOS: `brew install tmux`), "
-            "or restart the Xvaw host from a shell where `tmux -V` works."
+            "or restart the Xwav host from a shell where `tmux -V` works."
         )
     version = tmux_version(tmux)
     if version is None:

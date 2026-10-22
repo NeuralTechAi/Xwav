@@ -11,7 +11,7 @@ rendered result.
 Covered: custom app name (browser-tab title + sidebar wordmark), custom hero
 heading, an explicit empty heading that hides the hero line instead of falling
 back to the default, the custom in-app logo and favicon, and the "Powered by
-Xvaw" credit — which appears only when branding is set.
+Xwav" credit — which appears only when branding is set.
 """
 
 from __future__ import annotations
@@ -101,7 +101,7 @@ def test_empty_heading_hides_the_hero_line(page: Page, live_server: str) -> None
 
 
 def test_powered_by_false_hides_the_credit(page: Page, live_server: str) -> None:
-    """A branded deployment can explicitly hide the Xvaw attribution."""
+    """A branded deployment can explicitly hide the Xwav attribution."""
     base_url = live_server
     _stub_logos(page)
     _stub_info(
@@ -121,9 +121,9 @@ def test_unbranded_keeps_defaults_and_hides_credit(page: Page, live_server: str)
     _open_landing(page, base_url)
 
     expect(page.get_by_role("heading", name="What should we build?")).to_be_visible()
-    expect(page).to_have_title("Xvaw")
-    expect(page.get_by_role("link", name="Xvaw")).to_be_visible()
-    expect(page.get_by_test_id("sidebar-wordmark")).to_have_text("Xvaw")
+    expect(page).to_have_title("Xwav")
+    expect(page.get_by_role("link", name="Xwav")).to_be_visible()
+    expect(page.get_by_test_id("sidebar-wordmark")).to_have_text("Xwav")
     expect(page.get_by_test_id("sidebar-wordmark").locator("svg")).to_have_count(1)
     expect(page.get_by_test_id("powered-by-omnigent")).to_have_count(0)
     expect(page.locator("body")).not_to_contain_text(
@@ -134,12 +134,12 @@ def test_unbranded_keeps_defaults_and_hides_credit(page: Page, live_server: str)
 @pytest.mark.parametrize(
     ("section", "description"),
     [
-        ("general", "Configure general Xvaw behavior."),
-        ("appearance", "Choose how Xvaw looks on this device."),
-        ("git", "Configure how Xvaw works with Git."),
+        ("general", "Configure general Xwav behavior."),
+        ("appearance", "Choose how Xwav looks on this device."),
+        ("git", "Configure how Xwav works with Git."),
     ],
 )
-def test_settings_use_xvaw_branding(
+def test_settings_use_xwav_branding(
     page: Page, live_server: str, section: str, description: str
 ) -> None:
     _stub_info(page, None)

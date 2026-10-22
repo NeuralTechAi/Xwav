@@ -112,7 +112,7 @@ export const ProviderAuthRequired: Story = {
       source="execution"
       code="PROVIDER_AUTH_REQUIRED"
       title="Sign in to continue"
-      cause="Xvaw could not obtain a model credential for this session."
+      cause="Xwav could not obtain a model credential for this session."
       remediation="ucode configure"
     />
   ),

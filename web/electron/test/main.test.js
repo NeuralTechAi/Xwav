@@ -1414,7 +1414,7 @@ describe("Arca auto-connect wiring", () => {
 describe("Databricks auth mode wiring", () => {
   const workspace = "https://workspace.cloud.databricks.com/omnigent";
 
-  it("connects a pasted HTTP workspace URL using HTTPS auth and the Xvaw mount", async (t) => {
+  it("connects a pasted HTTP workspace URL using HTTPS auth and the Xwav mount", async (t) => {
     const target = "https://workspace.cloud.databricks.com/omnigent?o=123";
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async () => ({ headers: new Headers({ server: "databricks" }) });
@@ -2917,7 +2917,7 @@ describe("workspace chrome injection wiring (src/main.js)", () => {
         "call (it was removed or commented out). That call wires the did-finish-load",
         "listener that injects WORKSPACE_CHROME_HIDE_CSS to hide the Databricks workspace",
         "top-nav/switcher in the desktop window. Without it the switcher reappears and users",
-        "can navigate out of Xvaw into other workspace apps. Re-add the call (the wiring",
+        "can navigate out of Xwav into other workspace apps. Re-add the call (the wiring",
         "is defined in src/workspace-chrome.js); do not delete this test.",
       ].join(" "),
     );
@@ -3320,7 +3320,7 @@ describe("deep-link path join wiring (src/main.js)", () => {
   });
 
   it("stores the clean serverUrl (no conversation path) separately from loadUrl", () => {
-    // The window's server IDENTITY (for `xvaw host --server` etc.) must not
+    // The window's server IDENTITY (for `xwav host --server` etc.) must not
     // carry the /c/<id> path. Guard that createWindow sets `serverUrl: serverUrl`
     // (the clean value), not `serverUrl: destination`/`loadUrl`.
     assert.match(
@@ -3328,7 +3328,7 @@ describe("deep-link path join wiring (src/main.js)", () => {
       /serverUrl:\s*destination\s*\?\s*serverUrl\s*:\s*null/,
       [
         "createWindow no longer stores the clean serverUrl as the window's server",
-        "identity — it must keep the /c/<id> path out of `xvaw host --server`.",
+        "identity — it must keep the /c/<id> path out of `xwav host --server`.",
         "Restore `serverUrl: destination ? serverUrl : null` in the windows.set call.",
       ].join(" "),
     );
@@ -4628,7 +4628,7 @@ describe("onboarding runner IPC", () => {
     const event = { sender: setupSender(), senderFrame: setupFrame(h) };
     const result = await h.ipc.get("omnigent:connect-runner")(event, server, "local");
     assert.equal(result.ok, false);
-    assert.match(result.error, /Xvaw CLI was not found/);
+    assert.match(result.error, /Xwav CLI was not found/);
   });
 
   // Remote runs on a managed server behind the internal flag; local uses a laptop CLI.
@@ -4747,7 +4747,7 @@ it("keeps native feedback through cold authentication and the server document lo
   assert.equal(h.calls.loadURL.length, 0);
   finishAuth(new URL(target).origin);
   await tick();
-  assert.equal(h.calls.loading.at(-1).label, "Opening Xvaw…");
+  assert.equal(h.calls.loading.at(-1).label, "Opening Xwav…");
   assert.equal(h.calls.loadURL.length, 1);
   const attempt = h.calls.loading.at(-1).attempt;
   finishLoad();
@@ -4764,7 +4764,7 @@ it("dismisses native loading feedback when the server document fails", async (t)
   t.after(h.cleanup);
   await assert.rejects(h.api.loadServerUrl(h.win, "https://example.com/"), /connection lost/);
   const shown = h.calls.loading.find((call) => call.action === "show");
-  assert.equal(shown.label, "Opening Xvaw…");
+  assert.equal(shown.label, "Opening Xwav…");
   assert.deepEqual(h.calls.loading.at(-1), { action: "hide", attempt: shown.attempt });
 });
 

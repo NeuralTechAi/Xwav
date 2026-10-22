@@ -59,6 +59,8 @@ from omnigent.models.codex_model_vocabulary import codex_spawn_model
 from omnigent.models.model_fallbacks import CODEX_DEFAULT_MODEL
 from omnigent.native import _native_forwarder_health as native_forwarder_health
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 def _run(coro):
     loop = asyncio.new_event_loop()

@@ -214,7 +214,7 @@ def _log_dir() -> Path:
     """
     Return the CLI diagnostics log directory.
 
-    Uses the shared Xvaw runtime data dir so ``OMNIGENT_DATA_DIR``
+    Uses the shared Xwav runtime data dir so ``OMNIGENT_DATA_DIR``
     isolates diagnostics with the DB, artifacts, and process logs.
 
     :returns: ``<data-dir>/logs/cli``.
@@ -396,7 +396,7 @@ def print_stale_host_hint() -> None:
     dest = getattr(sys.stderr, "_original_stderr", sys.stderr)
     print(
         "If this is a runner tunnel rejection (HTTP 401), stale host processes "
-        f"may be the cause. Run `{cli_invocation()} stop` to stop existing Xvaw "
+        f"may be the cause. Run `{cli_invocation()} stop` to stop existing Xwav "
         "host instances, then try again.",
         file=dest,
     )

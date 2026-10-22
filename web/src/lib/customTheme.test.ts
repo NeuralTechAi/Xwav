@@ -136,7 +136,7 @@ describe("customTheme", () => {
     }
   });
 
-  it("keeps Xvaw's selection tint after contrast changes", () => {
+  it("keeps Xwav's selection tint after contrast changes", () => {
     const theme = createCustomThemeFromPalette(PALETTES[0]);
     const variants = deriveCustomTheme({ ...theme, contrast: 53 });
 
@@ -156,7 +156,7 @@ describe("customTheme", () => {
     expect(variants.dark.selectionForeground).toBe(variants.dark.foreground);
   });
 
-  it("keeps Xvaw's selected-session colors after contrast changes", () => {
+  it("keeps Xwav's selected-session colors after contrast changes", () => {
     const theme = createCustomThemeFromPalette(PALETTES[0]);
     const variants = deriveCustomTheme({ ...theme, contrast: 53 });
 

@@ -116,7 +116,7 @@ import {
   useSearchParams,
 } from "@/lib/routing";
 import { SidebarHeaderActions, SidebarSettingsButton } from "./SidebarHeaderActions";
-import { XvawIcon } from "@/components/icons/XvawIcon";
+import { XwavIcon } from "@/components/icons/XwavIcon";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1144,8 +1144,8 @@ function SidebarImpl({
                     data-testid="sidebar-wordmark"
                     className="inline-flex items-center gap-2 text-[17px] font-semibold tracking-tight"
                   >
-                    <XvawIcon className="size-6 shrink-0" />
-                    Xvaw
+                    <XwavIcon className="size-6 shrink-0" />
+                    Xwav
                   </span>
                 )}
               </Link>
@@ -4087,7 +4087,7 @@ function ConversationMenuItems({
                 reason when both apply. */}
             <TooltipContent side="left">
               {sharingOff
-                ? "Sharing has been disabled for this Xvaw server."
+                ? "Sharing has been disabled for this Xwav server."
                 : "Only the session owner can share this session"}
             </TooltipContent>
           </Tooltip>

@@ -82,8 +82,8 @@ _POLICY_PLUGIN_FILE = "omnigent-policy.js"
 # explicit ``POLICY_ACTION_DENY`` blocks a prompt (throw) or withholds a tool
 # result (redact). Raw string so the JS ``\n`` / regex escapes survive verbatim.
 _OPENCODE_POLICY_PLUGIN_JS = r"""
-// Xvaw policy bridge for opencode-native (generated; do not edit).
-// Forwards opencode lifecycle hooks to the Xvaw policy engine so
+// Xwav policy bridge for opencode-native (generated; do not edit).
+// Forwards opencode lifecycle hooks to the Xwav policy engine so
 // REQUEST-phase (prompt-submit) and TOOL_RESULT-phase policies enforce — the
 // phases the reactive permission.asked path cannot reach.
 const BASE = (process.env.OMNIGENT_POLICY_URL || "").replace(/\/+$/, "");
@@ -171,7 +171,7 @@ export const OmnigentPolicyPlugin = async () => ({
       // can't change the TUI text from a plugin, but the thrown message is
       // written to opencode's session log, so carry the policy reason there.
       throw new Error(
-        "Xvaw policy blocked this prompt: " + (verdict.reason || "request denied"),
+        "Xwav policy blocked this prompt: " + (verdict.reason || "request denied"),
       );
     }
   },
@@ -186,7 +186,7 @@ export const OmnigentPolicyPlugin = async () => ({
       { result: output.output },
     );
     if (verdict.result === "POLICY_ACTION_DENY") {
-      output.output = "[Xvaw policy withheld this tool result: " +
+      output.output = "[Xwav policy withheld this tool result: " +
         (verdict.reason || "denied") + "]";
     }
   },

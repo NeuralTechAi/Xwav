@@ -72,7 +72,7 @@ def test_older_node_fails(version: str) -> None:
     assert "Node.js 22.13.0 or newer is required" in message
     assert version.strip().lstrip("v") in message
     assert "https://nodejs.org/en/download" in message
-    assert "XVAW_SKIP_WEB_UI=true" in message
+    assert "XWAV_SKIP_WEB_UI=true" in message
 
 
 def test_unparseable_version_fails() -> None:
@@ -83,7 +83,7 @@ def test_unparseable_version_fails() -> None:
     assert "could not parse Node.js version not-a-version" in message
     assert "Node.js 22.13.0 or newer is required" in message
     assert "https://nodejs.org/en/download" in message
-    assert "XVAW_SKIP_WEB_UI=true" in message
+    assert "XWAV_SKIP_WEB_UI=true" in message
 
 
 def test_node_missing_fails() -> None:
@@ -95,7 +95,7 @@ def test_node_missing_fails() -> None:
     assert "Node.js not found on PATH" in message
     assert "Node.js 22.13.0 or newer is required" in message
     assert "https://nodejs.org/en/download" in message
-    assert "XVAW_SKIP_WEB_UI=true" in message
+    assert "XWAV_SKIP_WEB_UI=true" in message
 
 
 def test_node_version_probe_failure_fails() -> None:
@@ -114,7 +114,7 @@ def test_node_version_probe_failure_fails() -> None:
     assert "could not determine the Node.js version" in message
     assert "Node.js 22.13.0 or newer is required" in message
     assert "https://nodejs.org/en/download" in message
-    assert "XVAW_SKIP_WEB_UI=true" in message
+    assert "XWAV_SKIP_WEB_UI=true" in message
 
 
 def test_skip_web_ui_bypasses_node_gate(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -146,7 +146,7 @@ def test_newer_node_build_failure_is_actionable(monkeypatch: pytest.MonkeyPatch)
     assert "web UI build failed on Node.js 25.2.1" in message
     assert "ERR_PNPM_UNSUPPORTED_ENGINE" in message
     assert "upgrade to Node.js 22.13.0 or newer" in message
-    assert "XVAW_SKIP_WEB_UI=true" in message
+    assert "XWAV_SKIP_WEB_UI=true" in message
     assert excinfo.value.__cause__ is failure
 
 

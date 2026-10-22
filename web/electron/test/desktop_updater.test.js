@@ -155,13 +155,13 @@ describe("desktop_updater — pure helpers", () => {
     assert.match(UPDATES_UNAVAILABLE_IN_DEV, /unavailable in development/);
   });
 
-  it("does not configure an upstream release feed for the Xvaw fork", () => {
+  it("does not configure an upstream release feed for the Xwav fork", () => {
     const devConfig = yaml.load(
       fs.readFileSync(path.join(__dirname, "../dev-app-update.yml"), "utf8"),
     );
     const packageConfig = require("../package.json");
     assert.equal(packageConfig.build.publish, null);
-    assert.match(devConfig.url, /^https:\/\/github\.com\/NeuralTechAi\/Xvaw\//);
+    assert.match(devConfig.url, /^https:\/\/github\.com\/NeuralTechAi\/Xwav\//);
   });
 
   it("classifies signing/integrity errors as security errors", () => {
@@ -422,7 +422,7 @@ describe("desktop_updater — IPC trust + consent", () => {
     h.updater.registerIpc();
     await h.ipcHandlers.get("omnigent:update-download")(h.event);
     assert.equal(h.calls.showMessageBox.length, 1);
-    assert.equal(h.calls.showMessageBox[0].options.message, "Download an Xvaw update?");
+    assert.equal(h.calls.showMessageBox[0].options.message, "Download an Xwav update?");
     assert.equal(h.calls.downloadUpdate, 1);
 
     // set-config
@@ -430,7 +430,7 @@ describe("desktop_updater — IPC trust + consent", () => {
     h.updater.init();
     h.updater.registerIpc();
     await h.ipcHandlers.get("omnigent:set-update-config")(h.event, { mode: "manual" });
-    assert.equal(h.calls.showMessageBox[0].options.message, "Change Xvaw update settings?");
+    assert.equal(h.calls.showMessageBox[0].options.message, "Change Xwav update settings?");
     assert.equal(h.readSettings().update_mode, "manual");
   });
 

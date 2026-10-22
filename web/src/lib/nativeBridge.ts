@@ -1,7 +1,7 @@
 // Bridge between the web app and the optional native shells.
 //
 // The SAME `web` bundle runs in two places:
-//   1. A normal browser tab (served by the Xvaw server).
+//   1. A normal browser tab (served by the Xwav server).
 //   2. Inside the Electron desktop wrapper (`web/electron`), which loads
 //      that exact server-served bundle in a Chromium BrowserWindow.
 //   3. Inside the iOS wrapper (`web/ios`), which loads the same bundle in

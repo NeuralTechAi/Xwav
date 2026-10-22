@@ -70,7 +70,7 @@ describe("installCli", () => {
       "/res/install_oss.sh",
       "--non-interactive",
       "--repo",
-      "https://github.com/NeuralTechAi/Xvaw.git",
+      "https://github.com/NeuralTechAi/Xwav.git",
     ]);
   });
 

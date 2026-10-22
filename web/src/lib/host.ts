@@ -156,7 +156,7 @@ export interface OmnigentHostConfig {
   /**
    * Path suffix appended to the origin in CLI `--server` instructions shown
    * in the UI (e.g. `"/api/2.0/omnigent"`). When the host proxies the
-   * Xvaw API behind a path prefix, CLI users need the full URL
+   * Xwav API behind a path prefix, CLI users need the full URL
    * (`https://host/api/2.0/omnigent`) — this suffix supplies the
    * non-origin part.
    */

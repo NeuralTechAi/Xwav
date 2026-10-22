@@ -984,14 +984,14 @@ def _augment_system_prompt_for_omnigent_mcp_tools(
             f"use `mcp__omnigent__{name}` when instructions say `{name}`" for name in examples
         )
         note = (
-            "Claude SDK tool naming: Xvaw tools are exposed as MCP tools. "
-            f"{example_text}. For any other Xvaw tool, use "
+            "Claude SDK tool naming: Xwav tools are exposed as MCP tools. "
+            f"{example_text}. For any other Xwav tool, use "
             "`mcp__omnigent__<tool_name>` rather than the bare name."
         )
     else:
         note = (
-            "Claude SDK tool naming: Xvaw tools are exposed as MCP tools. "
-            "When instructions mention a bare Xvaw tool name, invoke "
+            "Claude SDK tool naming: Xwav tools are exposed as MCP tools. "
+            "When instructions mention a bare Xwav tool name, invoke "
             "`mcp__omnigent__<tool_name>` rather than the bare name."
         )
 
@@ -1746,6 +1746,7 @@ class ClaudeSDKExecutor(Executor):
         self._bundle_dir = bundle_dir
         self._agent_name = agent_name
         self._skills_filter = skills_filter
+        self._native_skill_overlay: tempfile.TemporaryDirectory[str] | None = None
         # Write the bundle's plugin manifest now (idempotent) so that
         # ``--plugin-dir <bundle>`` produces clean
         # ``<agent-name>:<skill-name>`` labels in Claude's skill
@@ -1866,6 +1867,10 @@ class ClaudeSDKExecutor(Executor):
             self._extra_env[_CLAUDE_API_KEY_HELPER_ENV_KEY] = api_key_helper
 
     def __del__(self) -> None:
+        overlay = getattr(self, "_native_skill_overlay", None)
+        if overlay is not None:
+            with suppress(Exception):
+                overlay.cleanup()
         wrapper_path = getattr(self, "_cli_wrapper_path", None)
         if isinstance(wrapper_path, str):
             with suppress(Exception):
@@ -2093,6 +2098,9 @@ class ClaudeSDKExecutor(Executor):
         if self._gateway_shim is not None:
             await self._gateway_shim.aclose()
             self._gateway_shim = None
+        if self._native_skill_overlay is not None:
+            self._native_skill_overlay.cleanup()
+            self._native_skill_overlay = None
 
     async def interrupt_session(self, session_key: str) -> bool:
         state = self._clients.get(session_key)
@@ -2401,7 +2409,7 @@ class ClaudeSDKExecutor(Executor):
         allowed = await self._elicitation_handler(tool_name, tool_input)
         if allowed:
             return PermissionResultAllow()
-        return PermissionResultDeny(message="Denied via Xvaw elicitation")
+        return PermissionResultDeny(message="Denied via Xwav elicitation")
 
     async def _evaluate_tool_call_policy(
         self,
@@ -2474,7 +2482,7 @@ class ClaudeSDKExecutor(Executor):
         if _action == "POLICY_ACTION_ASK":
             from claude_agent_sdk import PermissionResultAllow, PermissionResultDeny
 
-            reason = _verdict.reason or "Approval required by Xvaw TOOL_CALL policy"
+            reason = _verdict.reason or "Approval required by Xwav TOOL_CALL policy"
             if self._elicitation_handler is None:
                 logger.warning(
                     "TOOL_CALL policy ASK had no elicitation handler; denying tool=%s reason=%s",
@@ -2489,12 +2497,12 @@ class ClaudeSDKExecutor(Executor):
         if _action == "POLICY_ACTION_DENY":
             from claude_agent_sdk import PermissionResultDeny
 
-            reason = _verdict.reason or "Denied by Xvaw TOOL_CALL policy"
+            reason = _verdict.reason or "Denied by Xwav TOOL_CALL policy"
             logger.info("TOOL_CALL policy denied tool=%s reason=%s", tool_name, reason)
             return PermissionResultDeny(message=reason)
         from claude_agent_sdk import PermissionResultDeny
 
-        reason = f"Unexpected Xvaw TOOL_CALL policy verdict: {_action!r}"
+        reason = f"Unexpected Xwav TOOL_CALL policy verdict: {_action!r}"
         logger.warning("TOOL_CALL policy failed closed tool=%s reason=%s", tool_name, reason)
         return PermissionResultDeny(message=reason)
 
@@ -2734,6 +2742,18 @@ class ClaudeSDKExecutor(Executor):
         if max_output_tokens is not None:
             max_output_tokens = int(max_output_tokens)
             env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = str(max_output_tokens)
+        from omnigent.inner.bundle_skills import claude_agents_skill_args
+
+        if self._native_skill_overlay is None:
+            self._native_skill_overlay = tempfile.TemporaryDirectory(prefix="xwav-skills-")
+        roots = tuple(
+            path
+            for path in (pathlib.Path(self._cwd or os.getcwd()), self._bundle_dir)
+            if path is not None
+        )
+        portable_args = claude_agents_skill_args(
+            pathlib.Path(self._native_skill_overlay.name), roots, self._skills_filter
+        )
         options_kwargs: dict[str, Any] = {  # type: ignore[explicit-any]  # ClaudeAgentOptions accepts mixed-typed kwargs (str / list / dict / callable / etc.)
             "tools": base_tools,
             "system_prompt": system_prompt or None,
@@ -2748,6 +2768,7 @@ class ClaudeSDKExecutor(Executor):
             "include_hook_events": True,
             "skills": resolved.skills,
             "plugins": bundle_plugins,
+            "add_dirs": portable_args[1::2],
             "extra_args": {"no-session-persistence": None},
             "max_buffer_size": 10 * 1024 * 1024,
         }

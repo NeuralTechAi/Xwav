@@ -281,7 +281,7 @@ def _dump_user_config(data: Mapping[str, Any]) -> str:
     :returns: YAML text ready to write.
     """
 
-    header = "# Xvaw user configuration\n"
+    header = "# Xwav user configuration\n"
     if not data:
         return header
     body = yaml.safe_dump(dict(data), default_flow_style=False, sort_keys=True)

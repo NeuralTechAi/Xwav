@@ -807,12 +807,12 @@ def _create_request_otel_instruments(meter: MeterLike) -> _RequestOtelInstrument
         started=meter.create_counter(
             "omnigent.server.http.requests.started",
             unit="{request}",
-            description="HTTP requests started by the Xvaw server.",
+            description="HTTP requests started by the Xwav server.",
         ),
         completed=meter.create_counter(
             "omnigent.server.http.requests.completed",
             unit="{request}",
-            description="HTTP requests completed by the Xvaw server.",
+            description="HTTP requests completed by the Xwav server.",
         ),
         failed=meter.create_counter(
             "omnigent.server.http.requests.failed",

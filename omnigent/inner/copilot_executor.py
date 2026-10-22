@@ -496,14 +496,14 @@ class CopilotExecutor(Executor):
             verdict = await evaluator("PHASE_TOOL_CALL", {"name": name, "arguments": args})
             if getattr(verdict, "action", "") == "POLICY_ACTION_DENY":
                 reason = getattr(verdict, "reason", "") or "blocked by policy"
-                return PermissionDecisionReject(feedback=f"Denied by Xvaw policy: {reason}")
+                return PermissionDecisionReject(feedback=f"Denied by Xwav policy: {reason}")
 
         # Stage 2 — user elicitation: surface an approval card.
         handler = self._elicitation_handler
         if handler is not None:
             approved = await handler(name, args)
             if not approved:
-                return PermissionDecisionReject(feedback="Denied via Xvaw approval UI")
+                return PermissionDecisionReject(feedback="Denied via Xwav approval UI")
 
         return PermissionDecisionApproveOnce()
 

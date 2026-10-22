@@ -215,8 +215,8 @@ export interface PaletteMeta {
 export const PALETTES: readonly PaletteMeta[] = [
   {
     id: "omni",
-    label: "Xvaw",
-    blurb: "Navy, mint, and periwinkle. The Xvaw signature.",
+    label: "Xwav",
+    blurb: "Navy, mint, and periwinkle. The Xwav signature.",
     light: {
       bg: "#f2fbf8",
       card: "#ffffff",

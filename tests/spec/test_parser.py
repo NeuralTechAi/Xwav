@@ -22,6 +22,8 @@ from omnigent.spec.parser import (
 )
 from omnigent.spec.types import ApiKeyAuth, DatabricksAuth, ProviderAuth, SharePolicy
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 @pytest.fixture(autouse=True)
 def _clean_container_runtime_env(monkeypatch: pytest.MonkeyPatch) -> None:

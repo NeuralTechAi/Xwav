@@ -33,7 +33,7 @@ const DEFAULT_TIMEOUT_MS = 10000;
  * install instructions in the repo root README.
  */
 const INSTALL_COMMAND =
-  "curl -fsSL https://raw.githubusercontent.com/NeuralTechAi/Xvaw/main/scripts/install_oss.sh | sh -s -- --repo https://github.com/NeuralTechAi/Xvaw.git";
+  "curl -fsSL https://raw.githubusercontent.com/NeuralTechAi/Xwav/main/scripts/install_oss.sh | sh -s -- --repo https://github.com/NeuralTechAi/Xwav.git";
 
 /**
  * Strip a trailing slash so URL comparisons survive the difference between
@@ -86,14 +86,15 @@ function sameLoopbackServer(a, b) {
 }
 
 /**
- * The Xvaw local runtime data dir — `$OMNIGENT_DATA_DIR` (with `~`
+ * The Xwav local runtime data dir — `$OMNIGENT_DATA_DIR` (with `~`
  * expanded) or `~/.omnigent`. Mirrors `_local_data_dir()` in
  * omnigent/host/local_server.py. The local-server pidfile lives here.
  *
  * @returns {string}
  */
 function localDataDir() {
-  const raw = process.env.OMNIGENT_DATA_DIR ?? process.env.XVAW_DATA_DIR;
+  const raw =
+    process.env.OMNIGENT_DATA_DIR ?? process.env.XWAV_DATA_DIR ?? process.env.XVAW_DATA_DIR;
   if (raw && raw.trim() !== "") {
     const expanded = raw.startsWith("~") ? path.join(os.homedir(), raw.slice(1)) : raw;
     return path.resolve(expanded);
@@ -102,14 +103,17 @@ function localDataDir() {
 }
 
 /**
- * The Xvaw config dir — `$OMNIGENT_CONFIG_HOME` (with `~` expanded) or
+ * The Xwav config dir — `$OMNIGENT_CONFIG_HOME` (with `~` expanded) or
  * `~/.omnigent`. config.yaml (machine identity) lives here; it can differ from
  * the data dir under test env overrides, but is the same by default.
  *
  * @returns {string}
  */
 function localConfigDir() {
-  const raw = process.env.OMNIGENT_CONFIG_HOME ?? process.env.XVAW_CONFIG_HOME;
+  const raw =
+    process.env.OMNIGENT_CONFIG_HOME ??
+    process.env.XWAV_CONFIG_HOME ??
+    process.env.XVAW_CONFIG_HOME;
   if (raw && raw.trim() !== "") {
     const expanded = raw.startsWith("~") ? path.join(os.homedir(), raw.slice(1)) : raw;
     return path.resolve(expanded);
@@ -118,7 +122,7 @@ function localConfigDir() {
 }
 
 /**
- * The shared Xvaw state dir, ALWAYS `~/.omnigent` — it ignores
+ * The shared Xwav state dir, ALWAYS `~/.omnigent` — it ignores
  * `$OMNIGENT_DATA_DIR`, mirroring `state_dir()` in
  * sdks/ui/omnigent_ui_sdk/terminal/_config.py and `_HOST_PID_PATH` in
  * omnigent/cli.py (both hardcode `Path.home()/".omnigent"`). The auth-token
@@ -135,7 +139,7 @@ function stateDir() {
 let cachedHostId = null;
 
 /**
- * This machine's Xvaw host id (bare 32-char hex, e.g. "ab12…"), read from
+ * This machine's Xwav host id (bare 32-char hex, e.g. "ab12…"), read from
  * the machine identity in `config.yaml` (`host: host_id:`, written by
  * omnigent/host/identity.py) — instant, no subprocess. Present once generated,
  * even before connecting to any server. Returns null when no id exists yet;
@@ -263,7 +267,7 @@ async function localServerHealthy(timeoutMs = 1500) {
  * first (canonical) but accept `omni` so a machine that only installed the
  * alias still resolves. See pyproject.toml `[project.scripts]`.
  */
-const CLI_NAMES = ["xvaw", "omnigent", "omni"];
+const CLI_NAMES = ["xwav", "xvaw", "omnigent", "omni"];
 
 /**
  * Well-known install locations for the CLI binary, in priority order. For each
@@ -389,7 +393,7 @@ function resolveCliPath(configuredPath, deps = {}) {
  */
 function cliCommandParts(command) {
   if (typeof command === "string" && command !== "") {
-    return { executable: command, prefixArgs: [], displayName: "xvaw" };
+    return { executable: command, prefixArgs: [], displayName: "xwav" };
   }
   if (
     command &&
@@ -414,7 +418,7 @@ function cliCommandParts(command) {
 }
 
 /**
- * Run an Xvaw CLI subcommand and resolve with its captured output. Never
+ * Run an Xwav CLI subcommand and resolve with its captured output. Never
  * rejects — a failure surfaces as a non-zero `code` plus stderr so callers can
  * decide. `execFile` (no shell) avoids quoting pitfalls.
  *
@@ -914,7 +918,7 @@ function readDaemonRecords() {
 }
 
 /**
- * The Xvaw server URL a daemon record talks to, mirroring
+ * The Xwav server URL a daemon record talks to, mirroring
  * `_daemon_base_url()` (omnigent/cli.py): a local-mode daemon's URL lives in
  * `resolved_server_url` (falling back to a healthy local server's URL); a
  * server-mode daemon's is its `server_url`/`target`.

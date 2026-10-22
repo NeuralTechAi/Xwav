@@ -177,7 +177,7 @@ export function PermissionsModal({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">Sharing unavailable</DialogTitle>
-            <DialogDescription>Sharing has been disabled for this Xvaw server.</DialogDescription>
+            <DialogDescription>Sharing has been disabled for this Xwav server.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -320,7 +320,7 @@ export function PermissionsModal({
         {workspaceBlocked && (
           <p id={blockedNoticeId} className="text-sm text-destructive">
             This session&apos;s working directory (a home or root directory) cannot be shared on
-            this Xvaw server.
+            this Xwav server.
           </p>
         )}
 
@@ -587,7 +587,7 @@ function getShareableLink(sessionId: string, rebasePath: (path: string) => strin
 }
 
 /**
- * The `xvaw://<host>/c/<session_id>` deep link encoded into the share QR
+ * The `xwav://<host>/c/<session_id>` deep link encoded into the share QR
  * code. The host (with port when non-default) is parsed from the same shareable
  * URL `getShareableLink` resolves — so standalone and embedded (host-transformed)
  * origins agree on the same server the desktop shell's deep-link handler keys
@@ -598,10 +598,10 @@ function getDeepLink(sessionId: string, rebasePath: (path: string) => string): s
   const url = getShareableLink(sessionId, rebasePath);
   try {
     const { host } = new URL(url);
-    return `xvaw://${host}/c/${sessionId}`;
+    return `xwav://${host}/c/${sessionId}`;
   } catch {
     // Unparseable transform output: fall back to the current origin's host.
-    return `xvaw://${window.location.host}/c/${sessionId}`;
+    return `xwav://${window.location.host}/c/${sessionId}`;
   }
 }
 
@@ -640,8 +640,8 @@ function CopyLinkButton({ sessionId }: { sessionId: string }) {
 
 /**
  * A separate modal showing a QR code encoding the session's
- * `xvaw://<host>/c/<id>` deep link so a user can scan it with their phone
- * to open the session in the Xvaw app. The code is rendered on a fixed
+ * `xwav://<host>/c/<id>` deep link so a user can scan it with their phone
+ * to open the session in the Xwav app. The code is rendered on a fixed
  * white tile so it stays scannable regardless of the app's dark/light theme
  * (a dark-on-dark QR won't read). Error correction is bumped to M for
  * resilience against partial occlusion.
@@ -667,7 +667,7 @@ function QrCodeDialog({
             Open in mobile app
           </DialogTitle>
           <DialogDescription>
-            Scan with your phone's camera to open this session in the Xvaw app.
+            Scan with your phone's camera to open this session in the Xwav app.
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-center">
@@ -680,7 +680,7 @@ function QrCodeDialog({
               // mode; the padding also serves as the QR quiet zone.
               bgColor="#ffffff"
               fgColor="#000000"
-              aria-label="QR code to open this session in the Xvaw app"
+              aria-label="QR code to open this session in the Xwav app"
             />
           </div>
         </div>

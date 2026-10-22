@@ -1,4 +1,4 @@
-// Keep a workspace-hosted shell on Xvaw when Databricks navigation or an
+// Keep a workspace-hosted shell on Xwav when Databricks navigation or an
 // auth hand-back lands the main frame on the bare workspace root. Kept free of
 // Electron imports so navigation behavior can be tested with a fake webContents.
 

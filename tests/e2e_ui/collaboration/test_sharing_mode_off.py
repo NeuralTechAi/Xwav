@@ -32,7 +32,7 @@ from tests.e2e_ui.collaboration._multi_user_server import (
 _ADMIN_EMAIL = "sharing-off@ui.test"
 
 # Mirrors AppShell.tsx's shareDisabledReason for the sharing-off case.
-_OFF_REASON = "Sharing has been disabled for this Xvaw server."
+_OFF_REASON = "Sharing has been disabled for this Xwav server."
 
 
 @pytest.fixture(scope="module")

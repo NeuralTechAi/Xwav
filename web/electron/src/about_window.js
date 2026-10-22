@@ -122,7 +122,7 @@ function createAboutWindow({
     about = new BrowserWindow({
       ...(parent ? { parent } : {}),
       modal: Boolean(parent),
-      title: "About Xvaw",
+      title: "About Xwav",
       width: ABOUT_WIDTH,
       height: ABOUT_HEIGHT,
       minWidth: 640,

@@ -31,7 +31,7 @@ def test_require_json_object_rejects_html_success_response() -> None:
     resp = httpx.Response(
         200,
         headers={"content-type": "text/html; charset=utf-8"},
-        text="<!doctype html><title>Xvaw</title>",
+        text="<!doctype html><title>Xwav</title>",
     )
 
     with pytest.raises(OmnigentError) as exc_info:
@@ -41,7 +41,7 @@ def test_require_json_object_rejects_html_success_response() -> None:
     assert "GET /v1/conversations returned non-JSON response" in message
     assert "status=200" in message
     assert "text/html" in message
-    assert "Xvaw" in message
+    assert "Xwav" in message
     assert exc_info.value.status_code == 200
 
 

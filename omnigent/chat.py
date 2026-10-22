@@ -1731,13 +1731,13 @@ def _unreachable_server_message(base_url: str) -> str:
     """
     if is_loopback_url(base_url):
         return (
-            f"Could not connect to the local Xvaw server at {base_url}. "
+            f"Could not connect to the local Xwav server at {base_url}. "
             f"It may have stopped — run `{cli_invocation()} stop`, then try again. "
             f"Server logs are under {process_log_dir_reference('server')}."
         )
 
     return (
-        f"Could not connect to the Xvaw server at {display_server_url(base_url)}. "
+        f"Could not connect to the Xwav server at {display_server_url(base_url)}. "
         "Check the URL, your network connection, and any HTTP proxy settings."
     )
 

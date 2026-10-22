@@ -1,11 +1,11 @@
 // Hiding the Databricks workspace navigation chrome around a workspace-hosted
-// Xvaw SPA. Kept in its own Electron-free module so the injection logic is
+// Xwav SPA. Kept in its own Electron-free module so the injection logic is
 // unit-testable (test/workspace-chrome.test.js calls applyWorkspaceChromeHideCss
 // with a fake webContents) without requiring main.js, which boots the app.
 //
 // The mobile shells carry the same logic in
 // web/android/.../WorkspaceChromeScript.kt and
-// web/ios/Xvaw/WorkspaceChromeScript.swift. Keep the CSS identical in all
+// web/ios/Xwav/WorkspaceChromeScript.swift. Keep the CSS identical in all
 // three so a fix in one shell isn't silently missing from the others.
 
 /**
@@ -13,10 +13,10 @@
  *
  * On a workspace the SPA is mounted as a workspace *page*, so Databricks wraps
  * it in its top-nav shell (the dark bar with the workspace switcher). In a
- * dedicated desktop window that chrome is just noise. We promote Xvaw's
+ * dedicated desktop window that chrome is just noise. We promote Xwav's
  * own root — ``.omnigent-app``, the wrapper web's embed entry sets
  * (``web/src/embed.tsx``) — to a full-viewport overlay so it paints over
- * the workspace bar. Keying on Xvaw's wrapper (defined in THIS repo)
+ * the workspace bar. Keying on Xwav's wrapper (defined in THIS repo)
  * rather than the monolith-owned, unstable workspace nav markup keeps this
  * from silently breaking when Databricks reshuffles its chrome; on a
  * standalone (non-embed) build there is no ``.omnigent-app``, so the rule is

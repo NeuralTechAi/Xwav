@@ -90,7 +90,7 @@ describe("codex goal API", () => {
     );
   });
 
-  it("reads standard nested Xvaw error envelopes", async () => {
+  it("reads standard nested Xwav error envelopes", async () => {
     const err = await codexGoalApiErrorFromResponse(
       mockJsonResponse(
         { error: { code: "codex_native_goal_failed", message: "runner is asleep" } },

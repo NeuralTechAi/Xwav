@@ -1836,16 +1836,16 @@ def _upgrade_failure_message(code: int, extras: Collection[str] = ()) -> str:
         return f"Upgrade command exited with status {code}; your previous install is intact."
     extra_flags = "".join(f" --extra {extra}" for extra in sorted(extras))
     return (
-        f"Upgrade command exited with status {code}, and Xvaw is no longer "
+        f"Upgrade command exited with status {code}, and Xwav is no longer "
         "installed: the installer replaced the old environment before the new "
         "build failed. Your agents, history and credentials are untouched; "
         "reinstall the CLI to get back:\n\n"
-        "    curl -fsSL https://raw.githubusercontent.com/NeuralTechAi/Xvaw/main/"
+        "    curl -fsSL https://raw.githubusercontent.com/NeuralTechAi/Xwav/main/"
         "scripts/install_oss.sh | sh -s -- "
-        f"--repo https://github.com/NeuralTechAi/Xvaw.git{extra_flags}\n"
-        "    xvaw login <SERVER-URL>\n\n"
+        f"--repo https://github.com/NeuralTechAi/Xwav.git{extra_flags}\n"
+        "    xwav login <SERVER-URL>\n\n"
         "If the web UI build was what failed, install Node 22 LTS and pnpm "
-        "first, or set XVAW_SKIP_WEB_UI=true to install without it."
+        "first, or set XWAV_SKIP_WEB_UI=true to install without it."
     )
 
 

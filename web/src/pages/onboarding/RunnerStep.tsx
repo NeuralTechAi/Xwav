@@ -28,7 +28,7 @@ export function RunnerStep({
 }: {
   /** Offer the remote environment, and pick it by default. */
   remoteAvailable: boolean;
-  /** Returning user (CLI installed) → "Open Xvaw"; new → "Install Xvaw". */
+  /** Returning user (CLI installed) → "Open Xwav"; new → "Install Xwav". */
   installed?: boolean;
   /** A connect error to show above the actions. */
   error?: string;

@@ -1,4 +1,4 @@
-// What each harness on a user-connected host already brings to Xvaw: login
+// What each harness on a user-connected host already brings to Xwav: login
 // state, user-level skills, plugins, and MCP servers. Read-only; nothing here
 // changes the host's configuration.
 
@@ -228,7 +228,7 @@ interface HarnessInventoryOptions {
   awaitConnection?: boolean;
 }
 
-/** Discover what each harness on *host* carries into Xvaw sessions. */
+/** Discover what each harness on *host* carries into Xwav sessions. */
 export function useHarnessInventory(
   host: Host | null | undefined,
   {

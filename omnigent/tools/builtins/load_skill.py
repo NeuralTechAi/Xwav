@@ -52,12 +52,15 @@ class LoadSkillTool(Tool):
             # A runner can outlive its working directory; bundled skills still work.
             host_skills = []
         else:
-            host_skills = discover_host_skills(discovery_root, skills_filter)
+            host_skills = discover_host_skills(discovery_root, skills_filter, include_native=False)
 
         bundled_names = {s.name for s in skills}
         for hs in host_skills:
             if hs.name not in bundled_names:
                 all_skills.append(hs)
+        from omnigent.native_skills import merge_native_skills
+
+        all_skills = merge_native_skills(all_skills, skills_filter)
         self._skills = all_skills
         self._skills_by_name: dict[str, SkillSpec] = {s.name: s for s in all_skills}
 

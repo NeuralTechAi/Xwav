@@ -497,7 +497,7 @@ async def test_trust_failure_is_fail_open_with_reason(
         _self: CodexNativeAppServer, *, client: CodexAppServerClient | None = None
     ) -> None:
         del client
-        raise RuntimeError("Xvaw policy hook was not discovered for cwd ...")
+        raise RuntimeError("Xwav policy hook was not discovered for cwd ...")
 
     monkeypatch.setattr(CodexNativeAppServer, "_trust_policy_hooks", _raise_trust)
 

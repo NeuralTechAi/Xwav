@@ -27,7 +27,7 @@ function stubBridge(over: Record<string, unknown>) {
 it("reserves a full-width 48px desktop title-bar band", async () => {
   stubBridge({});
   const { container } = render(<BridgeSetupApp />);
-  await screen.findByRole("button", { name: /open xvaw/i });
+  await screen.findByRole("button", { name: /open xwav/i });
   expect(container.firstElementChild).toHaveStyle({
     position: "fixed",
     top: "0px",
@@ -63,7 +63,7 @@ it("tags a connect with a request ID, shows only its phases, and cancels it", as
     },
   });
   render(<BridgeSetupApp />);
-  const openButton = await screen.findByRole("button", { name: /open xvaw/i });
+  const openButton = await screen.findByRole("button", { name: /open xwav/i });
   await waitFor(() => expect(openButton).toBeEnabled());
   fireEvent.click(openButton);
   await waitFor(() => expect(setServerUrl).toHaveBeenCalledTimes(1));
@@ -93,7 +93,7 @@ it("a cancel from the shell (workspace picker closed) fails the terminal with Re
   });
   render(<BridgeSetupApp />);
   fireEvent.click(await screen.findByRole("button", { name: /join your team/i }));
-  fireEvent.click(await screen.findByRole("button", { name: /open xvaw/i }));
+  fireEvent.click(await screen.findByRole("button", { name: /open xwav/i }));
   expect(await screen.findByText("Connection cancelled.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
   expect(screen.queryByText(/server ready/i)).not.toBeInTheDocument();
@@ -117,10 +117,10 @@ it("shows manual instructions without an installer and detects the CLI after ins
   });
   render(<BridgeSetupApp />);
   fireEvent.click(await screen.findByRole("button", { name: /get started locally/i }));
-  fireEvent.click(screen.getByRole("button", { name: "Install Xvaw" }));
+  fireEvent.click(screen.getByRole("button", { name: "Install Xwav" }));
   expect(screen.getByRole("link", { name: "Installation instructions" })).toHaveAttribute(
     "href",
-    "https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally",
+    "https://github.com/NeuralTechAi/Xwav#run-this-fork-locally",
   );
   expect(screen.queryByRole("button", { name: "Continue anyway" })).not.toBeInTheDocument();
   expect(installCli).not.toHaveBeenCalled();
@@ -145,7 +145,7 @@ it("keeps remote connections available without a CLI or installer", async () => 
     installCli,
   });
   render(<BridgeSetupApp />);
-  fireEvent.click(await screen.findByRole("button", { name: "Open Xvaw" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Open Xwav" }));
   await waitFor(() => expect(setServerUrl).toHaveBeenCalledOnce());
   expect(startLocalServer).not.toHaveBeenCalled();
   expect(installCli).not.toHaveBeenCalled();
@@ -155,10 +155,10 @@ it("shows source-install instructions in a browser without the desktop bridge", 
   delete (window as { omnigentSetup?: unknown }).omnigentSetup;
   render(<BridgeSetupApp />);
   fireEvent.click(await screen.findByRole("button", { name: "Get started locally" }));
-  fireEvent.click(screen.getByRole("button", { name: "Install Xvaw" }));
+  fireEvent.click(screen.getByRole("button", { name: "Install Xwav" }));
   expect(screen.getByRole("link", { name: "Installation instructions" })).toHaveAttribute(
     "href",
-    "https://github.com/NeuralTechAi/Xvaw#run-this-fork-locally",
+    "https://github.com/NeuralTechAi/Xwav#run-this-fork-locally",
   );
   expect(screen.getByRole("button", { name: "Check again" })).toBeDisabled();
   expect(screen.queryByText("The desktop shell is unavailable.")).not.toBeInTheDocument();

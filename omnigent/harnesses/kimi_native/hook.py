@@ -190,7 +190,7 @@ def _main_evaluate_policy(argv: list[str]) -> int:
     try:
         eval_response = resp.json()
     except json.JSONDecodeError:
-        print("omnigent kimi evaluate-policy hook: malformed Xvaw response", file=sys.stderr)
+        print("omnigent kimi evaluate-policy hook: malformed Xwav response", file=sys.stderr)
         return _fail_closed()
 
     hook_output = evaluation_response_to_hook_output(hook_event, eval_response)
