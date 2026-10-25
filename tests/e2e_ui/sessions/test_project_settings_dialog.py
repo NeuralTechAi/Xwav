@@ -20,9 +20,11 @@ host-free path (the worktree toggle is a plain Switch, no host needed).
 
 from __future__ import annotations
 
+import re
 import uuid
 
 import httpx
+import pytest
 from playwright.sync_api import Page, expect
 
 
@@ -225,3 +227,85 @@ def test_project_settings_drops_base_branch_when_worktree_off(
     )
     page.get_by_test_id("project-settings-worktree").click()
     expect(page.get_by_test_id("project-settings-base-branch")).to_have_value("")
+
+
+@pytest.mark.parametrize("width", [1280, 390], ids=["desktop", "mobile"])
+def test_create_project_with_source_folder(page: Page, live_server: str, width: int) -> None:
+    """Real project persistence and folder-picker UI with a fake connected computer."""
+    from tests.e2e_ui.start_session.test_start_session import _HOST_ID, _hosts_body
+
+    page.route(
+        re.compile(r"/v1/hosts(?:\?.*)?$"),
+        lambda route: route.fulfill(content_type="application/json", body=_hosts_body()),
+    )
+    page.route(
+        f"**/v1/hosts/{_HOST_ID}/harnesses/*/model-options",
+        lambda route: route.fulfill(json={"models": []}),
+    )
+    page.route(
+        f"**/v1/hosts/{_HOST_ID}/worktrees?*", lambda route: route.fulfill(json={"data": []})
+    )
+    page.route(
+        f"**/v1/hosts/{_HOST_ID}/filesystem**",
+        lambda route: route.fulfill(
+            json={
+                "object": "list",
+                "base": "/",
+                "data": [
+                    {
+                        "id": "app",
+                        "name": "app",
+                        "path": "/projects/app",
+                        "type": "directory",
+                        "bytes": None,
+                        "modified_at": 0,
+                    }
+                ],
+                "has_more": False,
+            }
+        ),
+    )
+    page.set_viewport_size({"width": width, "height": 900})
+    page.goto(live_server)
+    sidebar = page.get_by_role("button", name="Open sidebar", exact=True)
+    if sidebar.is_visible():
+        sidebar.click()
+    page.mouse.move(width - 2, 898)
+    for test_id in ("new-project", "project-list-actions"):
+        control = page.get_by_test_id(test_id)
+        expect(control).to_be_visible()
+        assert control.evaluate(
+            "el => { for (let p = el; p; p = p.parentElement) { "
+            "if (getComputedStyle(p).opacity === '0') return false; } return true; }"
+        )
+    page.get_by_test_id("new-project").click()
+    name = f"Source folder {uuid.uuid4().hex[:6]}"
+    page.get_by_placeholder("Project name…").fill(name)
+    page.get_by_test_id("new-project-add-folder").click()
+    expect(page.get_by_test_id("workspace-picker-dialog")).to_be_visible()
+    page.get_by_test_id("workspace-picker-entry-app").click()
+    page.get_by_test_id("workspace-picker-select").click()
+    expect(page.get_by_test_id("new-project-source-folder")).to_have_text("/projects/app")
+    expect(page.get_by_test_id("workspace-picker-dialog")).to_be_hidden()
+    page.screenshot(path=f"/tmp/xwav-create-project-source-{width}.png", full_page=True)
+    with page.expect_response(
+        lambda response: (
+            response.request.method == "POST" and response.url.endswith("/v1/projects")
+        )
+    ) as captured:
+        page.get_by_test_id("new-project-confirm").click()
+    response = captured.value
+    assert response.ok
+    project_id = response.json()["id"]
+    try:
+        stored = page.request.get(f"{live_server}/v1/projects/{project_id}").json()
+        assert stored["config"] == {
+            "host_id": _HOST_ID,
+            "workspace": "/projects/app",
+            "source_folder": True,
+        }
+        page.goto(f"{live_server}/?project={name}")
+        expect(page.get_by_test_id("new-chat-landing-workspace-chip")).to_contain_text("app")
+        expect(page.get_by_test_id("project-sandbox-notice")).to_have_count(0)
+    finally:
+        page.request.delete(f"{live_server}/v1/projects/{project_id}")

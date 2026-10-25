@@ -384,7 +384,7 @@ describe("CanvasPage", () => {
     expect(screen.getByText("No sessions in Legacy")).toBeInTheDocument();
   });
 
-  it("opens a session on one click and starts new sessions in the active project", () => {
+  it("opens a session on one click and starts new jobs in the active project", () => {
     vi.mocked(conversationsHook.useProjects).mockReturnValue(projectsStub(PROJECTS));
     vi.mocked(canvasSessions.useCanvasSessions).mockReturnValue(
       sessionsStub([conversation("conv_1", 1, { project_id: "proj_a" })]),

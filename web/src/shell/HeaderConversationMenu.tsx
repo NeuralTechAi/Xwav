@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { PIN_WRITE_MUTATION_KEY } from "@/lib/sessionListCache";
+import { downloadJobWorkspace } from "@/lib/workspaceDownload";
 import { exportSessionTranscript } from "@/lib/sessionsApi";
 import { triggerBrowserDownload } from "@/hooks/useFileContent";
 import {
@@ -121,6 +122,7 @@ export function HeaderConversationMenu({
   const archive = useArchiveConversation();
   const archiveWorktreePrompt = useArchiveWorktreePrompt();
   const deleteConversation = useStopAndDeleteConversation();
+  const [downloadBusy, setDownloadBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -274,6 +276,22 @@ export function HeaderConversationMenu({
           Fork
         </SessionActionMenuItem>
       )}
+      <DropdownMenuItem
+        disabled={downloadBusy}
+        title="Download saved project files, including uncommitted changes; excludes dependencies and Git metadata."
+        onSelect={() => {
+          setDownloadBusy(true);
+          void downloadJobWorkspace(conversation.id)
+            .catch((error) =>
+              toast.error(error instanceof Error ? error.message : "Download failed"),
+            )
+            .finally(() => setDownloadBusy(false));
+        }}
+        data-testid="download-job-workspace"
+      >
+        <DownloadIcon className="size-3.5" />
+        {downloadBusy ? "Preparing project ZIP…" : "Download project (ZIP)"}
+      </DropdownMenuItem>
       <DropdownMenuItem
         data-testid="header-export-conversation"
         className={itemClass}

@@ -5876,3 +5876,22 @@ async def test_registration_database_failure_still_attempts_provider_cleanup(db_
         await launch_managed_host(config=_injected_config(fake), owner=_OWNER, host_store=hosts)
     assert len(fake.terminated) == 1
     assert fake.host_starts == []
+
+
+def test_docker_configuration_is_launchable_without_cloud_credentials():
+    from omnigent.onboarding.sandboxes.docker import DockerSandboxLauncher
+
+    config = parse_sandbox_config(
+        {
+            "provider": "docker",
+            "server_url": "http://127.0.0.1:6767",
+            "docker": {"cpus": 3, "memory_mib": 1024},
+        }
+    )
+    assert config is not None
+    offered = config.offered()[0]
+    launcher = offered.launcher_factory()
+    assert isinstance(launcher, DockerSandboxLauncher)
+    assert launcher.config.cpus == 3
+    assert launcher.config.memory_mib == 1024
+    assert offered.managed_launch_supported

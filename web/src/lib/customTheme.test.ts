@@ -28,6 +28,7 @@ afterEach(() => {
 describe("customTheme", () => {
   it("returns a safe default when no valid preference is stored", () => {
     expect(readCustomTheme()).toEqual(DEFAULT_CUSTOM_THEME);
+    expect(DEFAULT_CUSTOM_THEME.basePalette).toBe("github");
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ accent: "red" }));
     expect(readCustomTheme()).toEqual(DEFAULT_CUSTOM_THEME);
@@ -137,37 +138,53 @@ describe("customTheme", () => {
   });
 
   it("keeps Xwav's selection tint after contrast changes", () => {
-    const theme = createCustomThemeFromPalette(PALETTES[0]);
+    const theme = createCustomThemeFromPalette(PALETTES.find((palette) => palette.id === "omni")!);
     const variants = deriveCustomTheme({ ...theme, contrast: 53 });
 
-    expect(variants.light.selectionBackground).toBe("rgba(240, 1, 150, 0.1)");
-    expect(variants.light.selectionForeground).toBe("#651249");
-    expect(variants.dark.selectionBackground).toBe("rgba(240, 1, 150, 0.15)");
-    expect(variants.dark.selectionForeground).toBe("#f9a8d4");
+    expect(variants.light.selectionBackground).toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.light.selectionBackground,
+    );
+    expect(variants.light.selectionForeground).toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.light.selectionForeground,
+    );
+    expect(variants.dark.selectionBackground).toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.dark.selectionBackground,
+    );
+    expect(variants.dark.selectionForeground).toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.dark.selectionForeground,
+    );
   });
 
   it("tints the text selection with a custom accent, like the sidebar's active row", () => {
-    const theme = createCustomThemeFromPalette(PALETTES[0]);
+    const theme = createCustomThemeFromPalette(PALETTES.find((palette) => palette.id === "omni")!);
     const variants = deriveCustomTheme({ ...theme, accent: "#2563eb", darkAccent: "#f59e0b" });
 
-    expect(variants.light.selectionBackground).toBe("rgba(37, 99, 235, 0.1)");
+    expect(variants.light.selectionBackground).toBe("rgba(37, 99, 235, 0.15)");
     expect(variants.dark.selectionBackground).toBe("rgba(245, 158, 11, 0.15)");
     expect(variants.light.selectionForeground).toBe(variants.light.foreground);
     expect(variants.dark.selectionForeground).toBe(variants.dark.foreground);
   });
 
   it("keeps Xwav's selected-session colors after contrast changes", () => {
-    const theme = createCustomThemeFromPalette(PALETTES[0]);
+    const theme = createCustomThemeFromPalette(PALETTES.find((palette) => palette.id === "omni")!);
     const variants = deriveCustomTheme({ ...theme, contrast: 53 });
 
-    expect(variants.light.sidebarActive).toBe("rgba(240, 1, 150, 0.1)");
-    expect(variants.light.sidebarActiveForeground).toBe("#651249");
-    expect(variants.dark.sidebarActive).toBe("rgba(240, 1, 150, 0.15)");
-    expect(variants.dark.sidebarActiveForeground).toBe("#f472b6");
+    expect(variants.light.sidebarActive).toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.light.sidebarActive,
+    );
+    expect(variants.light.sidebarActiveForeground).toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.light.sidebarActiveForeground,
+    );
+    expect(variants.dark.sidebarActive).toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.dark.sidebarActive,
+    );
+    expect(variants.dark.sidebarActiveForeground).toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.dark.sidebarActiveForeground,
+    );
   });
 
   it("tints the sidebar active highlight with a custom accent", () => {
-    const theme = createCustomThemeFromPalette(PALETTES[0]);
+    const theme = createCustomThemeFromPalette(PALETTES.find((palette) => palette.id === "omni")!);
     const variants = deriveCustomTheme({
       ...theme,
       accent: "#2563eb",
@@ -215,15 +232,21 @@ describe("customTheme", () => {
       translucentSidebar: false,
     });
 
-    expect(variants.light.background).not.toBe(PALETTES[0].tokens.light.background);
+    expect(variants.light.background).not.toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.light.background,
+    );
     expect(variants.dark.background).toBe("#160e24");
     expect(variants.light.primary).toBe("#2563eb");
     expect(variants.dark.primary).toBe("#2563eb");
     expect(variants.light.primaryForeground).toBe("#ffffff");
     expect(variants.dark.primaryForeground).toBe("#ffffff");
     expect(variants.light.foreground).not.toBe(variants.dark.foreground);
-    expect(variants.light.shellBackground).toBe(PALETTES[0].tokens.light.shellBackground);
-    expect(variants.dark.shellBackground).toBe(PALETTES[0].tokens.dark.shellBackground);
+    expect(variants.light.shellBackground).toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.light.shellBackground,
+    );
+    expect(variants.dark.shellBackground).toBe(
+      PALETTES.find((palette) => palette.id === "omni")!.tokens.dark.shellBackground,
+    );
   });
 
   it("keeps helper text and links readable across custom contrast settings", () => {

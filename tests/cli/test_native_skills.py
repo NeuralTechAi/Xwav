@@ -16,6 +16,10 @@ def test_native_skill_inventory_and_content() -> None:
     names = [entry["name"] for entry in catalog]
     assert names == sorted(set(names))
     assert {
+        "git-workflow-and-versioning",
+        "github-ops",
+        "preproduction-tests",
+        "karpathy-guidelines",
         "context7-mcp",
         "reverse-engineer-anything",
         "graphify",

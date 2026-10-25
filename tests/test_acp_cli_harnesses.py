@@ -356,3 +356,28 @@ def test_spawn_env_forwards_permission_mode(monkeypatch: pytest.MonkeyPatch) -> 
 # ---------------------------------------------------------------------------
 # jcode managed-connect support
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("harness", ["grok", "jcode", "fakecli"])
+def test_builtin_acp_forwards_only_declared_vendor_credentials(monkeypatch, harness):
+    monkeypatch.setitem(ACP_CLI_HARNESSES, "fakecli", _FAKE_ROW)
+    monkeypatch.setenv("XAI_API_KEY", "fake-xai-key")
+    monkeypatch.setenv("UNRELATED_API_KEY", "must-not-leak")
+    monkeypatch.setattr(
+        "omnigent.host.jcode_databricks.connect_jcode_gateway_env", lambda **_kw: None
+    )
+    env = _build_acp_cli_spawn_env(_spec(harness), harness=harness)
+    if harness == "grok":
+        assert env["XAI_API_KEY"] == "fake-xai-key"
+        assert env["HARNESS_ACP_ENV_PASSTHROUGH"] == "XAI_API_KEY"
+    else:
+        assert "XAI_API_KEY" not in env
+        assert "HARNESS_ACP_ENV_PASSTHROUGH" not in env
+    assert "UNRELATED_API_KEY" not in env
+
+
+def test_grok_without_api_key_keeps_oauth_available(monkeypatch):
+    monkeypatch.delenv("XAI_API_KEY", raising=False)
+    env = _build_acp_cli_spawn_env(_spec("grok"), harness="grok")
+    assert "XAI_API_KEY" not in env
+    assert env["HARNESS_ACP_ENV_PASSTHROUGH"] == "XAI_API_KEY"

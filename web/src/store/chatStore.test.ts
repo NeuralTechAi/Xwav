@@ -7,7 +7,7 @@
 //     terminates immediately, no blocks delivered)
 //   - `GET  /v1/sessions/{id}`         → session metadata snapshot
 //   - `GET  /v1/sessions/{id}/items`   → paginated committed items
-//   - `POST /v1/sessions`              → new session JSON
+//   - `POST /v1/sessions`              → new job JSON
 //   - `GET  /v1/runners`               → one online runner
 //   - `PATCH /v1/sessions/{id}`        → runner / effort binding
 //   - `POST /v1/sessions/{id}/events`  → `{ queued }` ack
@@ -2815,7 +2815,7 @@ describe("chatStore — send (first-send ordering)", () => {
     expect(eventBodies.map(textOf)).toEqual(["1", "2", "3"]);
   });
 
-  it("does not apply prior session config while creating a brand-new session", async () => {
+  it("does not apply prior session config while creating a brand-new job", async () => {
     seedSession("conv_new");
     fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
@@ -4927,7 +4927,7 @@ describe("chatStore — sendSlashCommand", () => {
     expect(sender.status).toBe("idle");
   });
 
-  it("creates and binds a brand-new session before posting the slash_command", async () => {
+  it("creates and binds a brand-new job before posting the slash_command", async () => {
     // First-message-is-a-skill path: no conversation yet. Must create the
     // session + bind the stream (like send) before POSTing.
     seedSession("conv_new");
@@ -6697,7 +6697,7 @@ describe("chatStore — handleSessionEvent (session.* events)", () => {
         viewers: [{ userId: "alice@example.com", idle: false }],
       });
       // A late frame from the previous session's still-draining stream
-      // must not paint the new session's header with foreign viewers.
+      // must not paint the new job's header with foreign viewers.
       expect(useChatStore.getState().viewers).toEqual([]);
     });
   });
@@ -11327,7 +11327,7 @@ describe("chatStore — session configuration scope", () => {
     expect(patches.some((p) => "model_override" in p)).toBe(false);
   });
 
-  it("does NOT PATCH a removed Claude alias onto a new session", async () => {
+  it("does NOT PATCH a removed Claude alias onto a new job", async () => {
     seedSession("conv_cn_removed", []);
     withSnapshot("conv_cn_removed", {
       labels: { "omnigent.wrapper": "claude-code-native-ui" },

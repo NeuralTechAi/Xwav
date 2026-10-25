@@ -422,7 +422,7 @@ describe("MainTerminalView — native wrapper sessions", () => {
     const view = screen.getByTestId("terminal-view");
     expect(view).toHaveAttribute("data-session-id", "conv_b");
     // A new instance id proves the mount was torn down and rebuilt for the
-    // new session rather than reused with stale scrollback.
+    // new job rather than reused with stale scrollback.
     expect(view.getAttribute("data-instance")).not.toBe(first);
   });
 

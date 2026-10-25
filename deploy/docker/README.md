@@ -499,3 +499,44 @@ security considerations).
 
 - `designs/OIDC_AUTH.md` — full native OIDC design
 - `designs/SESSIONS_AUTH.md` — `AuthProvider` contract + permission system
+
+
+### Local Xwav job authentication
+
+Local Docker jobs start with their own filesystem and no model login. A running
+Ollama installation with only embedding models is not a chat provider. Configure
+an inference provider through `sandbox.host_config`, or sign in inside the job.
+For a trusted local deployment, `sandbox.docker.inherit_codex_login: true`
+explicitly copies the server operator's existing Codex login into every new job
+using stdin and owner-only files. It never mounts the host home or workspace.
+All jobs then use that account; leave this disabled for deployments serving
+untrusted users. Missing logins fail provisioning and remove the new container.
+
+### Native Quality Lab tools
+
+The host target bundles Python Playwright 1.60.0, its Chromium revision/system
+libraries, and axe-core 4.14.0 in `/opt/xwav-quality`. New jobs use these for
+responsive browser and accessibility baselines without editing project manifests.
+The native `preproduction-tests` skill guides application-specific test setup.
+Missing integration/regression/E2E suites remain visible gaps. Native Android/iOS
+device tooling and credentials still need project-specific configuration.
+
+To upgrade an existing local host image without reinstalling harness CLIs:
+
+```sh
+docker build -f deploy/docker/Dockerfile.quality -t xwav-host:local .
+```
+
+This affects newly created sandboxes; existing jobs retain their image. Custom
+hosts must supply equivalent tools or configured test commands. The server-only
+image does not include browser testing tools.
+
+Verify the built default image from the repository root:
+
+```sh
+python deploy/docker/verify-quality-tools.py
+```
+
+This creates and removes a fresh unprivileged container, audits a dependency-free
+fixture at all three responsive sizes, and checks that deliberately broken
+runtime/layout/accessibility fixtures fail. It does not use account credentials.

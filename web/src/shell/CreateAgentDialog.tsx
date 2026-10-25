@@ -111,7 +111,7 @@ function toMCPInputs(entries: MCPFormEntry[]): MCPServerInput[] | undefined {
   return result.length > 0 ? result : undefined;
 }
 
-/** Collect a draft for a new session, or import an installed agent bundle. */
+/** Collect a draft for a new job, or import an installed agent bundle. */
 export function CreateAgentDialog({
   open,
   onOpenChange,
@@ -303,6 +303,9 @@ function useAgentFormFields() {
   const [model, setModel] = useState("");
   const [mcpEntries, setMcpEntries] = useState<MCPFormEntry[]>([]);
   const [nextKey, setNextKey] = useState(0);
+  const [skills, setSkills] = useState<NonNullable<AgentBundleInput["skills"]>>([]);
+  const [skillError, setSkillError] = useState<string | null>(null);
+  const [readingSkills, setReadingSkills] = useState(false);
 
   function reset() {
     setName("");
@@ -312,6 +315,8 @@ function useAgentFormFields() {
     setModel("");
     setMcpEntries([]);
     setNextKey(0);
+    setSkills([]);
+    setSkillError(null);
   }
 
   function addMCPServer() {
@@ -328,7 +333,8 @@ function useAgentFormFields() {
   }
 
   const nameInvalid = name.trim().length > 0 && !AGENT_NAME_PATTERN.test(name.trim());
-  const canSubmit = AGENT_NAME_PATTERN.test(name.trim()) && model.trim().length > 0;
+  const canSubmit =
+    !readingSkills && AGENT_NAME_PATTERN.test(name.trim()) && model.trim().length > 0;
 
   function toInput(): AgentBundleInput {
     return {
@@ -338,6 +344,7 @@ function useAgentFormFields() {
       harness,
       model: model.trim(),
       mcpServers: toMCPInputs(mcpEntries),
+      skills,
     };
   }
 
@@ -358,6 +365,12 @@ function useAgentFormFields() {
     removeMCPServer,
     updateMCPEntry,
     nameInvalid,
+    skills,
+    setSkills,
+    skillError,
+    setSkillError,
+    readingSkills,
+    setReadingSkills,
     canSubmit,
     reset,
     toInput,
@@ -381,6 +394,12 @@ function AgentFormFields({
   removeMCPServer,
   updateMCPEntry,
   nameInvalid,
+  skills,
+  setSkills,
+  skillError,
+  setSkillError,
+  readingSkills,
+  setReadingSkills,
 }: ReturnType<typeof useAgentFormFields>) {
   return (
     <>
@@ -482,6 +501,80 @@ function AgentFormFields({
           className="min-h-[120px]"
           componentId="create_agent.instructions"
         />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="create-agent-skills" className="text-sm font-medium">
+          Skills
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Attach portable SKILL.md files with name and description frontmatter. They become slash
+          commands for this agent. For skills with scripts or supporting files, import a complete
+          agent bundle.
+        </p>
+        <Input
+          id="create-agent-skills"
+          type="file"
+          accept=".md"
+          multiple
+          disabled={readingSkills}
+          onChange={async (event) => {
+            const files = Array.from(event.target.files ?? []);
+            event.target.value = "";
+            setReadingSkills(true);
+            try {
+              const added = await Promise.all(
+                files.map(async (file) => {
+                  if (file.size > 256_000) throw new Error(`${file.name}: maximum size is 256 KB.`);
+                  const content = await file.text();
+                  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(content)?.[1];
+                  const skillName = frontmatter?.match(
+                    /^name:\s*["']?([a-zA-Z0-9_-]{1,64})["']?\s*$/m,
+                  )?.[1];
+                  if (!skillName || !/^description:\s*\S/m.test(frontmatter ?? ""))
+                    throw new Error(
+                      `${file.name}: include a valid name and description in YAML frontmatter.`,
+                    );
+                  return { name: skillName, content };
+                }),
+              );
+              setSkills((current) => {
+                const merged = new Map(current.map((skill) => [skill.name.toLowerCase(), skill]));
+                for (const skill of added) merged.set(skill.name.toLowerCase(), skill);
+                return [...merged.values()];
+              });
+              setSkillError(null);
+            } catch (error) {
+              setSkillError(error instanceof Error ? error.message : String(error));
+            } finally {
+              setReadingSkills(false);
+            }
+          }}
+        />
+        {skillError && (
+          <p role="alert" className="text-sm text-destructive">
+            {skillError}
+          </p>
+        )}
+        {skills.map((skill) => (
+          <div
+            key={skill.name}
+            className="flex items-center justify-between rounded-lg border p-2 text-sm"
+          >
+            <span>/{skill.name}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label={`Remove skill ${skill.name}`}
+              onClick={() =>
+                setSkills((current) => current.filter((item) => item.name !== skill.name))
+              }
+            >
+              <TrashIcon className="size-4" />
+            </Button>
+          </div>
+        ))}
       </div>
 
       {/* MCP Servers */}

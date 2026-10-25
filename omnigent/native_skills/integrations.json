@@ -55,6 +55,52 @@
       ],
       "integration": "optional-mcp",
       "adaptation": "Xwav runtime setup guidance; runtime dependencies are not bundled"
+    },
+    {
+      "repository": "https://github.com/google-research/harness2",
+      "revision": "1cfe254e8d25b15f37048c3730134686abe60335",
+      "license": "Apache-2.0",
+      "version": "0.1.0",
+      "skills": [
+        "harness2"
+      ],
+      "integration": "optional-cli",
+      "adaptation": "Xwav native CLI adapter and offline setup guidance; upstream benchmark execution remains separate from interactive chat and Xwav policy enforcement."
+    },
+    {
+      "repository": "https://github.com/NeuralTechAi/Xwav",
+      "origin": "first-party",
+      "revision": null,
+      "license": "Apache-2.0",
+      "skills": [
+        "github-ops"
+      ],
+      "integration": "native-cli-guidance",
+      "adaptation": "Original Xwav guidance using the existing GitHub connection, PR panel and gh CLI; no additional MCP server or agent runtime."
+    },
+    {
+      "repository": "https://github.com/NeuralTechAi/Xwav",
+      "origin": "first-party",
+      "revision": null,
+      "license": "Apache-2.0",
+      "skills": [
+        "preproduction-tests"
+      ],
+      "integration": "native-quality-lab",
+      "adaptation": "Original guidance for application-specific suites and truthful Quality Lab coverage; host image bundles Chromium and axe."
+    },
+    {
+      "repository": "https://github.com/multica-ai/andrej-karpathy-skills",
+      "revision": "2c606141936f1eeef17fa3043a72095b4765b9c2",
+      "license": "MIT",
+      "version": "1.0.0",
+      "skills": [
+        "karpathy-guidelines"
+      ],
+      "integration": "native-offline-skill",
+      "upstream_skill_sha256": "6e22cc54cb02a5e98ae42d06d9d7292db0c1b43894831b32879beb0166b2aea7",
+      "license_evidence": ".claude-plugin/plugin.json, skills/karpathy-guidelines/SKILL.md and README.md declare MIT; upstream has no standalone LICENSE at this revision. Original plugin manifest is preserved as LICENSE.upstream.json.",
+      "adaptation": "Unmodified canonical skill only; no duplicate CLAUDE.md, Cursor rules, plugin installer or global instructions. Existing name, plugin-alias and normalized-content precedence applies."
     }
   ]
 }

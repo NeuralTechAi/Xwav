@@ -281,7 +281,7 @@ describe("ErrorBanner", () => {
     ],
     [
       "client_update_required",
-      "The agent CLI on the host is too old for the selected model. Update it on the host, then start a new session.",
+      "The agent CLI on the host is too old for the selected model. Update it on the host, then start a new job.",
     ],
   ])("describes a %s failure in plain English", (code, sentence) => {
     render(<ErrorBanner message="raw diagnostics" source="execution" code={code} />);
@@ -296,7 +296,7 @@ describe("ErrorBanner", () => {
         code="client_update_required"
         title="Claude Code needs an update"
         cause="Claude Code 2.1.217 on the host doesn't support this model; version 2.1.280 or newer is required."
-        remediation="Run `claude update` on the host, then start a new session."
+        remediation="Run `claude update` on the host, then start a new job."
         onRetry={vi.fn()}
       />,
     );

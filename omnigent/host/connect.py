@@ -506,6 +506,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
     {
         "PATH",
         "PYTHONPATH",
+        "PLAYWRIGHT_BROWSERS_PATH",
         "HOME",
         "USER",
         "LOGNAME",

@@ -1,3 +1,4 @@
+import { readDefaultChatHarness, writeDefaultChatHarness } from "./defaultHarnessPreferences";
 import { beforeEach, describe, expect, it } from "vitest";
 import { COMPOSER_SEND_SHORTCUT_STORAGE_KEY } from "./composerSendShortcutPreferences";
 import { applyImportedSettings, collectSettings } from "./settingsPortability";
@@ -119,4 +120,15 @@ describe("composer shortcut portability", () => {
     });
     expect(localStorage.getItem(COMPOSER_SEND_SHORTCUT_STORAGE_KEY)).toBe("true");
   });
+});
+
+it("exports and imports the pinned default without exporting the last session choice", () => {
+  writeDefaultChatHarness("codex-native");
+  localStorage.setItem("omnigent:last-agent-id", "session-override");
+  const exported = collectSettings()!;
+  expect(exported.settings["xwav:default-chat-harness"]).toBe("codex-native");
+  expect(exported.settings["omnigent:last-agent-id"]).toBeUndefined();
+  writeDefaultChatHarness("pi-native");
+  applyImportedSettings(exported);
+  expect(readDefaultChatHarness()).toBe("codex-native");
 });

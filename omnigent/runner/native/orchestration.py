@@ -2664,6 +2664,18 @@ async def _auto_create_pi_terminal(
         PI_NATIVE_CONFIG_ENV_VAR: str(config),
         "OMNIGENT_PI_NATIVE_BRIDGE_DIR": str(bridge_dir),
     }
+    from omnigent.inner.pi_executor import _resolve_pi_skill_args
+    from omnigent.native_skills.pi import pi_native_skill_launch
+
+    pi_skill_spec = _unwrap_resolved_spec(agent_spec)
+    pi_skill_filter = pi_skill_spec.skills_filter if pi_skill_spec is not None else "all"
+    # An explicit vendor opt-out is stronger than the app's default catalog.
+    if "--no-skills" in (launch_config.terminal_launch_args or []):
+        pi_skill_filter = "none"
+    pi_args.extend(_resolve_pi_skill_args(pi_skill_filter, _resolved_spec_workdir(agent_spec)))
+    native_skill_args, native_skill_env = pi_native_skill_launch(pi_skill_filter, pi_cli_version)
+    pi_args.extend(native_skill_args)
+    pi_env.update(native_skill_env)
     # Route the runner-owned Pi process through the provider configured by
     # ``omnigent setup`` (Databricks gateway / API key), so a separate
     # ``pi /login`` isn't required — the parity codex-native/claude-native
@@ -2732,6 +2744,17 @@ async def _auto_create_pi_terminal(
     # and ``parent_os_env`` below, launch_required_terminal falls back to
     # _default_sandbox_for_platform (linux_bwrap), overriding the YAML config.
     agent_os_env = _agent_os_env_from_spec(agent_spec)
+    pi_sandbox = agent_os_env.sandbox if agent_os_env is not None else None
+    if native_skill_args:
+        from omnigent.inner.sandbox import _default_sandbox_for_platform
+        from omnigent.native_skills import native_skill_root
+
+        pi_sandbox = pi_sandbox or _default_sandbox_for_platform()
+        if pi_sandbox.type != "none":
+            pi_sandbox = dataclasses.replace(
+                pi_sandbox,
+                read_paths=[*(pi_sandbox.read_paths or []), str(native_skill_root().parent)],
+            )
     terminal_view = await resource_registry.launch_required_terminal(
         session_id=session_id,
         terminal_name="pi",
@@ -2742,7 +2765,7 @@ async def _auto_create_pi_terminal(
             os_env=OSEnvSpec(
                 type="caller_process",
                 cwd=workspace,
-                sandbox=(agent_os_env.sandbox if agent_os_env is not None else None),
+                sandbox=pi_sandbox,
             ),
             command=pi_command,
             args=pi_args,

@@ -17,6 +17,21 @@ An open-source workspace for orchestrating Claude Code, Codex, Cursor, Pi, and c
 
 ![Xwav — Your agents. One workspace.](docs/images/xwav-banner.svg)
 
+## Primary workflow: Google Harness²
+
+This checkout uses [Google Research Harness²](docs/HARNESS2.md) as its primary
+benchmark optimization workflow. Run `just` for its installation status, or:
+
+```bash
+just benchmark demo --output /tmp/xwav-harness2-demo --k 2 --mode both
+just benchmark run --help
+```
+
+The demo needs no model credentials. Model-backed benchmarks require their own
+benchmark setup and model configuration. Harness² is a benchmark orchestrator;
+interactive chat keeps a separate supported chat harness. Use `just --list` for
+all development tasks.
+
 ## Run this fork locally
 
 Xwav is a rebranded fork of [Omnigent](https://github.com/omnigent-ai/omnigent). The Python package, imports, configuration paths, and SDK contracts keep their upstream names for compatibility. Settings accept the public `XWAV_*` prefix, and new session links use `xwav://` while older links remain accepted. The additional `xwav` command runs the same local CLI. Upstream installers and PyPI packages install **Omnigent**, not this fork; use this source checkout for Xwav.
@@ -298,7 +313,11 @@ in a native window and adds OS notifications (with a configurable sound) and a d
 > [!TIP]
 > On first run, Xwav picks up model credentials already in your
 > environment (an `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`, or a `claude` /
-> `codex` CLI you're logged into) and offers one as the default.
+> `codex` CLI you're logged into). Pi is the default for fresh sessions; a bare
+> `xwav run` prefers the Pi RPC harness when a compatible provider is configured,
+> then falls back to configured Claude or Codex. Saved user/project selections
+> and explicit `--harness` choices take precedence. The browser picker starts
+> with Pi's native terminal harness (`pi-native`).
 
 ```bash
 omnigent

@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { SIDEBAR_ROW } from "./sidebarStyles";
 
 export type SettingsSectionId =
+  | "extensions"
   | "appearance"
   | "harnesses"
   | "custom-agents"
@@ -53,6 +54,7 @@ export type SettingsSectionId =
   | "updates";
 
 const SECTION_IDS: readonly SettingsSectionId[] = [
+  "extensions",
   "appearance",
   "harnesses",
   "custom-agents",
@@ -131,6 +133,7 @@ export function settingsNavGroups(
     // on a deploy with sign-in.
     general.unshift({ id: "account", label: "Account", icon: UserCogIcon });
   }
+  general.push({ id: "extensions", label: "Skills, tools & plugins", icon: BlocksIcon });
   const groups: SettingsNavGroup[] = [{ title: "General", items: general }];
   if (customAgentsEnabled) {
     groups.push({

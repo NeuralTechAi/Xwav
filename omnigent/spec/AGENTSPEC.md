@@ -270,7 +270,27 @@ When asked to research a topic:
 | `name` | yes | max 64 chars; lowercase letters, digits, hyphens; need not match the directory name |
 | `description` | yes | max 1024 chars; one-line description of when to use this skill |
 
-Everything after the frontmatter is markdown content passed to the model.
+Everything after the frontmatter is markdown content loaded for the model only
+when the skill is activated. Discovery may parse files for metadata and duplicate
+checks; this does not execute a skill or put every skill body in the prompt.
+Supporting references and scripts are not automatically read or executed.
+
+For Xwav's built-in loader, `disable-model-invocation: true` in frontmatter
+keeps a skill available for explicit invocation but removes it from the automatic
+catalog. The equivalent Codex skill policy in `agents/openai.yaml` is:
+
+```yaml
+policy:
+  allow_implicit_invocation: false
+```
+
+Either restriction wins when both are present. Native harnesses also retain
+their own invocation policies. `user-invocable: false` is a separate control for
+hiding a skill from the user-facing slash menu.
+
+Automatic selection must follow the task's intent, not isolated keywords. It
+uses the smallest relevant set, allows zero skills, and reuses instructions
+already in context unless they changed, were lost, or the user requests a reload.
 
 ---
 

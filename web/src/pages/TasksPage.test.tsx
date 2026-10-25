@@ -121,7 +121,7 @@ describe("TasksPage list", () => {
   it("renders the title, subtitle and task rows with schedule text", () => {
     setTasks([task()]);
     renderPage();
-    expect(screen.getByText("Automations")).toBeInTheDocument();
+    expect(screen.getByText("Scheduler")).toBeInTheDocument();
     expect(screen.getByText(/Run agent sessions on a recurring schedule/i)).toBeInTheDocument();
     const row = screen.getByTestId("scheduled-task-row");
     expect(within(row).getByText("Nightly triage")).toBeInTheDocument();

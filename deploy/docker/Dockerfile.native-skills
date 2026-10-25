@@ -1,0 +1,8 @@
+# Refresh offline native skills without rebuilding harnesses or quality tools.
+ARG BASE_IMAGE=xwav-host:local
+FROM ${BASE_IMAGE}
+USER root
+COPY omnigent/native_skills/skills /tmp/xwav-native-skills/skills
+COPY omnigent/native_skills/sources.json omnigent/native_skills/integrations.json /tmp/xwav-native-skills/
+RUN python -c "import omnigent.native_skills, pathlib, shutil; shutil.copytree('/tmp/xwav-native-skills', pathlib.Path(omnigent.native_skills.__file__).parent, dirs_exist_ok=True)" \
+ && rm -rf /tmp/xwav-native-skills

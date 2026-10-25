@@ -399,6 +399,11 @@ COPY --from=builder /build /build
 RUN pip install --no-cache-dir /build /build/sdks/python-client /build/sdks/ui \
  && ! grep -R --include='*.pth' --include='*.egg-link' -nE '/build(/|$)' /opt/venv/lib/python*/site-packages
 
+# Native Quality Lab tools are image-owned, independent of project dependencies.
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/xwav-quality/browsers
+COPY deploy/docker/install-quality-tools.sh /tmp/install-quality-tools.sh
+RUN sh /tmp/install-quality-tools.sh && rm /tmp/install-quality-tools.sh
+
 # Sandbox launchers exec commands through `bash -lc`, and Debian's
 # /etc/profile unconditionally resets PATH for login shells — the ENV
 # PATH above would silently drop off and `omnigent` / `pip` would

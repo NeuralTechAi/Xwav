@@ -12,6 +12,7 @@ from omnigent.runner.subagent_work import (
 )
 from omnigent.runtime.mcp_tool_result import encode_mcp_image_result
 from omnigent.runtime.prompt import (
+    AUTOMATIC_SKILL_SELECTION_INSTRUCTION,
     EMBEDDED_BROWSER_PRIORITY_INSTRUCTION,
     SUBAGENT_WAKE_NOTICE_INSTRUCTION,
     SUBAGENT_WAKE_NOTICE_SHAPE,
@@ -435,3 +436,65 @@ def test_raw_author_instructions_verbatim_and_none() -> None:
 
     whitespace_only = cast(AgentSpec, SimpleNamespace(instructions="   \n  "))
     assert raw_author_instructions(whitespace_only) is None
+
+
+@pytest.mark.parametrize("builder", [build_instructions, build_instructions_nullable])
+@pytest.mark.parametrize("skills_filter", ["all", ["karpathy-guidelines"]])
+def test_automatic_skill_selection_without_a_slash_command(builder, skills_filter) -> None:
+    spec = AgentSpec(
+        spec_version=1, instructions="Project instructions", skills_filter=skills_filter
+    )
+    result = builder(spec, "Fix the broken calculator", [])
+    assert AUTOMATIC_SKILL_SELECTION_INSTRUCTION in result
+    assert result.index("Fix the broken calculator") < result.index(
+        AUTOMATIC_SKILL_SELECTION_INSTRUCTION
+    )
+    assert "smallest relevant set" in result
+    assert "honor disabled skills and allowlists" in result
+    assert "does not authorize installing tools" in result
+
+
+@pytest.mark.parametrize("skills_filter", ["none", []])
+def test_disabled_catalog_does_not_request_automatic_selection(skills_filter) -> None:
+    spec = AgentSpec(spec_version=1, skills_filter=skills_filter)
+    assert AUTOMATIC_SKILL_SELECTION_INSTRUCTION not in build_instructions(spec, None, [])
+
+
+def test_skill_loader_receives_automatic_guidance_without_bundled_skills() -> None:
+    spec = AgentSpec(spec_version=1, skills_filter="none")
+    schema = {"type": "function", "function": {"name": "load_skill"}}
+    assert AUTOMATIC_SKILL_SELECTION_INSTRUCTION in build_instructions(spec, None, [schema])
+
+
+def test_bundled_skill_can_be_selected_when_host_defaults_are_disabled() -> None:
+    from omnigent.spec.types import SkillSpec
+
+    skill = SkillSpec(name="project-review", description="Review the project", content="Review it")
+    spec = AgentSpec(spec_version=1, skills_filter="none", skills=[skill])
+    assert AUTOMATIC_SKILL_SELECTION_INSTRUCTION in build_instructions(spec, None, [])
+
+
+@pytest.mark.parametrize("builder", [build_instructions, build_instructions_nullable])
+def test_skill_prompt_only_advertises_automatic_metadata_and_preserves_explicit_content(builder):
+    from omnigent.spec.types import SkillSpec
+
+    automatic = SkillSpec(name="review", description="Review code", content="REVIEW_BODY_SENTINEL")
+    manual = SkillSpec(
+        name="publish",
+        description="Publish a release",
+        content="MANUAL_BODY_SENTINEL",
+        allow_implicit_invocation=False,
+    )
+    spec = AgentSpec(spec_version=1, skills=[automatic, manual], skills_filter="none")
+    tool = {"type": "function", "function": {"name": "load_skill"}}
+    result = builder(spec, "What does this function do?", [tool])
+    assert "review: Review code" in result
+    assert "publish: Publish a release" not in result
+    assert automatic.content not in result
+    assert manual.content not in result
+    assert "matching words or general coding context alone are not enough" in result
+    assert "Do not preload a collection" in result
+    assert "Reuse instructions already available" in result
+    assert "do not read all references or run bundled scripts" in result
+    explicit = builder(spec, "Explicit requested instructions: " + manual.content, [tool])
+    assert manual.content in explicit

@@ -60,7 +60,33 @@ EMBEDDED_BROWSER_PRIORITY_INSTRUCTION = (
 )
 
 
-def _framework_instructions_for(spec: AgentSpec) -> list[str]:
+AUTOMATIC_SKILL_SELECTION_INSTRUCTION = (
+    "Automatic skill selection: for each user request, inspect the available skill "
+    "names and descriptions and select the smallest relevant set for the task. "
+    "Select a skill only when its instructions materially help fulfill the current "
+    "request; matching words or general coding context alone are not enough. "
+    "Do not preload a collection of skills for possible later work. "
+    "The user does not need to name a skill or type a slash command. When a skill "
+    "matches, load its full instructions with load_skill, the harness's native "
+    "skill loader, or by reading the SKILL.md path in its catalog before applying "
+    "it. Load supporting files only as needed for the current step; do not read "
+    "all references or run bundled scripts just because a skill lists them. "
+    "Reuse instructions already available in the conversation instead of reloading "
+    "the same skill on every turn; reload only if they changed, were lost from "
+    "context, or the user asks. Manual-only skills (disable-model-invocation: true "
+    "or policy.allow_implicit_invocation: false) require an explicit user request. "
+    "Prefer an explicitly requested "
+    "skill and preserve user/project overrides; do not load equivalent copies. "
+    "Briefly tell the user which skills you are using and why. Reassess when the "
+    "task changes. If no skill matches, the catalog is empty, or the task is "
+    "trivial, proceed normally without forcing a skill. Use only skills actually "
+    "available to this agent; honor disabled skills and allowlists. Selecting a "
+    "skill does not authorize installing tools, accessing accounts, spending "
+    "money, or taking actions beyond the user's request."
+)
+
+
+def _framework_instructions_for(spec: AgentSpec, tool_schemas: list[dict[str, Any]]) -> list[str]:
     """
     Framework instructions that apply to every turn of ``spec``.
 
@@ -82,6 +108,12 @@ def _framework_instructions_for(spec: AgentSpec) -> list[str]:
     if spec.tools.agents or spec.spawn or dispatches_web_researcher:
         instructions.append(SUBAGENT_WAKE_NOTICE_INSTRUCTION)
     instructions.append(EMBEDDED_BROWSER_PRIORITY_INSTRUCTION)
+    has_skill_loader = any(
+        schema.get("function", {}).get("name") == "load_skill" for schema in tool_schemas
+    )
+    skills_filter = getattr(spec, "skills_filter", "none")
+    if spec.skills or has_skill_loader or skills_filter not in ("none", []):
+        instructions.append(AUTOMATIC_SKILL_SELECTION_INSTRUCTION)
     return instructions
 
 
@@ -132,6 +164,8 @@ def _assemble_instruction_parts(
     if spec.skills and has_load_skill:
         skill_lines = ["Available skills (use the load_skill tool to load one):"]
         for skill in spec.skills:
+            if not skill.allow_implicit_invocation:
+                continue
             skill_lines.append(f"- {skill.name}: {skill.description}")
         parts.append("\n".join(skill_lines))
 
@@ -170,7 +204,7 @@ def build_instructions(
     return (
         append_framework_instructions(
             base_instructions,
-            [*_framework_instructions_for(spec), *framework_instructions],
+            [*_framework_instructions_for(spec, tool_schemas), *framework_instructions],
         )
         or base_instructions
     )
@@ -204,7 +238,7 @@ def build_instructions_nullable(
     base_instructions = "\n\n".join(parts) if parts else None
     return append_framework_instructions(
         base_instructions,
-        [*_framework_instructions_for(spec), *framework_instructions],
+        [*_framework_instructions_for(spec, tool_schemas), *framework_instructions],
     )
 
 

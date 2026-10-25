@@ -198,3 +198,44 @@ describe("buildAgentBundle", () => {
     expect(yaml).toContain("model: gpt-4o");
   });
 });
+
+it("bundles portable skills with their full instructions", async () => {
+  const content = "---\nname: review\ndescription: Review changes\n---\nRead the diff.\n";
+  const file = await buildAgentBundle({
+    name: "reviewer",
+    harness: "claude-sdk",
+    model: "test",
+    skills: [{ name: "review", content }],
+  });
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const text = new TextDecoder().decode(bytes);
+  expect(text).toContain("skills/review/SKILL.md");
+  expect(text).toContain(content);
+});
+
+it.each(["../outside", "a/b", "x".repeat(65)])("rejects unsafe skill paths: %s", async (name) => {
+  await expect(
+    buildAgentBundle({
+      name: "test",
+      harness: "claude-sdk",
+      model: "test",
+      skills: [{ name, content: "body" }],
+    }),
+  ).rejects.toThrow("Skill names");
+});
+
+it("rejects duplicate skills and oversized instructions", async () => {
+  const input = { name: "test", harness: "claude-sdk", model: "test" };
+  await expect(
+    buildAgentBundle({
+      ...input,
+      skills: [
+        { name: "review", content: "one" },
+        { name: "Review", content: "two" },
+      ],
+    }),
+  ).rejects.toThrow("Duplicate skill");
+  await expect(
+    buildAgentBundle({ ...input, skills: [{ name: "review", content: "x".repeat(256_001) }] }),
+  ).rejects.toThrow("256 KB");
+});

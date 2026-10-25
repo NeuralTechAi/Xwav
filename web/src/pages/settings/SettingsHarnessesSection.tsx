@@ -10,6 +10,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "@/lib/routing";
+import { DefaultHarnessControl } from "@/components/DefaultHarnessControl";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,6 +36,12 @@ import {
   type HarnessCredentialKind,
 } from "@/lib/harnessSetup";
 import { NATIVE_CODING_AGENTS } from "@/lib/nativeCodingAgents";
+import {
+  Harness2Card,
+  Harness2Workflow,
+  HARNESS2_DESCRIPTION,
+  useHarness2Status,
+} from "./Harness2Workflow";
 import { BackButton, HarnessCatalog } from "./HarnessCatalog";
 import { HarnessFixDialog, type HarnessFixMode } from "./HarnessFixDialog";
 import { useSettingsRoute } from "../../shell/settingsNav";
@@ -94,6 +101,7 @@ function hostHarnessKey(hostId: string, harness: string): string {
  */
 export const SettingsHarnessesSection = () => {
   const { harness } = useSettingsRoute();
+  const benchmarkStatus = useHarness2Status();
   const [query, setQuery] = useState("");
   const [installedOnly, setInstalledOnly] = useState(false);
   const info = useServerInfo();
@@ -147,11 +155,19 @@ export const SettingsHarnessesSection = () => {
     );
   }, [query, installedOnly, selectedHost]);
 
+  const benchmarkMatches =
+    (!installedOnly || benchmarkStatus.data?.pinned === true) &&
+    (!query.trim() ||
+      `Google Harness² harness2 ${HARNESS2_DESCRIPTION}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()));
   const detail = HARNESS_ENTRIES.find((entry) => entry.harness === harness);
 
   return (
     <div className="@container">
-      {detail ? (
+      {harness === "harness2" ? (
+        <Harness2Workflow status={benchmarkStatus} />
+      ) : detail ? (
         <HarnessDetail
           key={detail.harness}
           entry={detail}
@@ -178,8 +194,11 @@ export const SettingsHarnessesSection = () => {
             <h1 className="settings-page-title text-2xl font-semibold">Harnesses</h1>
             <HostSelect hosts={sortedHosts} selected={selectedHost} onSelect={setSelectedHostId} />
           </div>
+          <div className="mb-6 rounded-xl border border-border bg-card p-4">
+            <DefaultHarnessControl />
+          </div>
           <div className="mb-6 flex items-center gap-2">
-            <div className="flex h-8 flex-1 items-center gap-2 rounded-lg border border-border px-2.5">
+            <div className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border px-2.5">
               <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
               <input
                 type="search"
@@ -188,7 +207,7 @@ export const SettingsHarnessesSection = () => {
                 placeholder="Search agent harnesses..."
                 aria-label="Search agent harnesses"
                 data-testid="harness-search"
-                className="min-w-0 flex-1 bg-transparent text-ui outline-none placeholder:text-muted-foreground/50"
+                className="min-w-0 flex-1 bg-transparent text-ui outline-none placeholder:text-muted-foreground"
               />
             </div>
             <Tabs
@@ -204,18 +223,13 @@ export const SettingsHarnessesSection = () => {
             </Tabs>
           </div>
           {!selectedHost && <NoHostNotice />}
-          {filtered.length === 0 && (
+          {filtered.length === 0 && !benchmarkMatches && (
             <p className="text-ui text-muted-foreground">
               {query.trim() ? `No harnesses match “${query}”.` : "No installed harnesses."}
             </p>
           )}
-          <div
-            className={cn(
-              "grid grid-cols-1 gap-3 @[520px]:grid-cols-2",
-              // No host to resolve status against — dim the catalog to read as inactive.
-              !selectedHost && "opacity-50",
-            )}
-          >
+          <div className="grid grid-cols-1 gap-3 @[520px]:grid-cols-2">
+            {benchmarkMatches && <Harness2Card status={benchmarkStatus} />}
             {filtered.map((entry) => (
               <HarnessCard
                 key={entry.harness}
@@ -724,10 +738,10 @@ function HarnessWarning({
     reason === "readiness-error"
       ? `${entry.name} isn’t working on ${host.name}. Run setup again to fix it.`
       : mode === "reconfigure"
-        ? `${entry.name} can’t sign in on ${host.name}. Its credential is missing, so new sessions can’t use ${entry.name}.`
+        ? `${entry.name} can’t sign in on ${host.name}. Its credential is missing, so new jobs can’t use ${entry.name}.`
         : mode === "update"
-          ? `${entry.name} is out of date on ${host.name}. Update it so new sessions can use ${entry.name}.`
-          : `${entry.name} isn’t set up on ${host.name}, so new sessions can’t use ${entry.name}.`;
+          ? `${entry.name} is out of date on ${host.name}. Update it so new jobs can use ${entry.name}.`
+          : `${entry.name} isn’t set up on ${host.name}, so new jobs can’t use ${entry.name}.`;
   const action = !installable
     ? "Set up"
     : mode === "update"

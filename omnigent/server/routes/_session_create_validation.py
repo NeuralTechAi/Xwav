@@ -41,6 +41,7 @@ async def resolve_project_session_create(
     body: Any,
     user_id: str | None,
     project_store: ProjectStore | None,
+    sandbox_isolation: bool = False,
 ) -> ProjectCreateResolution:
     """Apply opt-in project defaults before any create-side validation.
 
@@ -68,6 +69,26 @@ async def resolve_project_session_create(
     for field in ("agent_id", "workspace", "git"):
         if field not in fields_set and field in config and field in body.__class__.model_fields:
             updates[field] = config[field]
+    source_folder = (
+        config.get("source_folder") is True
+        and body.host_type != "managed"
+        and isinstance(config.get("host_id"), str)
+        and bool(config["host_id"])
+        and isinstance(config.get("workspace"), str)
+        and bool(config["workspace"])
+    )
+    if source_folder and "host_id" not in fields_set and body.host_type != "managed":
+        updates["host_id"] = config["host_id"]
+    if sandbox_isolation and not source_folder and body.parent_session_id is None:
+        # Machine directory/worktree hints cannot cross the sandbox boundary.
+        updates["git"] = None
+        updates["host_type"] = "managed"
+        if body.host_type != "managed":
+            updates["host_id"] = None
+        if "workspaces" in fields_set and "workspace" not in fields_set:
+            updates["workspace"] = None
+        elif "workspace" not in fields_set:
+            updates["workspace"] = config.get("repository_url") or None
     resolved_data = body.model_dump()
     resolved_data.update(updates)
     # Re-validate project hints because config is intentionally stored as

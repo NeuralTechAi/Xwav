@@ -39,9 +39,9 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from tests._helpers.native_session import create_native_session
+from tests._helpers.session import bind_session_runner
 from tests.e2e_ui.conftest import (
     _CODEX_MOCK_MODEL,
-    _bind_session_runner,
     _ensure_runner_online,
     _server_state,
     _temp_omnigent_mock_config,
@@ -117,7 +117,8 @@ def _create_codex_session_with_workspace(
         metadata={"workspace": str(workspace)},
     )
     session_id = str(created["session_id"])
-    _bind_session_runner(base_url, session_id, runner_id)
+    # Binding starts the real native terminal; cold startup can exceed 10 seconds.
+    bind_session_runner(httpx.patch, base_url, session_id, runner_id, timeout=60.0)
     return session_id
 
 

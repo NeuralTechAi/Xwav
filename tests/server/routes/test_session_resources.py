@@ -10297,3 +10297,428 @@ async def test_environment_id_is_one_runner_url_segment(
             == (base + quote(environment_id, safe="") + suffix).encode()
         )
         assert forwarded.fragment == ""
+
+
+@pytest.mark.asyncio
+async def test_project_preview_reuses_owner_shell_and_decodes_status(
+    client: httpx.AsyncClient,
+) -> None:
+    import json
+
+    runner = _FakeRunnerClient(
+        payload={
+            "stdout": json.dumps({"state": "ready", "port": 41881, "version": "v1"}),
+            "exit_code": 0,
+        }
+    )
+    set_runner_router(_FakeRunnerRouter(runner))  # type: ignore[arg-type]
+    response = await client.post("/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/preview", json={})
+    assert response.status_code == 200
+    assert response.json()["port"] == 41881
+    assert runner.calls == [
+        (
+            "POST",
+            "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/resources/environments/default/shell",
+        )
+    ]
+    command = runner.post_json_calls[0][1]["command"]
+    assert "workspace_ports" in command
+    assert "127.0.0.1" in command
+
+
+@pytest.mark.asyncio
+async def test_project_preview_rejects_malformed_runtime_output(client: httpx.AsyncClient) -> None:
+    runner = _FakeRunnerClient(payload={"stdout": "not preview status", "exit_code": 1})
+    set_runner_router(_FakeRunnerRouter(runner))  # type: ignore[arg-type]
+    response = await client.post("/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/preview", json={})
+    assert response.status_code == 502
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["idle", "running", "waiting", None])
+async def test_chat_revert_requires_idle_and_uses_owner_shell(client, app, status):
+    from types import SimpleNamespace
+
+    session_id = "79b22ebd2309e48fdeb450c65611d51b"
+    app.state.test_conversation_store.appended_items.append(
+        SimpleNamespace(
+            id="message-one",
+            type="message",
+            data=SimpleNamespace(role="user"),
+        )
+    )
+    runner = _FakeRunnerClient(
+        responses={
+            f"/v1/sessions/{session_id}": (200, {"status": status}),
+        },
+        payload={"stdout": json.dumps({"state": "ready", "count": 1, "token": "review"})},
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.post(
+        f"/v1/sessions/{session_id}/revert", json={"action": "plan", "item_id": "message-one"}
+    )
+    assert response.status_code == (200 if status == "idle" else 409)
+    if status == "idle":
+        command = runner.post_json_calls[-1][1]["command"]
+        assert "checkpoint_request" in command
+        assert '"action": "plan"' in command
+    else:
+        assert runner.post_json_calls == []
+
+
+@pytest.mark.asyncio
+async def test_chat_revert_reports_missing_checkpoint_without_success(client, app):
+    from types import SimpleNamespace
+
+    session_id = "79b22ebd2309e48fdeb450c65611d51b"
+    app.state.test_conversation_store.appended_items.append(
+        SimpleNamespace(
+            id="older-message",
+            type="message",
+            data=SimpleNamespace(role="user"),
+        )
+    )
+    runner = _FakeRunnerClient(
+        responses={f"/v1/sessions/{session_id}": (200, {"status": "idle"})},
+        payload={"stdout": json.dumps({"state": "unavailable", "message": "No checkpoint saved"})},
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.post(
+        f"/v1/sessions/{session_id}/revert",
+        json={"action": "apply", "item_id": "older-message", "token": "old"},
+    )
+    assert response.status_code == 409
+    assert "No checkpoint saved" in response.text
+
+
+@pytest.mark.asyncio
+async def test_native_checkpoint_link_survives_source_id_replacement():
+    from omnigent.runtime import pending_inputs
+    from omnigent.server.routes.sessions import _persist_external_conversation_item
+
+    store = _ConversationStore()
+    sid = "64a784c3aa907d1774f44313546947c6"
+    conv = store.get_conversation(sid)
+    assert conv is not None
+    stable_id = "a" * 32
+    pending_inputs.reset_for_tests()
+    pending_inputs.record(sid, [{"type": "input_text", "text": "edit app"}], stable_id=stable_id)
+    try:
+        item_id = await _persist_external_conversation_item(
+            sid,
+            conv,
+            SessionEventInput(
+                type="external_conversation_item",
+                data={
+                    "item_type": "message",
+                    "response_id": "turn",
+                    "source_id": "codex:user:message",
+                    "item_data": {
+                        "role": "user",
+                        "content": [{"type": "input_text", "text": "edit app"}],
+                        "workspace_checkpoint_id": "forged",
+                    },
+                },
+            ),
+            store,
+        )
+        item = store.get_item(sid, item_id)
+        assert item.id != stable_id
+        assert item.data.workspace_checkpoint_id == stable_id
+    finally:
+        pending_inputs.reset_for_tests()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["ensure", "start", "cancel", "status"])
+@pytest.mark.parametrize("kind", ["preproduction", "loadtesting"])
+async def test_preproduction_uses_owner_workspace_shell(client, action, kind):
+    import json
+
+    runner = _FakeRunnerClient(
+        payload={
+            "stdout": json.dumps({"state": "running", "id": "run", "checks": []}),
+            "exit_code": 0,
+        }
+    )
+    set_runner_router(_FakeRunnerRouter(runner))  # type: ignore[arg-type]
+    response = await client.post(
+        f"/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/{kind}", json={"action": action}
+    )
+    assert response.status_code == 200
+    assert response.json()["id"] == "run"
+    command = runner.post_json_calls[0][1]["command"]
+    assert "request_action" in command and action in command
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["preproduction", "loadtesting"])
+async def test_preproduction_rejects_bad_actions_and_broken_results(client, kind):
+    runner = _FakeRunnerClient(payload={"stdout": "not-json", "exit_code": 1})
+    set_runner_router(_FakeRunnerRouter(runner))  # type: ignore[arg-type]
+    url = f"/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/{kind}"
+    assert (await client.post(url, json={"action": "arbitrary-command"})).status_code == 400
+    assert runner.calls == []
+    assert (await client.get(url)).status_code == 502
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("count", [1, 100_000_000])
+async def test_loadtesting_request_count_reaches_owner_worker(client, count):
+    import json
+
+    runner = _FakeRunnerClient(
+        payload={"stdout": json.dumps({"state": "running", "checks": []}), "exit_code": 0}
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.post(
+        "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/loadtesting",
+        json={"action": "start", "max_requests": count},
+    )
+    assert response.status_code == 200
+    assert f"(root,{count})" in runner.post_json_calls[0][1]["command"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("count", [0, -1, 100_000_001, True, 1.5, "100", None])
+async def test_loadtesting_invalid_count_does_not_start_worker(client, count):
+    runner = _FakeRunnerClient(payload={"stdout": "{}", "exit_code": 0})
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.post(
+        "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/loadtesting",
+        json={"action": "start", "max_requests": count},
+    )
+    assert response.status_code == 400
+    assert runner.calls == []
+
+
+@pytest.mark.asyncio
+async def test_workspace_archive_download_uses_existing_runner_filesystem(client, tmp_path):
+    import io
+    import zipfile
+
+    (tmp_path / "app.txt").write_bytes(b"latest uncommitted source")
+    runner = FastAPI()
+
+    @runner.get(_FS_ROUTE)
+    async def filesystem(relative_path: str, download: bool = False):
+        if download:
+            return FileResponse(tmp_path / "app.txt", filename="app.txt")
+        return {"data": [{"path": "app.txt", "type": "file"}], "has_more": False}
+
+    async with _runner_app_client(runner):
+        response = await client.get("/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/download")
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"] == "application/zip"
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["content-disposition"].endswith('.zip"')
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        assert archive.read("app.txt") == b"latest uncommitted source"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "level,share_files,expected",
+    [
+        (0, False, 404),
+        (LEVEL_READ, False, 403),
+        (LEVEL_READ, True, 200),
+        (LEVEL_EDIT, False, 200),
+        (LEVEL_OWNER, False, 200),
+    ],
+)
+async def test_workspace_archive_obeys_workspace_sharing(level, share_files, expected):
+    session_id = "79b22ebd2309e48fdeb450c65611d51b"
+    conversations = _ConversationStore()
+    conversations.get_conversation(session_id).share_workspace_files = share_files
+    permissions = _StubPermissionStore()
+    if level:
+        permissions.add_grant("alice@example.com", session_id, level)
+    application = FastAPI()
+
+    @application.exception_handler(OmnigentError)
+    async def error(request, exc):
+        return JSONResponse(status_code=exc.http_status, content={"error": exc.code})
+
+    application.include_router(
+        create_sessions_router(
+            conversations,
+            Mock(),
+            auth_provider=UnifiedAuthProvider(source="header", local_single_user=False),
+            permission_store=permissions,
+        ),
+        prefix="/v1",
+    )
+    runner = FastAPI()
+
+    @runner.get(_FS_ROUTE)
+    async def filesystem(relative_path: str):
+        return {"data": [], "has_more": False}
+
+    async with (
+        _runner_app_client(runner),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=application), base_url="http://server"
+        ) as api,
+    ):
+        response = await api.get(
+            f"/v1/sessions/{session_id}/download",
+            headers={"X-Forwarded-Email": "alice@example.com"},
+        )
+    assert response.status_code == expected, response.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider", ["vercel", "netlify", "cloudflare", "railway", "project"])
+async def test_release_provider_choice_uses_owner_workspace_shell(client, provider):
+    runner = _FakeRunnerClient(
+        payload={
+            "stdout": json.dumps({"state": "running", "id": "run", "checks": []}),
+            "exit_code": 0,
+        }
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.post(
+        "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/releases",
+        json={"action": "start", "target": "web", "operation": "deploy", "provider": provider},
+    )
+    assert response.status_code == 200, response.text
+    command = runner.post_json_calls[0][1]["command"]
+    assert "request_action" in command and provider in command and "deploy" in command
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"action": "ensure"},
+        {"action": "shell"},
+        {"target": "linux"},
+        {"target": []},
+        {"operation": "delete"},
+        {"provider": "unknown"},
+        {"engine": "shell"},
+        {"engine": []},
+        {"channel": "other"},
+        {"action": "prepare"},
+        {"action": "prepare", "engine": "github", "repository": "a" * 201},
+        {"site": "x;echo BAD"},
+        {"accept_android_licenses": "yes"},
+        {"accept_android_licenses": 1},
+    ],
+)
+async def test_invalid_release_options_do_not_execute(client, body):
+    runner = _FakeRunnerClient(payload={"stdout": "{}", "exit_code": 0})
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.post(
+        "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/releases", json=body
+    )
+    assert response.status_code == 400, response.text
+    assert not runner.calls
+
+
+@pytest.mark.asyncio
+async def test_release_get_cannot_start_and_runtime_errors_are_not_packages(client):
+    runner = _FakeRunnerClient(payload={"stdout": "bad-json", "exit_code": 1})
+    set_runner_router(_FakeRunnerRouter(runner))
+    url = "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/releases"
+    assert (await client.get(url + "?action=start")).status_code == 400
+    assert not runner.calls
+    assert (await client.get(url)).status_code == 502
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "state,listed,condition,expected",
+    [
+        ("running", True, "ok", 409),
+        ("error", True, "ok", 409),
+        ("complete", False, "ok", 409),
+        ("complete", True, "ok", 200),
+        ("complete", True, "stale", 409),
+        ("complete", True, "tampered", 409),
+        ("complete", True, "missing-hash", 409),
+    ],
+)
+async def test_release_download_only_exposes_completed_listed_artifacts(
+    client, tmp_path, state, listed, condition, expected
+):
+    run_id = "a" * 32
+    sid = "79b22ebd2309e48fdeb450c65611d51b"
+    artifact = tmp_path / "app.exe"
+    artifact.write_bytes(b"download bytes")
+    report = {
+        "state": state,
+        "id": run_id,
+        "checks": [],
+        "artifacts": [
+            {"path": f".xwav/releases/artifacts/{run_id}/app.exe", "bytes": 14, "sha256": "a" * 64}
+        ]
+        if listed
+        else [],
+    }
+    report["source_changed"] = condition == "stale"
+    if condition == "missing-hash":
+        report["artifacts"][0].pop("sha256")
+    runner = FastAPI()
+
+    @runner.post("/v1/sessions/{session_id}/resources/environments/default/shell")
+    async def shell(request: Request):
+        command = (await request.json())["command"]
+        payload = (
+            {"valid": condition != "tampered"} if "XWAV_VERIFY_ARTIFACT" in command else report
+        )
+        return {"stdout": json.dumps(payload), "exit_code": 0}
+
+    @runner.get(_FS_ROUTE)
+    async def filesystem(relative_path: str):
+        assert relative_path.endswith(f".xwav/releases/artifacts/{run_id}/app.exe")
+        return FileResponse(artifact, filename="app.exe")
+
+    async with _runner_app_client(runner):
+        response = await client.get(f"/v1/sessions/{sid}/releases/{run_id}/app.exe")
+    assert response.status_code == expected, response.text
+    if expected == 200:
+        assert response.content == b"download bytes"
+        assert "attachment" in response.headers["content-disposition"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "level,expected", [(0, 404), (LEVEL_READ, 403), (LEVEL_EDIT, 403), (LEVEL_OWNER, 200)]
+)
+async def test_release_actions_require_job_ownership(level, expected):
+    sid = "79b22ebd2309e48fdeb450c65611d51b"
+    permissions = _StubPermissionStore()
+    if level:
+        permissions.add_grant("alice@example.com", sid, level)
+    application = FastAPI()
+
+    @application.exception_handler(OmnigentError)
+    async def error(request, exc):
+        return JSONResponse(status_code=exc.http_status, content={"error": exc.code})
+
+    application.include_router(
+        create_sessions_router(
+            _ConversationStore(),
+            Mock(),
+            auth_provider=UnifiedAuthProvider(source="header", local_single_user=False),
+            permission_store=permissions,
+        ),
+        prefix="/v1",
+    )
+    runner = _FakeRunnerClient(
+        payload={"stdout": json.dumps({"state": "empty", "checks": []}), "exit_code": 0}
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=application), base_url="http://server"
+    ) as api:
+        response = await api.post(
+            f"/v1/sessions/{sid}/releases",
+            json={"action": "start"},
+            headers={"x-forwarded-email": "alice@example.com"},
+        )
+    assert response.status_code == expected, response.text
+    if expected != 200:
+        assert not runner.calls

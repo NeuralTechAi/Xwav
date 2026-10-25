@@ -181,6 +181,11 @@ def test_load_skill_schema_lists_skill_names(
     desc = schema["function"]["description"]
     assert "summarize" in desc
     assert "code-review" in desc
+    assert "summarize: Summarizes text." in desc
+    assert "code-review: Reviews code." in desc
+    assert "slash command is not required" in desc
+    assert skill_no_resources.content not in desc
+    assert skill_with_resources.content not in desc
 
 
 def test_list_skill_resources_includes_root_level_files(tmp_path: Path) -> None:
@@ -399,3 +404,52 @@ def test_load_skill_tool_accepts_namespaced_alias(tmp_path: Path, tool_ctx: Tool
     tool = LoadSkillTool([skill])
     result = tool.invoke(json.dumps({"name": "myplugin:brand-review"}), tool_ctx)
     assert result == "Review the brand."
+
+
+def test_manual_only_skill_is_hidden_from_automatic_catalog_but_explicitly_loadable(tool_ctx):
+    manual = SkillSpec(
+        name="publish-production",
+        description="Publish production artifacts",
+        content="MANUAL_PRIVATE_INSTRUCTIONS",
+        allow_implicit_invocation=False,
+    )
+    automatic = SkillSpec(name="review", description="Review code", content="REVIEW_BODY")
+    tool = LoadSkillTool([manual, automatic], skills_filter="none")
+    description = tool.get_schema()["function"]["description"]
+    assert "review: Review code" in description
+    assert "publish-production" not in description
+    assert manual.content not in description
+    assert automatic.content not in description
+    assert tool.invoke('{"name":"publish-production"}', tool_ctx) == manual.content
+    assert manual in tool.skills
+    assert manual.name not in tool.invoke('{"name":"unknown"}', tool_ctx)
+
+
+def test_loading_one_skill_does_not_load_supporting_file_contents(
+    skill_with_resources, skill_no_resources, tool_ctx, monkeypatch
+):
+    from omnigent.tools.builtins.read_skill_file import ReadSkillFileTool
+
+    reads = []
+    original = Path.read_text
+
+    def read(path, *args, **kwargs):
+        reads.append(path)
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read)
+    tool = LoadSkillTool([skill_with_resources, skill_no_resources], skills_filter="none")
+    assert reads == []
+    schema = tool.get_schema()
+    assert reads == []
+    assert skill_with_resources.content not in schema["function"]["description"]
+    result = tool.invoke('{"name":"code-review"}', tool_ctx)
+    assert "references/style-guide.md" in result
+    assert "Use snake_case" not in result
+    assert skill_no_resources.content not in result
+    assert reads == []
+    reader = ReadSkillFileTool(tool.skills)
+    assert "Use snake_case" in reader.invoke(
+        '{"skill_name":"code-review","path":"references/style-guide.md"}', tool_ctx
+    )
+    assert reads == [skill_with_resources.skill_dir / "references/style-guide.md"]

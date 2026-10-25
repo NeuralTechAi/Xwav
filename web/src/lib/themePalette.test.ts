@@ -76,13 +76,13 @@ afterEach(() => {
 describe("themePalette", () => {
   it("returns the default palette when nothing is stored", () => {
     expect(readThemePalette()).toBe(DEFAULT_PALETTE);
-    expect(DEFAULT_PALETTE).toBe("omni");
+    expect(DEFAULT_PALETTE).toBe("github");
   });
 
   it("round-trips a valid palette", () => {
-    writeThemePalette("github");
-    expect(readThemePalette()).toBe("github");
-    expect(localStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify("github"));
+    writeThemePalette("omni");
+    expect(readThemePalette()).toBe("omni");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify("omni"));
   });
 
   it("round-trips the custom theme selection", () => {
@@ -95,7 +95,7 @@ describe("themePalette", () => {
     writeThemePalette("dracula");
     expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();
     writeThemePalette(DEFAULT_PALETTE);
-    // Storing the default just reverts to base tokens, so drop the key.
+    // The app-wide default does not need a persisted override.
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(readThemePalette()).toBe(DEFAULT_PALETTE);
   });
@@ -135,10 +135,12 @@ describe("themePalette", () => {
     expect(document.documentElement.getAttribute("data-theme")).toBe("custom");
   });
 
-  it("removes data-theme for the default palette so the base tokens take over", () => {
+  it("keeps GitHub explicit and removes data-theme only for the legacy brand palette", () => {
     applyThemePalette("github");
     expect(document.documentElement.getAttribute("data-theme")).toBe("github");
     applyThemePalette(DEFAULT_PALETTE);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("github");
+    applyThemePalette("omni");
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
@@ -154,8 +156,8 @@ describe("themePalette", () => {
     expect(inner.getAttribute("data-theme")).toBe("dracula");
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
     applyThemePalette(DEFAULT_PALETTE);
-    expect(scope.hasAttribute("data-theme")).toBe(false);
-    expect(inner.hasAttribute("data-theme")).toBe(false);
+    expect(scope.getAttribute("data-theme")).toBe("github");
+    expect(inner.getAttribute("data-theme")).toBe("github");
   });
 
   it("exposes swatch metadata for every selectable palette, default first", () => {
@@ -191,6 +193,19 @@ describe("themePalette", () => {
     }
   });
 
+  it("keeps Xwav secondary text readable on workspace and sidebar surfaces", () => {
+    const palette = PALETTES.find((item) => item.id === "omni")!;
+    for (const mode of ["light", "dark"] as const) {
+      const { mutedForeground, background, cardSolid, sidebar } = palette.tokens[mode];
+      for (const surface of [background, cardSolid, sidebar]) {
+        expect(
+          contrast(parseColor(mutedForeground).rgb, parseColor(surface).rgb),
+          `${mode} secondary text on ${surface}`,
+        ).toBeGreaterThanOrEqual(7);
+      }
+    }
+  });
+
   it("uses the canonical Solarized backgrounds", () => {
     const solarized = PALETTES.find((palette) => palette.id === "solarized");
     expect(solarized?.tokens.light.background).toBe("#fdf6e3");
@@ -207,7 +222,7 @@ describe("themePalette", () => {
 
   it("keeps Xwav's text selection on the brand tint, not the neutral primary", () => {
     const omni = PALETTES.find((palette) => palette.id === "omni")!;
-    expect(omni.tokens.light.selectionBackground).toBe("rgba(8, 127, 112, 0.12)");
+    expect(omni.tokens.light.selectionBackground).toBe("rgba(8, 127, 112, 0.15)");
     expect(omni.tokens.light.selectionForeground).toBe("#075E53");
     expect(omni.tokens.dark.selectionBackground).toBe("rgba(110, 231, 210, 0.15)");
     expect(omni.tokens.dark.selectionForeground).toBe("#B2F5E8");

@@ -89,7 +89,7 @@ export function BackgroundTaskIndicator() {
     if (bgCount <= 0) setOpen(false);
   }, [bgCount]);
   // The tally is session-local: a conversation switch starts closed. Flag the
-  // reason so the close never yanks focus to the new session's trigger.
+  // reason so the close never yanks focus to the new job's trigger.
   useEffect(() => {
     closeReasonRef.current = "session-change";
     setOpen(false);
@@ -147,7 +147,7 @@ export function BackgroundTaskIndicator() {
           onCloseAutoFocus={(event) => {
             if (closeReasonRef.current === "session-change") {
               // Closed by a conversation switch, not a user gesture: never
-              // move focus to the new session's trigger.
+              // move focus to the new job's trigger.
               event.preventDefault();
             } else if (closeReasonRef.current === "escape") {
               // A rapid reopen can retain Radix's previous outside-click state.

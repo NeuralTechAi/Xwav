@@ -40,6 +40,25 @@ describe("CommandGoalDialog", () => {
     expect(screen.getByText(/Codex keeps working until this condition is met/)).toBeInTheDocument();
   });
 
+  it("edits a saved launch condition with accurate launch copy", () => {
+    const save = vi.fn();
+    render(
+      <CommandGoalDialog
+        open
+        readOnly={false}
+        onOpenChange={vi.fn()}
+        onStartGoal={save}
+        initialCondition="Existing goal"
+        submitLabel="Save goal"
+        description="Add a completion condition to the first task."
+      />,
+    );
+    expect(screen.getByTestId("goal-condition")).toHaveValue("Existing goal");
+    expect(screen.getByText("Add a completion condition to the first task.")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Save goal" }));
+    expect(save).toHaveBeenCalledWith("Existing goal");
+  });
+
   it("rejects an empty condition", () => {
     const onStartGoal = vi.fn();
     render(

@@ -1226,3 +1226,36 @@ async def test_runner_never_expands_an_installed_agents_variables(
 
     assert contents.status_code == 200, contents.text
     assert contents.headers["X-Agent-Session-Scoped"] == "true"
+
+
+async def test_imported_integration_preserves_skills_and_mcp_tools(client) -> None:
+    bundle = bundle_files(
+        {
+            "config.yaml": (
+                b"spec_version: 1\nname: portable-reviewer\nexecutor:\n  type: omnigent\n"
+                b"  model: test\n  config:\n    harness: claude-sdk\ntools:\n  docs:\n"
+                b"    type: mcp\n    url: https://example.invalid/mcp\n"
+            ),
+            "skills/review/SKILL.md": (
+                b"---\nname: review\ndescription: Review project changes\n---\n"
+                b"Read GUIDE.md and inspect the diff.\n"
+            ),
+            "skills/review/GUIDE.md": b"Check for regressions.\n",
+        }
+    )
+    imported = await client.post(
+        "/v1/agents", headers=ALICE, files={"bundle": ("agent.tar.gz", bundle, "application/gzip")}
+    )
+    assert imported.status_code == 200, imported.text
+    agent_id = imported.json()["id"]
+    detail = await client.get(f"/v1/agents/{agent_id}", headers=ALICE)
+    assert detail.status_code == 200
+    assert [skill["name"] for skill in detail.json()["skills"]] == ["review"]
+    config = await client.get(f"/v1/agents/{agent_id}/config", headers=ALICE)
+    assert config.json()["mcp_servers"]["docs"]["url"] == "https://example.invalid/mcp"
+    assert (await client.get(f"/v1/agents/{agent_id}", headers=BOB)).status_code == 404
+    replacement = await client.post(
+        "/v1/agents", headers=ALICE, files={"bundle": ("agent.tar.gz", bundle, "application/gzip")}
+    )
+    assert replacement.json()["id"] == agent_id
+    assert await _my_names(client, ALICE) == ["portable-reviewer"]

@@ -4054,6 +4054,7 @@ def test_build_runner_env_allowlists_host_env_and_strips_secrets(tmp_path: Path)
         "DATABRICKS_AUTH_STORAGE": "plaintext",
         "ANTHROPIC_API_KEY": "sk-harness",
         "IS_SANDBOX": "1",
+        "PLAYWRIGHT_BROWSERS_PATH": "/opt/xwav-quality/browsers",
         "DATABRICKS_TOKEN": "dapi-secret",
         "AWS_SECRET_ACCESS_KEY": "aws-secret",
         "SOME_RANDOM_VAR": "x",
@@ -4109,6 +4110,7 @@ def test_build_runner_env_allowlists_host_env_and_strips_secrets(tmp_path: Path)
     # needs it to allow --dangerously-skip-permissions under root in
     # sandbox containers. Only the baked host image ever sets it.
     assert env["IS_SANDBOX"] == "1"
+    assert env["PLAYWRIGHT_BROWSERS_PATH"] == "/opt/xwav-quality/browsers"
     # The claude-sdk sandbox bypass flag forwards — it is read inside the
     # harness, so a bare ``OMNIGENT_CLAUDE_SDK_NO_SANDBOX=1 omnigent run …``
     # must reach the runner without also forcing

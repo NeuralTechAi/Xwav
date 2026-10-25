@@ -130,3 +130,46 @@ def test_custom_agent_edit_preserves_fields_and_recovers_conflict(
             expect(page.get_by_role("heading", name="Custom agents", exact=True)).to_be_visible()
         finally:
             api.delete(path)
+
+
+@pytest.mark.parametrize("mobile", [False, True], ids=["desktop", "mobile"])
+def test_extensions_create_agent_with_portable_skill(
+    page: Page, live_server: str, mobile: bool
+) -> None:
+    """The Settings entry, file attachment and browser-built archive use the real installer."""
+    name = f"skills-{uuid.uuid4().hex[:8]}"
+    page.set_viewport_size({"width": 390 if mobile else 1280, "height": 844 if mobile else 900})
+    page.goto(f"{live_server}/settings/extensions")
+    expect(page.get_by_role("heading", name="Skills, tools & plugins", exact=True)).to_be_visible()
+    page.get_by_role("link", name="Add skills to an agent").click()
+    page.get_by_test_id("create-agent-name").fill(name)
+    page.get_by_test_id("create-agent-model").fill("test-model")
+    content = (
+        b"---\nname: review\ndescription: Review changes\n---\n"
+        b"Review the project diff carefully.\n"
+    )
+    page.get_by_label("Skills", exact=True).set_input_files(
+        {"name": "SKILL.md", "mimeType": "text/markdown", "buffer": content}
+    )
+    expect(page.get_by_text("/review", exact=True)).to_be_visible()
+    with page.expect_response(
+        lambda response: response.request.method == "POST" and response.url.endswith("/v1/agents")
+    ) as saved:
+        page.get_by_role("button", name="Save agent", exact=True).click()
+    response = saved.value
+    assert response.ok, response.text()
+    agent_id = response.json()["id"]
+    with httpx.Client(base_url=live_server, timeout=20) as api:
+        try:
+            detail = api.get(f"/v1/agents/{agent_id}")
+            detail.raise_for_status()
+            assert [skill["name"] for skill in detail.json()["skills"]] == ["review"]
+            page.goto(f"{live_server}/settings/custom-agents")
+            expect(page.get_by_role("link", name=name, exact=True)).to_be_visible()
+            page.screenshot(
+                path=f"/tmp/xwav-extensions-{'mobile' if mobile else 'desktop'}.png",
+                full_page=True,
+            )
+        finally:
+            removed = api.delete(f"/v1/agents/{agent_id}")
+            removed.raise_for_status()

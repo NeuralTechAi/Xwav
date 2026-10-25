@@ -7410,8 +7410,17 @@ def _build_new_item(
             f"invalid data for {body.type!r} item: {exc}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
-    if isinstance(data, MessageData) and data.role == "user" and not data.is_meta:
-        data = data.model_copy(update={"user_authored": True})
+    if isinstance(data, MessageData):
+        data = data.model_copy(update={"workspace_checkpoint_id": None})
+        if data.role == "user" and not data.is_meta:
+            data = data.model_copy(
+                update={
+                    "user_authored": True,
+                    "workspace_checkpoint_id": _web_send_stable_id(body)
+                    if adopt_stable_id
+                    else None,
+                }
+            )
     return NewConversationItem(
         type=body.type,
         response_id=response_id,

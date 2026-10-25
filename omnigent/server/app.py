@@ -1964,6 +1964,7 @@ def create_app(
     host_registry.launch_authorizer = _admit_host_launch
     app.state.agent_store = agent_store
     app.state.sandbox_config = sandbox_config
+    app.state.project_sandbox_isolation = sandbox_config is not None
     app.state.branding_snapshot = branding_snapshot
     app.state.feature_flags = resolved_feature_flags
     # Deployment base path (e.g. "/proxy/6767"), so route handlers that build
@@ -3232,7 +3233,10 @@ def create_app(
                 "server_version": _server_version(),
                 "smart_routing_enabled": smart_routing_enabled,
                 "smart_routing_sources": smart_routing_sources,
-                "features": app.state.feature_flags.frontend_dict(),
+                "features": {
+                    **app.state.feature_flags.frontend_dict(),
+                    "project_sandbox_isolation": app.state.project_sandbox_isolation,
+                },
                 "harness_install_enabled": harness_install_enabled,
                 "installable_harnesses": installable_harnesses,
                 "dictation_available": dictation_available,

@@ -203,7 +203,7 @@ export function FlatFileList({
   /**
    * The runner went offline after being connected (session status
    * "failed", e.g. host restarted) — show the reconnect hint. When the
-   * session simply hasn't started yet (a new session also 503s) this is
+   * session simply hasn't started yet (a new job also 503s) this is
    * false and we fall through to the normal empty state instead.
    */
   runnerWentOffline?: boolean;

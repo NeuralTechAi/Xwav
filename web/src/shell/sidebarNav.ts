@@ -129,7 +129,7 @@ export type ConversationIconKind =
 
 // Display label for a session with no title and no native-wrapper name —
 // shown in the sidebar row and as the browser tab title fallback.
-export const UNTITLED_CONVERSATION_LABEL = "New session";
+export const UNTITLED_CONVERSATION_LABEL = "New Job";
 
 function wrapperLabel(conversation: Conversation): string | undefined {
   return conversation.labels?.[WRAPPER_LABEL_KEY];

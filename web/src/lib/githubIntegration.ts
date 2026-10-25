@@ -30,6 +30,15 @@ export interface GithubConnectionStatus {
 /** Fetch the current user's GitHub connection status. */
 export async function fetchGithubStatus(): Promise<GithubConnectionStatus> {
   const res = await authenticatedFetch("/v1/connections/github/status");
+  if (res.status === 404)
+    return {
+      enabled: false,
+      connected: false,
+      login: null,
+      scopes: null,
+      connected_at: null,
+      install_url: null,
+    };
   if (!res.ok) {
     throw new Error(`GitHub status failed: ${res.status}`);
   }

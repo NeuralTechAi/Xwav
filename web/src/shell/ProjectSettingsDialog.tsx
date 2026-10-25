@@ -4,10 +4,10 @@
 // isolated-worktree default when starting a session in the project.
 //
 // Scope mirrors what the composer prefills today: host, workspace, agent,
-// whether new sessions start in a fresh git worktree, the base branch a
+// whether new jobs start in a fresh git worktree, the base branch a
 // worktree forks from (which overrides the user-global default in Settings ›
 // Git), and — when the default agent is a native harness with a model choice
-// (Claude Code / Codex) — a default model for new sessions. Reasoning-effort /
+// (Claude Code / Codex) — a default model for new jobs. Reasoning-effort /
 // harness stay per-agent run config, out of scope here. The host and agent
 // pickers reuse the composer's components; the working directory reuses its
 // filesystem browser (inline, so it scrolls inside the modal).
@@ -37,7 +37,7 @@ import { useProjectConfig, useUpdateProjectConfig } from "@/hooks/useConversatio
 import { useAvailableAgents } from "@/hooks/useAvailableAgents";
 import { useHostModelOptions, useHosts } from "@/hooks/useHosts";
 import { selectableSessionAgents } from "@/lib/agentGrouping";
-import { sandboxOptionLabel } from "@/lib/capabilities";
+import { isFeatureEnabled, sandboxOptionLabel } from "@/lib/capabilities";
 import { useServerInfo } from "@/lib/CapabilitiesContext";
 import { readAlwaysUseWorktree } from "@/lib/worktreeDefaultPreferences";
 import { SANDBOX_HOST_CHOICE } from "@/lib/hostPreferences";
@@ -49,7 +49,7 @@ import {
 } from "@/lib/nativeCodingAgents";
 import type { ProjectConfig } from "@/lib/projectsApi";
 import { shouldGuardDialogDismiss } from "@/lib/dialogDismissGuard";
-import { AgentHarnessPicker } from "./NewChatDialog";
+import { AgentHarnessPicker, isValidSandboxRepoUrl, splitSandboxWorkspace } from "./NewChatDialog";
 import { WorkspacePickerDialog } from "./WorkspacePickerDialog";
 
 /** Select sentinel for "no default" — Radix Select can't hold an empty value. */
@@ -120,6 +120,9 @@ export function ProjectSettingsDialog({
   // sandbox hosts — mirror the composer's gate so we don't offer a target that
   // can only fail on create.
   const managedSandboxesEnabled = info !== "loading" && info.managed_sandboxes_enabled;
+  const projectIsolation = isFeatureEnabled(info, "project_sandbox_isolation");
+  const [repositoryUrl, setRepositoryUrl] = useState("");
+  const [repositoryError, setRepositoryError] = useState<string | null>(null);
   const sandboxProvider = info !== "loading" ? info.sandbox_provider : null;
 
   // Draft fields. Seeded from the stored config each time the dialog opens (or
@@ -137,7 +140,7 @@ export function ProjectSettingsDialog({
   // alongside the worktree default, but kept independent so it survives toggling.
   const [baseBranch, setBaseBranch] = useState("");
   const [agentId, setAgentId] = useState<string | null>(null);
-  // Default model for new sessions, only meaningful when the default agent is
+  // Default model for new jobs, only meaningful when the default agent is
   // a native harness with a model choice; NONE stores no default (unset key).
   const [model, setModel] = useState<string>(NONE);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
@@ -186,6 +189,8 @@ export function ProjectSettingsDialog({
     const c: ProjectConfig = stored ?? {};
     setHostId(c.host_id ?? NONE);
     setWorkspace(c.workspace ?? "");
+    setRepositoryUrl(c.repository_url ?? "");
+    setRepositoryError(null);
     setUseWorktree(c.use_worktree ?? readAlwaysUseWorktree());
     setBaseBranch(c.base_branch ?? "");
     setAgentId(c.agent_id ?? null);
@@ -201,6 +206,15 @@ export function ProjectSettingsDialog({
     // Preserve config keys owned by other dialogs, then replace only the fields
     // this form edits.
     const config: ProjectConfig = { ...(stored ?? {}) };
+    if (projectIsolation) {
+      const repository = repositoryUrl.trim();
+      if (repository && !isValidSandboxRepoUrl(splitSandboxWorkspace(repository).url)) {
+        setRepositoryError("Enter a Git repository URL, or leave blank for an empty sandbox.");
+        return;
+      }
+      if (repository) config.repository_url = repository;
+      else delete config.repository_url;
+    }
     if (hostId !== NONE) config.host_id = hostId;
     else delete config.host_id;
     // A workspace is host-relative and only meaningful with a concrete host —
@@ -321,142 +335,169 @@ export function ProjectSettingsDialog({
         <DialogHeader>
           <DialogTitle>Project settings</DialogTitle>
           <DialogDescription>
-            Defaults for new sessions in <span className="font-medium">{projectName}</span>. Each is
-            a starting point you can change per session; leave a field blank for no default.
+            Defaults for new jobs in <span className="font-medium">{projectName}</span>. Each is a
+            starting point you can change per session; leave a field blank for no default.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          <Field label="Host" hint="Where new sessions run by default">
-            <Select
-              value={hostId}
-              onValueChange={setHostId}
-              onOpenChange={onDropdownOpenChange}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-full" data-testid="project-settings-host">
-                <SelectValue placeholder="No default" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>No default</SelectItem>
-                {managedSandboxesEnabled && (
-                  <SelectItem value={SANDBOX_HOST_CHOICE}>
-                    {sandboxOptionLabel(sandboxProvider)}
-                  </SelectItem>
-                )}
-                {onlineHosts.map((h) => (
-                  <SelectItem key={h.host_id} value={h.host_id}>
-                    {h.name}
-                  </SelectItem>
-                ))}
-                {storedHostMissing && (
-                  <SelectItem value={hostId}>
-                    {stored?.host_id === hostId ? `${hostId} (unavailable)` : hostId}
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <Field
-            label="Working directory"
-            hint={
-              hostId === NONE
-                ? "Pick a host first"
-                : browsableHostId
-                  ? "Browse the host or type a path"
-                  : "Absolute path on the host"
-            }
-            htmlFor="project-settings-workspace"
-          >
-            {hostId === NONE ? (
-              // Mirror the new-session composer: the working directory can only
-              // be chosen once a host is selected (the file browser lists
-              // against a concrete host, and a path is host-relative anyway).
-              <p
-                className="rounded-md border border-dashed px-3 py-2 text-muted-foreground text-ui"
-                data-testid="project-settings-workspace"
-              >
-                Pick a host first
-              </p>
-            ) : browsableHostId ? (
-              // Browsing uses the shared full-screen picker; navigation is
-              // provisional until the user confirms a folder.
-              <div
-                className="relative flex flex-col gap-1.5"
-                data-testid="project-settings-workspace"
-              >
-                <button
-                  type="button"
-                  onClick={() => setWorkspaceOpen(true)}
-                  aria-expanded={workspaceOpen}
-                  disabled={isLoading}
-                  className="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 text-ui outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <span className={workspace ? "truncate" : "truncate text-muted-foreground"}>
-                    {workspace || "Browse…"}
-                  </span>
-                  <ChevronDownIcon
-                    className={`size-4 shrink-0 opacity-50 transition-transform ${
-                      workspaceOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-                <WorkspacePickerDialog
-                  open={workspaceOpen}
-                  onOpenChange={setWorkspaceOpen}
-                  hostId={browsableHostId}
-                  initialPath={workspace}
-                  onConfirm={setWorkspace}
-                />
-              </div>
-            ) : (
-              // A host is picked but not browsable (sandbox / offline stored
-              // host) — fall back to typing an absolute path.
-              <input
-                id="project-settings-workspace"
-                data-testid="project-settings-workspace"
-                className="w-full rounded-md border bg-transparent px-3 py-2 text-ui outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="/path/to/repo"
-                value={workspace}
-                onChange={(e) => setWorkspace(e.target.value)}
-                disabled={isLoading}
-              />
-            )}
-          </Field>
-
-          <Field
-            label="Random worktree"
-            hint="Start each new session in a fresh randomly-named git worktree (vs. directly in the workspace). Overrides the global default in Settings › Git."
-          >
-            <div className="flex sm:justify-end">
-              <Switch
-                data-testid="project-settings-worktree"
-                checked={useWorktree}
-                onCheckedChange={setUseWorktree}
-                disabled={isLoading}
-              />
-            </div>
-          </Field>
-
-          {useWorktree && (
+          {projectIsolation ? (
             <Field
-              label="Base branch"
-              hint="Branch new worktrees fork from; blank uses the current branch"
-              htmlFor="project-settings-base-branch"
+              label="Project repository"
+              hint="Each job clones this repository into a fresh sandbox. Leave blank for an empty sandbox."
+              htmlFor="project-settings-repository"
             >
               <input
-                id="project-settings-base-branch"
-                data-testid="project-settings-base-branch"
-                className="w-full rounded-md border bg-transparent px-3 py-2 text-ui outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="e.g. main"
-                value={baseBranch}
-                onChange={(e) => setBaseBranch(e.target.value)}
+                id="project-settings-repository"
+                data-testid="project-settings-repository"
+                className="w-full rounded-md border bg-transparent px-3 py-2 text-ui"
+                value={repositoryUrl}
+                onChange={(event) => {
+                  setRepositoryUrl(event.target.value);
+                  setRepositoryError(null);
+                }}
+                placeholder="https://github.com/owner/repository#branch"
                 disabled={isLoading}
               />
+              {repositoryError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {repositoryError}
+                </p>
+              )}
             </Field>
-          )}
+          ) : (
+            <>
+              <Field label="Host" hint="Where new jobs run by default">
+                <Select
+                  value={hostId}
+                  onValueChange={setHostId}
+                  onOpenChange={onDropdownOpenChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="w-full" data-testid="project-settings-host">
+                    <SelectValue placeholder="No default" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>No default</SelectItem>
+                    {managedSandboxesEnabled && (
+                      <SelectItem value={SANDBOX_HOST_CHOICE}>
+                        {sandboxOptionLabel(sandboxProvider)}
+                      </SelectItem>
+                    )}
+                    {onlineHosts.map((h) => (
+                      <SelectItem key={h.host_id} value={h.host_id}>
+                        {h.name}
+                      </SelectItem>
+                    ))}
+                    {storedHostMissing && (
+                      <SelectItem value={hostId}>
+                        {stored?.host_id === hostId ? `${hostId} (unavailable)` : hostId}
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </Field>
 
-          <Field label="Agent" hint="Default agent / harness for new sessions">
+              <Field
+                label="Working directory"
+                hint={
+                  hostId === NONE
+                    ? "Pick a host first"
+                    : browsableHostId
+                      ? "Browse the host or type a path"
+                      : "Absolute path on the host"
+                }
+                htmlFor="project-settings-workspace"
+              >
+                {hostId === NONE ? (
+                  // Mirror the new-session composer: the working directory can only
+                  // be chosen once a host is selected (the file browser lists
+                  // against a concrete host, and a path is host-relative anyway).
+                  <p
+                    className="rounded-md border border-dashed px-3 py-2 text-muted-foreground text-ui"
+                    data-testid="project-settings-workspace"
+                  >
+                    Pick a host first
+                  </p>
+                ) : browsableHostId ? (
+                  // Browsing uses the shared full-screen picker; navigation is
+                  // provisional until the user confirms a folder.
+                  <div
+                    className="relative flex flex-col gap-1.5"
+                    data-testid="project-settings-workspace"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setWorkspaceOpen(true)}
+                      aria-expanded={workspaceOpen}
+                      disabled={isLoading}
+                      className="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 text-ui outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span className={workspace ? "truncate" : "truncate text-muted-foreground"}>
+                        {workspace || "Browse…"}
+                      </span>
+                      <ChevronDownIcon
+                        className={`size-4 shrink-0 opacity-50 transition-transform ${
+                          workspaceOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                    <WorkspacePickerDialog
+                      open={workspaceOpen}
+                      onOpenChange={setWorkspaceOpen}
+                      hostId={browsableHostId}
+                      initialPath={workspace}
+                      onConfirm={setWorkspace}
+                    />
+                  </div>
+                ) : (
+                  // A host is picked but not browsable (sandbox / offline stored
+                  // host) — fall back to typing an absolute path.
+                  <input
+                    id="project-settings-workspace"
+                    data-testid="project-settings-workspace"
+                    className="w-full rounded-md border bg-transparent px-3 py-2 text-ui outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="/path/to/repo"
+                    value={workspace}
+                    onChange={(e) => setWorkspace(e.target.value)}
+                    disabled={isLoading}
+                  />
+                )}
+              </Field>
+
+              <Field
+                label="Random worktree"
+                hint="Start each new job in a fresh randomly-named git worktree (vs. directly in the workspace). Overrides the global default in Settings › Git."
+              >
+                <div className="flex sm:justify-end">
+                  <Switch
+                    data-testid="project-settings-worktree"
+                    checked={useWorktree}
+                    onCheckedChange={setUseWorktree}
+                    disabled={isLoading}
+                  />
+                </div>
+              </Field>
+
+              {useWorktree && (
+                <Field
+                  label="Base branch"
+                  hint="Branch new worktrees fork from; blank uses the current branch"
+                  htmlFor="project-settings-base-branch"
+                >
+                  <input
+                    id="project-settings-base-branch"
+                    data-testid="project-settings-base-branch"
+                    className="w-full rounded-md border bg-transparent px-3 py-2 text-ui outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="e.g. main"
+                    value={baseBranch}
+                    onChange={(e) => setBaseBranch(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </Field>
+              )}
+            </>
+          )}
+          <Field label="Agent" hint="Default agent / harness for new jobs">
             <div className="flex flex-col items-end gap-1" data-testid="project-settings-agent">
               <AgentHarnessPicker
                 agentEntries={agentEntries}
@@ -519,7 +560,7 @@ export function ProjectSettingsDialog({
               hint={
                 modelPickerEmpty
                   ? "No model catalog available — pick a Host default (or connect a host) to choose from its models"
-                  : "Default model for new sessions with this agent"
+                  : "Default model for new jobs with this agent"
               }
             >
               <Select

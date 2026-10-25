@@ -742,7 +742,7 @@ describe("ForkSessionDialog", () => {
       expect(screen.getByRole("heading", { name: "Continue in another directory" })).toBeVisible();
       expect(
         screen.getByText(
-          "Choose an existing directory to continue this conversation in a new session. Files from the missing workspace won’t be restored.",
+          "Choose an existing directory to continue this conversation in a new job. Files from the missing workspace won’t be restored.",
         ),
       ).toBeVisible();
       expect(screen.getByTestId("fork-session-host-select")).toHaveTextContent("serena-laptop");

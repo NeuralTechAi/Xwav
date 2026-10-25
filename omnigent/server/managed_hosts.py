@@ -20,7 +20,10 @@ server mints per launch (see
 :meth:`omnigent.stores.host_store.HostStore.replace_managed_host_sandbox`, and
 the managed-token branch in
 :mod:`omnigent.server.routes.host_tunnel`) — the user's own
-credentials never enter the sandbox.
+credentials never enter the sandbox by default. Local Docker deployments may
+explicitly enable `sandbox.docker.inherit_codex_login`; that copies the server
+operator's Codex login into each job with owner-only permissions and no host
+mount. Use this account-sharing option only for a trusted local deployment.
 
 How a deployment supplies the sandbox backend (two paths, one seam —
 :class:`ManagedSandboxConfig` carries a launcher FACTORY, so embedding
@@ -226,6 +229,7 @@ SUPPORTED_SANDBOX_PROVIDERS: frozenset[str] = frozenset(
         "modal",
         "daytona",
         "blaxel",
+        "docker",
         "boxlite",
         "cwsandbox",
         "islo",
@@ -243,6 +247,7 @@ PROVIDERS_WITH_MANAGED_LAUNCH: frozenset[str] = frozenset(
         "modal",
         "daytona",
         "blaxel",
+        "docker",
         "boxlite",
         "cwsandbox",
         "islo",
@@ -1653,6 +1658,17 @@ def _parse_single_provider_sandbox_config(raw: dict[str, object]) -> ManagedSand
             _parse_modal_image(raw), _parse_modal_secrets(raw)
         )
         token_ttl_s = MODAL_MANAGED_TOKEN_TTL_S
+    elif provider == "docker":
+        from omnigent.onboarding.sandboxes.docker import DockerSandboxConfig, DockerSandboxLauncher
+
+        docker_config = DockerSandboxConfig.model_validate(
+            _parse_provider_section(raw, "docker") or {}
+        )
+
+        def launcher_factory() -> DockerSandboxLauncher:
+            return DockerSandboxLauncher(config=docker_config)
+
+        token_ttl_s = 7 * 24 * 3600
     elif provider == "daytona":
         launcher_factory = _daytona_launcher_factory(
             _parse_daytona_image(raw), _parse_daytona_env(raw)

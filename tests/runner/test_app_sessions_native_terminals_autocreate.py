@@ -746,6 +746,40 @@ async def test_auto_create_pi_terminal_cli_version_at_floor_or_unknown_proceeds(
     assert captured["spec"].command == "pi"
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("skills_filter", ["all", "none", ["unslop"]])
+async def test_pi_14_terminal_loads_native_resource_extension(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, skills_filter: str | list[str]
+) -> None:
+    from omnigent.native_skills import discover_native_skills
+    from omnigent.native_skills.pi import PI_SKILL_CATALOG_ENV
+    from omnigent.spec.types import AgentSpec
+
+    captured = _pi_launch_test_stubs(tmp_path, monkeypatch, (1, 4, 0))
+    await _auto_create_pi_terminal(
+        "47f049b9d13df4db397c7f46859b825f",
+        captured["registry"],  # type: ignore[arg-type]
+        lambda _sid, _evt: None,
+        server_client=NullServerClient(),  # type: ignore[arg-type]
+        agent_spec=AgentSpec(spec_version=1, name="pi-skills", skills_filter=skills_filter),
+    )
+    launched = captured["spec"]
+    if skills_filter == "none":
+        assert "--no-skills" in launched.args
+        assert PI_SKILL_CATALOG_ENV not in launched.env
+    else:
+        extension = Path(__file__).parents[2] / "omnigent/native_skills/pi_resources.cjs"
+        assert str(extension) in launched.args
+        catalog = json.loads(launched.env[PI_SKILL_CATALOG_ENV])
+        assert {entry["name"] for entry in catalog} == (
+            {"unslop"}
+            if isinstance(skills_filter, list)
+            else {skill.name for skill in discover_native_skills()}
+        )
+        if isinstance(skills_filter, list):
+            assert "--no-skills" in launched.args
+
+
 async def _launch_pi_terminal_args(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -1,0 +1,134 @@
+.loadtesting-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.loadtesting-summary > div,
+.loadtesting-profiles article {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 20px;
+}
+.loadtesting-summary span {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.loadtesting-summary strong {
+  display: block;
+  font-size: 26px;
+  margin-top: 8px;
+}
+.loadtesting-profiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin: 22px 0;
+}
+.loadtesting-profiles header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.loadtesting-profiles h2 {
+  font-size: 20px;
+  font-weight: 650;
+}
+.loadtesting-profiles p {
+  font-size: 13px;
+  margin: 10px 0;
+  line-height: 1.6;
+}
+.load-status {
+  font-size: 12px;
+  border: 1px solid var(--border);
+  padding: 4px 9px;
+  border-radius: 99px;
+}
+.load-status-passed {
+  color: var(--primary);
+}
+.load-status-failed,
+.load-status-blocked {
+  color: var(--destructive);
+}
+.loadtesting-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+.loadtesting-metrics dt {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.loadtesting-metrics dd {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.loadtesting-sparkline {
+  width: 100%;
+  height: 80px;
+  color: var(--primary);
+  margin: 18px 0;
+}
+.loadtesting-profiles pre,
+.loadtesting-page .preproduction-setup pre {
+  max-height: 280px;
+  overflow: auto;
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.loadtesting-profiles table {
+  width: 100%;
+  font-size: 12px;
+  text-align: left;
+  margin: 14px 0;
+}
+.loadtesting-profiles th,
+.loadtesting-profiles td {
+  padding: 6px;
+}
+@media (max-width: 750px) {
+  .loadtesting-profiles {
+    grid-template-columns: 1fr;
+  }
+  .loadtesting-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.loadtesting-request-control {
+  display: grid;
+  gap: 8px;
+  max-width: 680px;
+  margin: 18px 0 24px;
+}
+.loadtesting-request-control label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.loadtesting-request-control input {
+  width: min(100%, 280px);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+.loadtesting-request-control input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.loadtesting-request-control input[aria-invalid="true"] {
+  border-color: var(--destructive);
+}
+.loadtesting-request-control p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}

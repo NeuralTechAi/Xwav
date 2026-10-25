@@ -1,0 +1,11 @@
+# Update skill selection in an existing local job image.
+ARG BASE_IMAGE=xwav-host:local
+FROM ${BASE_IMAGE}
+USER root
+COPY omnigent/runtime/prompt.py /tmp/xwav-skill-selection/prompt.py
+COPY omnigent/tools/builtins/load_skill.py /tmp/xwav-skill-selection/load_skill.py
+COPY omnigent/spec/parser.py omnigent/spec/types.py /tmp/xwav-skill-selection/
+RUN python -c "import omnigent, pathlib, shutil; root=pathlib.Path(omnigent.__file__).parent; shutil.copyfile('/tmp/xwav-skill-selection/prompt.py', root/'runtime/prompt.py'); shutil.copyfile('/tmp/xwav-skill-selection/load_skill.py', root/'tools/builtins/load_skill.py'); shutil.copyfile('/tmp/xwav-skill-selection/parser.py', root/'spec/parser.py'); shutil.copyfile('/tmp/xwav-skill-selection/types.py', root/'spec/types.py')" \
+ && rm -rf /tmp/xwav-skill-selection
+
+USER sandbox

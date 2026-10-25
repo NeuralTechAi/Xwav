@@ -832,7 +832,7 @@ describe("useWorkspaceChangedFiles trailing-edge invalidate", () => {
 describe("isRunnerUnavailable503", () => {
   // The crux of distinguishing "runner asleep" from other 503s: a 503 is
   // only treated as the offline runner when the body carries the app's
-  // runner_unavailable code. A new session whose runner is still
+  // runner_unavailable code. A new job whose runner is still
   // connecting 503s with this same code, but the hook's retries let it
   // resolve before the hint shows — see the retry config.
   it("is true for the app's runner_unavailable error body", async () => {
@@ -1454,7 +1454,7 @@ describe("useWorkspaceFileExists", () => {
 
 describe("shouldRetryRunnerOffline", () => {
   it("retries a still-connecting runner up to the cap, then stops", () => {
-    // A new session whose runner is still booting answers RunnerOfflineError
+    // A new job whose runner is still booting answers RunnerOfflineError
     // (the app's runner_unavailable 503). ~2 minutes of backoff must outlast
     // a cold boot; beyond the cap the runner is genuinely offline and the
     // reconnect hint should show instead of retrying forever.

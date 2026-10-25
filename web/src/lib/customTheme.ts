@@ -1,4 +1,5 @@
 import {
+  DEFAULT_PALETTE,
   isThemePalette,
   PALETTE_TOKEN_CSS_NAMES,
   PALETTES,
@@ -22,12 +23,14 @@ export interface CustomTheme {
   translucentSidebar: boolean;
 }
 
+const defaultPalette = PALETTES.find((palette) => palette.id === DEFAULT_PALETTE)!;
+
 export const DEFAULT_CUSTOM_THEME: CustomTheme = {
-  basePalette: "omni",
-  accent: "#11171c",
-  darkAccent: "#e8ecf0",
-  tint: "#ffffff",
-  darkTint: "#0e1013",
+  basePalette: DEFAULT_PALETTE,
+  accent: defaultPalette.tokens.light.primary,
+  darkAccent: defaultPalette.tokens.dark.primary,
+  tint: defaultPalette.tokens.light.background,
+  darkTint: defaultPalette.tokens.dark.background,
   contrast: 50,
   translucentSidebar: false,
 };

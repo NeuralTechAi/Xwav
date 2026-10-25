@@ -12,6 +12,7 @@ import os
 import shutil
 import threading
 from collections.abc import Iterator
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,7 @@ import pytest
 from omnigent.chat import _bundle_agent
 from omnigent.inner import pi_executor
 from omnigent.inner.executor import ExecutorError, TurnComplete
-from omnigent.runtime.prompt import build_instructions
+from omnigent.runtime.prompt import AUTOMATIC_SKILL_SELECTION_INSTRUCTION, build_instructions
 from omnigent.spec import AgentSpec, load
 
 _INLINE_MARKER = "PI_INLINE_PROMPT_42D9"
@@ -110,9 +111,15 @@ def captured_llm_requests() -> Iterator[tuple[str, list[dict[str, Any]]]]:
 @pytest.mark.parametrize("context_files", [True, False], ids=["enabled", "disabled"])
 @pytest.mark.parametrize("system_prompt_mode", ["append", "replace"])
 @pytest.mark.parametrize(
-    ("context_path", "expect_context"),
-    [(None, False), ("AGENT.md", False), ("AGENTS.md", True), ("workspace/AGENTS.md", True)],
-    ids=["absent", "singular-filename", "ancestor", "workspace"],
+    ("context_path", "expect_context", "auto_skills"),
+    [
+        (None, False, False),
+        ("AGENT.md", False, False),
+        ("AGENTS.md", True, False),
+        ("workspace/AGENTS.md", True, False),
+        (None, False, True),
+    ],
+    ids=["absent", "singular-filename", "ancestor", "workspace", "automatic-skills"],
 )
 async def test_real_pi_adds_workspace_context_after_inline_prompt(
     tmp_path: Path,
@@ -120,6 +127,7 @@ async def test_real_pi_adds_workspace_context_after_inline_prompt(
     captured_llm_requests: tuple[str, list[dict[str, Any]]],
     context_path: str | None,
     expect_context: bool,
+    auto_skills: bool,
     context_files: bool,
     system_prompt_mode: str,
 ) -> None:
@@ -128,6 +136,15 @@ async def test_real_pi_adds_workspace_context_after_inline_prompt(
     if not pi_path:
         pytest.skip("real Pi CLI is required for the prompt-context process test")
     spec, bundle_dir = _uploaded_spec(tmp_path, directory=True)
+    if auto_skills:
+        from omnigent.native_skills import discover_native_skills
+
+        native = discover_native_skills(["karpathy-guidelines"])[0]
+        destination = bundle_dir / "skills" / native.name
+        shutil.copytree(native.skill_dir, destination)
+        spec = replace(
+            spec, skills=[replace(native, skill_dir=destination)], skills_filter=[native.name]
+        )
     project = tmp_path / "project"
     workspace = project / "workspace"
     workspace.mkdir(parents=True)
@@ -181,8 +198,18 @@ async def test_real_pi_adds_workspace_context_after_inline_prompt(
             events = [
                 event
                 async for event in executor.run_turn(
-                    [{"role": "user", "content": "hello"}],
-                    [],
+                    [{"role": "user", "content": "Fix the calculator with minimal changes"}],
+                    (
+                        [
+                            {
+                                "name": "probe",
+                                "description": "Local test tool",
+                                "parameters": {"type": "object", "properties": {}},
+                            }
+                        ]
+                        if auto_skills
+                        else []
+                    ),
                     build_instructions(
                         spec, _REQUEST_MARKER, [], framework_instructions=[_FRAMEWORK_MARKER]
                     ),
@@ -200,6 +227,11 @@ async def test_real_pi_adds_workspace_context_after_inline_prompt(
         if message["role"] in ("system", "developer")
     )
     assert _INLINE_MARKER in system
+    assert (AUTOMATIC_SKILL_SELECTION_INSTRUCTION in system) is auto_skills
+    if auto_skills:
+        assert "karpathy-guidelines" in system
+        assert "Behavioral guidelines to reduce common LLM coding mistakes" in system
+        assert "Fix the calculator with minimal changes" in json.dumps(requests[0])
     assert _FRAMEWORK_MARKER in system
     assert (
         system.index(_INLINE_MARKER)

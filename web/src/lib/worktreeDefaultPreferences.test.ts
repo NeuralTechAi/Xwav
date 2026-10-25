@@ -8,7 +8,7 @@ afterEach(() => {
 
 describe("worktreeDefaultPreferences", () => {
   it("defaults to off when nothing is stored", () => {
-    // Absence of the key is the off state — new sessions start directly in the
+    // Absence of the key is the off state — new jobs start directly in the
     // workspace unless the user opted in.
     expect(readAlwaysUseWorktree()).toBe(false);
   });

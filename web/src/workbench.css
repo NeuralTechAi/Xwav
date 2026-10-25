@@ -1,0 +1,331 @@
+/* Xwav workbench: a compact navigation spine and an open, editorial workspace. */
+.xwav-rail {
+  display: none;
+  flex: 0 0 68px;
+  z-index: 35;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 10px 16px;
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  border-right: 1px solid var(--sidebar-border);
+}
+.xwav-rail-brand {
+  color: var(--sidebar-primary);
+  padding: 5px;
+  margin-bottom: 35px;
+}
+.xwav-rail-links,
+.xwav-rail-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.xwav-rail-bottom {
+  margin-top: auto;
+  padding-top: 32px;
+}
+.xwav-rail-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    background 150ms,
+    color 150ms;
+}
+.xwav-rail-action:hover {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+.xwav-rail-action[aria-current="page"] {
+  background: var(--sidebar-active);
+  color: var(--sidebar-active-foreground);
+}
+.xwav-rail-action:focus-visible,
+.xwav-rail-brand:focus-visible {
+  outline: 2px solid var(--sidebar-ring);
+  outline-offset: 4px;
+}
+.xwav-rail-monogram {
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+  margin-top: 8px;
+}
+.app-shell .conversations-sidebar:not(.is-peek) {
+  border-right: 1px solid var(--border);
+  box-shadow: none;
+}
+.app-shell .conversations-sidebar .sidebar-header-row {
+  height: 80px;
+  padding-inline: 20px 12px;
+}
+.app-shell .sidebar-brand {
+  letter-spacing: -0.05em;
+}
+.app-shell [data-testid="sidebar-primary-nav"] {
+  padding-inline: 12px;
+  gap: 5px;
+}
+.app-shell [data-testid="new-chat-button"] {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  min-height: 40px;
+  background: var(--card-solid);
+}
+.app-shell .chat-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+}
+.xwav-launch {
+  overflow-y: auto;
+  padding-top: 70px;
+}
+.xwav-launch-content {
+  max-width: 1040px;
+  margin: auto;
+  padding: 40px 52px 60px;
+}
+.xwav-launch-heading {
+  position: relative;
+  padding-right: 86px;
+  margin-bottom: 30px;
+}
+.xwav-workbench-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted-foreground);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.12em;
+  margin-bottom: 20px;
+}
+.xwav-workbench-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand-accent);
+}
+.xwav-workbench-divider {
+  color: var(--border-strong);
+  margin-inline: 2px;
+}
+.xwav-launch-mark {
+  position: absolute;
+  right: 8px;
+  top: 41px;
+  opacity: 0.9;
+  width: 48px;
+  height: 48px;
+}
+.xwav-launch-heading h1 {
+  text-align: left;
+  font-size: clamp(28px, 3.3vw, 44px);
+  line-height: 1.15;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  max-width: 100%;
+}
+.xwav-launch-description {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-top: 0;
+}
+.xwav-launch .xwav-launch-composer {
+  width: 100%;
+  max-width: none;
+  padding: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: var(--card-solid);
+  box-shadow: 0 8px 30px color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.xwav-launch-composer textarea {
+  min-height: 110px;
+}
+.xwav-launch [data-testid="new-chat-landing-composer-surface"]:focus-within {
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+.xwav-starters {
+  width: 100%;
+  margin-top: 38px;
+}
+.xwav-section-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted-foreground);
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+.xwav-section-label > :last-child {
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.13em;
+}
+.xwav-starter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--border);
+}
+.xwav-starter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  text-align: left;
+  padding: 22px 18px 22px 0;
+  min-width: 0;
+  cursor: pointer;
+  transition: background 150ms;
+}
+.xwav-starter + .xwav-starter {
+  padding-left: 22px;
+  border-left: 1px solid var(--border);
+}
+.xwav-starter:hover {
+  background: var(--muted);
+}
+.xwav-starter:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.xwav-starter:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.xwav-starter-icon {
+  color: var(--brand-accent);
+}
+.xwav-starter strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  padding-right: 8px;
+}
+.xwav-starter-description {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 5px;
+}
+.xwav-starter-arrow {
+  position: absolute;
+  top: 23px;
+  right: 18px;
+  color: var(--muted-foreground);
+}
+@media (min-width: 768px) {
+  .xwav-rail {
+    display: flex;
+  }
+  html[data-electron-mac] .xwav-rail {
+    padding-top: 64px;
+  }
+}
+@media (max-width: 1100px) and (min-width: 768px) {
+  .xwav-launch-content {
+    padding-inline: 28px;
+  }
+  .xwav-starter-description {
+    font-size: 13px;
+  }
+}
+@media (max-width: 767px) {
+  .xwav-launch {
+    padding-top: 60px;
+  }
+  .xwav-launch-content {
+    padding: 24px 20px 36px;
+    margin-block: 0;
+  }
+  .xwav-launch-heading {
+    padding-right: 42px;
+    margin-bottom: 25px;
+  }
+  .xwav-launch-mark {
+    width: 30px;
+    height: 30px;
+    top: 40px;
+    right: 0;
+  }
+  .xwav-workbench-label {
+    font-size: 13px;
+    gap: 7px;
+    margin-bottom: 16px;
+  }
+  .xwav-launch-description {
+    font-size: 13px;
+  }
+  .xwav-starters {
+    margin-top: 28px;
+  }
+  .xwav-starter-grid {
+    grid-template-columns: 1fr;
+  }
+  .xwav-starter,
+  .xwav-starter + .xwav-starter {
+    flex-direction: row;
+    gap: 16px;
+    padding: 18px 28px 18px 0;
+    border-left: 0;
+  }
+  .xwav-starter + .xwav-starter {
+    border-top: 1px solid var(--border);
+  }
+  .xwav-starter-arrow {
+    top: 20px;
+    right: 0;
+  }
+  .xwav-starter-description {
+    font-size: 13px;
+  }
+  .xwav-section-label > :last-child {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xwav-rail-action,
+  .xwav-starter {
+    transition: none;
+  }
+}
+
+/* Keep the workspace tray opaque and neutral across both appearance modes. */
+.app-shell .xwav-launch .xwav-launch-composer .composer-workspace-surface {
+  background: var(--secondary);
+}
+
+@media (max-width: 767px) {
+  .xwav-launch [data-testid="new-chat-landing-actions"] {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .xwav-launch [data-testid="new-chat-landing-left-controls"],
+  .xwav-launch [data-testid="new-chat-landing-right-controls"] {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .xwav-launch [data-testid="new-chat-landing-right-controls"] > div:first-child {
+    margin-right: auto;
+    flex: 1 1 auto;
+  }
+  .xwav-launch [data-testid="new-chat-landing-agent-select"] {
+    flex-shrink: 1;
+  }
+  .xwav-launch [data-testid="new-chat-landing-actions"] button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

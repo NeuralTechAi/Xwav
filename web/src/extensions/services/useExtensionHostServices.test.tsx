@@ -256,7 +256,7 @@ describe("useExtensionHostServices", () => {
     expect(authenticatedFetchMock).not.toHaveBeenCalled();
   });
 
-  it("opens a project-scoped new session by resolving the project name", async () => {
+  it("opens a project-scoped new job by resolving the project name", async () => {
     const projects = new Response(
       JSON.stringify({ object: "list", data: [{ id: "p1", name: "Alpha & co" }] }),
       { status: 200 },

@@ -1,5 +1,9 @@
-default:
-    @just --list
+# Harness² is the primary local workflow. List other tasks with `just --list`.
+default: benchmark
+
+[group('benchmark')]
+benchmark *args='status':
+    .venv/bin/python -m omnigent.cli harness2 {{args}}
 
 export FASTLANE_SKIP_UPDATE_CHECK := "1"
 

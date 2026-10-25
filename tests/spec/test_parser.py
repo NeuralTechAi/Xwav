@@ -4636,3 +4636,45 @@ def test_parse_executor_reasoning_effort_absent(tmp_path: Path) -> None:
     spec = parse(tmp_path)
 
     assert spec.executor.reasoning_effort is None
+
+
+@pytest.mark.parametrize(
+    "disabled,policy,expected",
+    [
+        ("true", None, False),
+        ('"true"', None, False),
+        ("false", None, True),
+        ("false", "false", False),
+        ("false", '"false"', False),
+        ("true", "true", False),
+        ("false", "true", True),
+    ],
+)
+def test_skill_implicit_invocation_policy(tmp_path, disabled, policy, expected):
+    directory = tmp_path / "release-helper"
+    directory.mkdir()
+    skill = directory / "SKILL.md"
+    skill.write_text(
+        "---\nname: release-helper\ndescription: Release software\n"
+        f"disable-model-invocation: {disabled}\n---\nOnly release when requested."
+    )
+    if policy is not None:
+        (directory / "agents").mkdir()
+        (directory / "agents/openai.yaml").write_text(
+            f"policy:\n  allow_implicit_invocation: {policy}\n"
+        )
+    parsed = _parse_skill(skill)
+    assert parsed.allow_implicit_invocation is expected
+    assert parsed.user_invocable is True
+    assert parsed.content == "Only release when requested."
+
+
+@pytest.mark.parametrize("metadata", ["policy: [", "policy: []", "[]"])
+def test_invalid_skill_invocation_policy_is_not_silently_enabled(tmp_path, metadata):
+    directory = tmp_path / "manual"
+    (directory / "agents").mkdir(parents=True)
+    skill = directory / "SKILL.md"
+    skill.write_text("---\nname: manual\ndescription: Manual workflow\n---\nInstructions.")
+    (directory / "agents/openai.yaml").write_text(metadata)
+    with pytest.raises(OmnigentError, match="invocation policy"):
+        _parse_skill(skill)

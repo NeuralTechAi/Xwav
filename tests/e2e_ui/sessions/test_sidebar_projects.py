@@ -284,7 +284,7 @@ def test_project_actions_are_keyboard_accessible_on_desktop(
 
     header = page.get_by_role("button", name=project, exact=True)
     kebab = page.get_by_role("button", name=f"Project actions for {project}")
-    shortcut = page.get_by_role("link", name=f"New session in {project}", exact=True)
+    shortcut = page.get_by_role("link", name=f"New Job in {project}", exact=True)
     actions = kebab.locator("xpath=../..")
     expect(actions).to_have_css("opacity", "0")
     header.hover()
@@ -327,13 +327,13 @@ def test_project_menu_is_visible_without_hover(
     viewport: dict[str, int],
     has_touch: bool,
 ) -> None:
-    """Touch folders expose a menu containing New session without a long press."""
+    """Touch folders expose a menu containing New Job without a long press."""
     base_url, session_id = seeded_session
     project = f"Project with a long name to check action overlap {uuid.uuid4().hex[:6]}"
     page.goto(f"{base_url}/c/{session_id}")
     _move_to_new_project(page, _row(page, session_id), project)
     page.get_by_role("button", name=project, exact=True).hover()
-    expect(page.get_by_role("link", name=f"New session in {project}", exact=True)).to_be_visible()
+    expect(page.get_by_role("link", name=f"New Job in {project}", exact=True)).to_be_visible()
 
     context = browser.new_context(viewport=viewport, has_touch=has_touch)
     touch = context.new_page()
@@ -342,7 +342,7 @@ def test_project_menu_is_visible_without_hover(
         header = touch.get_by_role("button", name=project, exact=True)
         expect(header).to_be_visible()
         shortcut = touch.get_by_role(
-            "link", name=f"New session in {project}", exact=True, include_hidden=True
+            "link", name=f"New Job in {project}", exact=True, include_hidden=True
         )
         if has_touch:
             expect(shortcut).to_be_hidden()

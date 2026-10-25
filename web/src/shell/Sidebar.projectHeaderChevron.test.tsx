@@ -118,7 +118,7 @@ describe("project folder header icon/chevron", () => {
     expect(classOf(trailing)).not.toMatch(/md:group-hover:opacity-100/);
   });
 
-  it("highlights the project row instead of global New session for a project-scoped composer", () => {
+  it("highlights the project row instead of global New Job for a project-scoped composer", () => {
     renderSidebar("/?project=My%20Project");
 
     const header = headerButton("My Project");
@@ -141,7 +141,7 @@ describe("project folder header icon/chevron", () => {
     fireEvent.click(headerButton("My Project"));
 
     const action = screen
-      .getAllByRole("link", { name: "new session" })
+      .getAllByRole("link", { name: "new job" })
       .find((link) => link.getAttribute("href") === "/?project=My%20Project")!;
     const empty = action.closest(".sidebar-row")!;
     expect(empty.parentElement).toHaveClass("pl-6");
@@ -174,10 +174,10 @@ describe("project folder header icon/chevron", () => {
     expect(message).not.toHaveClass("text-ui");
     const body = message.querySelector("span")!;
     expect(body).not.toHaveClass("text-ui");
-    expect(body).toHaveTextContent("No sessions. Start a new session.");
+    expect(body).toHaveTextContent("No sessions. Start a new job.");
     expect(body).toContainElement(action);
     expect(message).toContainElement(action);
-    expect(within(empty as HTMLElement).getByRole("link", { name: "new session" })).toBe(action);
+    expect(within(empty as HTMLElement).getByRole("link", { name: "new job" })).toBe(action);
     expect(action).toHaveAttribute("href", "/?project=My%20Project");
     expect(action).toHaveClass("text-primary", "hover:underline");
     expect(action).not.toHaveAttribute("data-slot", "button");

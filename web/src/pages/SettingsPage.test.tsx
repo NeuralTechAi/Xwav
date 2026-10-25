@@ -713,21 +713,20 @@ describe("SettingsPage", () => {
     });
   });
 
-  it("renders the color theme dropdown, defaults to Xwav, and applies a palette on change", () => {
+  it("renders the color theme dropdown, defaults to GitHub, and applies a palette on change", () => {
     localStorage.clear();
     renderPage("/settings/appearance");
 
     const select = screen.getByTestId("color-theme-select") as HTMLSelectElement;
-    // Nothing stored → the default (Xwav) palette is selected and no
-    // data-theme override is applied to the document.
-    expect(select.value).toBe("omni");
+    // The Settings component reads the GitHub default; main.tsx applies it at boot.
+    expect(select.value).toBe("github");
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();
 
     // Choosing a palette applies it live to <html> and persists it.
     fireEvent.change(select, { target: { value: "github" } });
     expect(select.value).toBe("github");
     expect(document.documentElement.getAttribute("data-theme")).toBe("github");
-    expect(localStorage.getItem("omnigent:ui-theme-palette")).toBe(JSON.stringify("github"));
+    expect(localStorage.getItem("omnigent:ui-theme-palette")).toBeNull();
   });
 
   it("creates and applies a custom theme when a guided color control changes", () => {
@@ -929,7 +928,7 @@ describe("SettingsPage", () => {
     // Sanity: the non-default choices were persisted.
     expect(localStorage.getItem("omnigent:terminal-theme")).toBe("dark");
     expect(localStorage.getItem("omnigent:default-transcript-view")).toBe("terminal");
-    expect(localStorage.getItem("omnigent:ui-theme-palette")).toBe(JSON.stringify("github"));
+    expect(localStorage.getItem("omnigent:ui-theme-palette")).toBeNull();
     expect(localStorage.getItem("omnigent:default-workspace-panel")).toBe("open");
     expect(localStorage.getItem("omnigent:default-workspace-tab")).toBe("subagents");
     expect(localStorage.getItem("omnigent:ui-font-size")).toBe("15");
@@ -954,9 +953,9 @@ describe("SettingsPage", () => {
     expect(localStorage.getItem("omnigent:code-font-size")).toBeNull();
     expect(localStorage.getItem("omnigent:code-font-weight")).toBeNull();
 
-    // Color theme is back to Xwav.
-    expect((screen.getByTestId("color-theme-select") as HTMLSelectElement).value).toBe("omni");
-    expect(document.documentElement.getAttribute("data-theme")).toBeNull();
+    // Color theme is back to GitHub.
+    expect((screen.getByTestId("color-theme-select") as HTMLSelectElement).value).toBe("github");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("github");
 
     // Terminal theme, transcript view, workspace defaults, and harness visibility are restored.
     expect(screen.getByTestId("terminal-theme-auto")).toHaveAttribute("aria-checked", "true");

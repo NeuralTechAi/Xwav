@@ -113,6 +113,15 @@ user-visible behavior. It then uses exactly these four H2 sections in order:
 
 ## Features
 
+- [Pre-Production Tests](./preproduction.md) covers job tests and downloadable reports.
+- [Load Testing](./loadtesting.md) covers bounded load, stress, spike and endurance runs.
+
+- [Live project app preview](./preview.md) covers automatic app discovery,
+  device panels and live updates.
+
+- [Chat file reverts](./chat-revert.md) covers pre-message checkpoints, review,
+  restoration, backup undo and unavailable states on desktop and mobile.
+
 - [Workspace content search](./workspace-content-search.md) covers runner-backed
   text search, result navigation and its release flag.
 
@@ -200,6 +209,8 @@ map an area, remove it here in the same change.
 
 **CLI commands:**
 
+- Benchmark workflows and native skill catalogs: `omnigent harness2`, `omnigent skills`
+
 - Setup and diagnostics: `omnigent setup`, `omnigent config`, `omnigent doctor`,
   `omnigent diagnose`, `omnigent debug`, `omnigent usage` (config defaults are
   mapped; credential configuration and the other commands remain unmapped)
@@ -247,3 +258,15 @@ budgets, MCP servers, sandbox providers, and smart routing.
   not documented away.
 - **After review:** when a reviewer says a change missed a surface, add that
   surface to the feature file in the same change.
+
+- [App preview](preview.md): periscope navigation, Web/Android/iOS responsive previews and panel controls.
+
+
+- [Skills, tools and plugins](extensions.md): user integrations, portable agent
+  bundles, skill attachments, MCP configuration and harness plugin inventories.
+- [Project and job downloads](project-downloads.md): ZIP exports of current saved
+  workspaces from job actions and project folder menus.
+- [Project source folders](project-source-folders.md): visible creation/action controls,
+  source-folder selection and connected-computer defaults for project jobs.
+- [Deployments and installable downloads](releases.md): provider choice, native
+  conversion/builds, background progress and authorized artifact downloads.

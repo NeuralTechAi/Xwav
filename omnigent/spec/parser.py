@@ -2683,6 +2683,28 @@ def _parse_skill(skill_md: Path) -> SkillSpec:
     # ``user-invocable: false`` marks an internal orchestration skill that
     # the user should not invoke directly; absent/true ⇒ invocable.
     user_invocable = not _falsey_flag(frontmatter.get("user-invocable", True))
+    disabled = frontmatter.get("disable-model-invocation", False)
+    allow_implicit = not (
+        disabled is True
+        or (isinstance(disabled, str) and disabled.strip().lower() in {"true", "yes", "on", "1"})
+    )
+    policy_file = skill_md.parent / "agents/openai.yaml"
+    if policy_file.is_file():
+        try:
+            metadata = yaml.safe_load(policy_file.read_text(encoding="utf-8"))
+            if not isinstance(metadata, dict):
+                raise ValueError("Skill metadata must be a mapping")
+            policy = metadata.get("policy", {})
+            if not isinstance(policy, dict):
+                raise ValueError("Skill policy must be a mapping")
+            allow_implicit = allow_implicit and not _falsey_flag(
+                policy.get("allow_implicit_invocation", True)
+            )
+        except (OSError, UnicodeDecodeError, ValueError, yaml.YAMLError) as exc:
+            raise OmnigentError(
+                f"Skill invocation policy could not be read: {policy_file}",
+                code=ErrorCode.INVALID_INPUT,
+            ) from exc
     label = str(name)
     return SkillSpec(
         name=skill_md.parent.name,
@@ -2690,6 +2712,7 @@ def _parse_skill(skill_md: Path) -> SkillSpec:
         content=content.strip(),
         skill_dir=skill_md.parent,
         user_invocable=user_invocable,
+        allow_implicit_invocation=allow_implicit,
         display_name=label if label != skill_md.parent.name else None,
     )
 

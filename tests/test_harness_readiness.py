@@ -65,6 +65,7 @@ def test_configured_harness_map_exposes_pi_native(monkeypatch: pytest.MonkeyPatc
     gained the credential axis) rather than a bare ``False``.
     """
     monkeypatch.setattr(hr, "harness_cli_installed", lambda _key, **_kw: False)
+    monkeypatch.setattr(hr, "harness_cli_binary", lambda _key: None)
     cmap = hr.configured_harness_map()
     assert cmap.get("pi-native") == "binary-missing"
     assert cmap.get("pi") == "binary-missing"
@@ -100,6 +101,7 @@ def test_configured_harness_map_pi_installed_with_provider_ready(
 def test_configured_harness_map_exposes_kiro_native(monkeypatch: pytest.MonkeyPatch) -> None:
     """The readiness map carries Kiro native keys for the web picker lookup."""
     monkeypatch.setattr(hr, "harness_cli_installed", lambda _key, **_kw: False)
+    monkeypatch.setattr(hr, "harness_cli_binary", lambda _key: None)
     cmap = hr.configured_harness_map()
     assert cmap.get("kiro-native") is False
     assert cmap.get("native-kiro") is False

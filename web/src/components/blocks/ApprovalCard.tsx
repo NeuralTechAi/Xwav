@@ -860,7 +860,7 @@ export function ApprovalCard({
             )}
             {agyPermission?.alwaysAllowPattern && (
               <span className="text-sm text-muted-foreground">
-                Always allow saves a rule for this Xwav session. New sessions have separate rules.
+                Always allow saves a rule for this Xwav session. New Jobs have separate rules.
               </span>
             )}
             {formattedPreview && (

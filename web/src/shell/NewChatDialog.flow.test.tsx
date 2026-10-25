@@ -106,7 +106,7 @@ vi.mock("@/store/chatStore", () => ({
 }));
 
 // The create races the POST against the updates stream's announcement of the
-// new session row. Stub the stream so a test decides when (and with what row)
+// new job row. Stub the stream so a test decides when (and with what row)
 // that announcement lands, and can inspect the matcher the screen built to
 // tell its own session apart from everything else the stream pushes.
 const pushMatchers: ((item: SessionListWireItem) => boolean)[] = [];
@@ -1682,7 +1682,7 @@ describe("NewChatLandingScreen create flow", () => {
     ).toBe("bypassPermissions");
   });
 
-  it("seeds the permission mode from the last pick for claude-native on a new session", async () => {
+  it("seeds the permission mode from the last pick for claude-native on a new job", async () => {
     // A returning user's last pick for this harness is on record; the new
     // session must auto-fill it (the "Mode:" pill reflects it) and post it
     // WITHOUT the user re-opening the pill.
@@ -2135,9 +2135,9 @@ describe("NewChatLandingScreen create flow", () => {
     ).toBe("omnigent-openai/system.ai.gpt-5-6-sol");
   });
 
-  it("seeds the model + effort from the last pick for claude-native on a new session", async () => {
+  it("seeds the model + effort from the last pick for claude-native on a new job", async () => {
     // A returning user's last model/effort pick for this harness is on record;
-    // the new session must auto-fill it and post it WITHOUT re-opening the
+    // the new job must auto-fill it and post it WITHOUT re-opening the
     // picker — the same remember-your-pick behavior the permission mode has.
     localStorage.setItem(
       "omnigent:last-mode-by-harness",

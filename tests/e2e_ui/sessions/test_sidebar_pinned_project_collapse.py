@@ -116,11 +116,11 @@ def test_click_pinned_project_session_keeps_project_collapsed(
     # The sibling is not rendered while the folder is collapsed.
     expect(_section(page, project).locator(f'a[href="/c/{session_b}"]')).to_have_count(0)
 
-    # Navigate away (New session button → "/"), then click back into the
+    # Navigate away (New Job button → "/"), then click back into the
     # pinned session. This is the specific interaction from the issue video:
     # the pinned session becomes active again, and the auto-expand effect
     # was firing on the resulting ``activeProjectName`` transition.
-    page.get_by_role("link", name=re.compile(r"New session", re.IGNORECASE)).first.click()
+    page.get_by_role("link", name=re.compile(r"New Job", re.IGNORECASE)).first.click()
     expect(page).to_have_url(re.compile(r"/$"))
     _section(page, "Pinned").locator(f'a[href="/c/{session_a}"]').click()
     expect(page).to_have_url(re.compile(rf"/c/{session_a}$"))

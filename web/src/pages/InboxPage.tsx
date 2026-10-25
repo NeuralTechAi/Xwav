@@ -52,7 +52,7 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   HandIcon,
-  InboxIcon,
+  BellRingIcon,
   Loader2Icon,
   SquarePenIcon,
   type LucideIcon,
@@ -554,7 +554,7 @@ export function InboxPage() {
   return (
     <PageScroll maxWidthClassName="max-w-[960px]" contentClassName="px-4 md:px-10">
       <div className="mb-4 flex items-center gap-3">
-        <h1 className="text-2xl font-normal">Inbox</h1>
+        <h1 className="text-2xl font-normal">Notifications</h1>
         {totalCount > 0 && (
           <span
             title={summary}
@@ -576,7 +576,7 @@ export function InboxPage() {
         componentId="inbox.filter"
         className="mb-4"
       >
-        <TabsList variant="pill" aria-label="Inbox filter" className="gap-1">
+        <TabsList variant="pill" aria-label="Notifications filter" className="gap-1">
           {INBOX_TABS.map(({ value, label }) => (
             <TabsTrigger key={value} value={value} className="h-7 flex-none px-3">
               {label}
@@ -619,7 +619,7 @@ export function InboxPage() {
 
       {!assembling && failedSessionCount === 0 && visibleCount === 0 && (
         <div className="flex flex-col items-center gap-2 py-16 text-center">
-          <InboxIcon className="size-8 text-muted-foreground/50" />
+          <BellRingIcon className="size-8 text-muted-foreground/50" />
           <p className="text-ui font-medium">
             {hasNextPage ? "Nothing waiting in these sessions" : emptyState.title}
           </p>

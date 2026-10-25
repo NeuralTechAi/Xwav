@@ -29,6 +29,7 @@ export function ComposerAddMenu({
   showPlan = true,
   planDisabled = false,
   planLabel,
+  planDescription,
   testIdPrefix = "composer",
   onPlan,
   planActive,
@@ -47,6 +48,7 @@ export function ComposerAddMenu({
   showPlan?: boolean;
   planDisabled?: boolean;
   planLabel?: string;
+  planDescription?: string;
   testIdPrefix?: string;
   onPlan?: () => void;
   planActive: boolean;
@@ -206,7 +208,7 @@ export function ComposerAddMenu({
                       </span>
                       <span>Plan</span>
                       <span className="truncate text-xs leading-4 text-muted-foreground">
-                        {planActive ? "Plan mode is on" : "Turn plan mode on"}
+                        {planDescription ?? (planActive ? "Plan mode is on" : "Turn plan mode on")}
                       </span>
                     </DropdownMenuItem>
                   )}

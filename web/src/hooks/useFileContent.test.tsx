@@ -442,7 +442,7 @@ describe("useFileContent gating", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("does not fetch for a temp id while the new session is still being created", async () => {
+  it("does not fetch for a temp id while the new job is still being created", async () => {
     // The file viewer can stay open across a navigate-first new chat; its
     // `temp:*` id names no server session, so the request could only fail.
     onlineMock.mockReturnValue(true);

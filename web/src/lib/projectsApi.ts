@@ -20,6 +20,10 @@ import { apiErrorFromResponse } from "./sessionsApi";
  * and never acts on it, so adding a key here needs no backend change.
  */
 export interface ProjectConfig {
+  /** Explicit folder-backed project; use its connected computer rather than a managed sandbox. */
+  source_folder?: boolean;
+  /** Repository cloned into each fresh project-job sandbox. */
+  repository_url?: string;
   /** Default host id, or the sandbox sentinel. */
   host_id?: string;
   /** Default working directory / repo path on that host. */

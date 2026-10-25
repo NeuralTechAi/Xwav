@@ -91,7 +91,7 @@ describe("usePromptHistory — per-conversation recall", () => {
   });
 
   it("recalls an entry written by appendPromptHistoryEntry before the hook mounted", () => {
-    // Landing-composer handoff: home page writes under the new session id, then
+    // Landing-composer handoff: home page writes under the new job id, then
     // the chat composer mounts bound to that id and hydrates from the same key.
     const text = "  - first\n  - second";
     appendPromptHistoryEntry(text, "conv_a");

@@ -92,15 +92,24 @@ class LoadSkillTool(Tool):
 
         :returns: A tool schema dict.
         """
-        skill_names = [s.name for s in self._skills]
+        skill_catalog = "\n".join(
+            f"- {skill.name}: {' '.join(skill.description.split())}"
+            for skill in self._skills
+            if skill.allow_implicit_invocation
+        )
         return {
             "type": "function",
             "function": {
                 "name": "load_skill",
                 "description": (
-                    "Load a skill's full instructions by "
-                    "name. Available skills: "
-                    f"{', '.join(skill_names)}"
+                    "Load a skill's full instructions by name. Select relevant skills "
+                    "from the user's request using the descriptions below; a manual "
+                    "slash command is not required. Load only when a skill materially "
+                    "helps the current task; skip weak keyword matches. Reuse "
+                    "instructions already in context unless they changed. "
+                    "Manual-only skills require an explicit user request. "
+                    "Read the instructions before applying the skill. Available skills:\n"
+                    f"{skill_catalog or '(none)'}"
                 ),
                 "parameters": {
                     "type": "object",
@@ -141,7 +150,7 @@ class LoadSkillTool(Tool):
             return "Error: 'name' must be a string"
         skill = find_skill_by_name(self._skills, skill_name)
         if skill is None:
-            available = list(self._skills_by_name.keys())
+            available = [s.name for s in self._skills if s.allow_implicit_invocation]
             return f"Error: skill {skill_name!r} not found. Available skills: {available}"
         resources = list_skill_resources(skill)
         return format_skill_content(skill, resources)

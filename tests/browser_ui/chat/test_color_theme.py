@@ -2,11 +2,12 @@
 
 Alongside the light/dark **mode** tiles, ``AppearanceSection``
 (``pages/SettingsPage.tsx``) renders a "Color theme" dropdown (a shadcn
-``Select``) — one option per palette (Omnigent, Dracula, GitHub, Catppuccin,
+``Select``) — one option per palette (GitHub, Xwav, Dracula, Catppuccin,
 Gruvbox, Solarized, Nord). Choosing one calls ``applyThemePalette``
 (``lib/themePalette.ts``), which sets ``data-theme`` on ``<html>`` and persists the id to
-``localStorage["omnigent:ui-theme-palette"]``. The default "Omnigent" palette
-carries no override, so choosing it removes the attribute and clears the key.
+``localStorage["omnigent:ui-theme-palette"]``. The default GitHub palette
+sets data-theme=github without needing a saved override. Xwav keeps its legacy
+attribute-free brand tokens when explicitly selected.
 
 The palette axis is orthogonal to the light/dark class next-themes toggles, so
 ``data-theme`` and the ``dark`` class coexist on ``<html>``. On reload the saved
@@ -21,6 +22,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from tests.browser_ui.chat.session_contract import ChatSessionContract, message_item
@@ -241,41 +243,28 @@ def _open_appearance(page: Page, base_url: str) -> None:
 def test_color_palette_applies_persists_and_resets(
     page: Page, chat_session_contract: ChatSessionContract
 ) -> None:
-    """Selecting a palette skins ``<html>`` + persists; the default clears it.
-
-    Fresh load is the default "Omnigent" (its name shown, nothing stored, no
-    ``data-theme``). Picking GitHub sets ``data-theme="github"`` and persists it —
-    and survives a reload (re-applied at boot). Returning to Omnigent removes the
-    attribute and clears the stored key.
-    """
+    """GitHub is the default; explicit legacy choices persist and reset returns GitHub."""
     base_url = chat_session_contract.base_url
     _open_appearance(page, base_url)
-
-    # Fresh context → default "Omnigent": the trigger shows it, no override, and
-    # nothing persisted.
-    expect(_color_theme_select(page)).to_contain_text("Xwav")
-    assert _data_theme(page) is None, "expected no data-theme override on a fresh load"
-    assert _stored_palette(page) is None, "expected no persisted palette on a fresh load"
-
-    # → GitHub: the data-theme attribute lands on <html> and the choice persists.
-    _pick_palette(page, "GitHub")
     expect(_color_theme_select(page)).to_contain_text("GitHub")
-    assert _data_theme(page) == "github", "data-theme=github not set after selecting GitHub"
-    assert _stored_palette(page) == '"github"'
+    assert _data_theme(page) == "github"
+    assert _stored_palette(page) is None
 
-    # Reload: the saved palette is re-applied before first paint (main.tsx), so
-    # <html> still carries data-theme=github and the trigger stays on GitHub.
-    page.reload()
-    expect(_color_theme_select(page)).to_be_visible(timeout=30_000)
-    assert _data_theme(page) == "github", "saved palette not re-applied after reload"
-    expect(_color_theme_select(page)).to_contain_text("GitHub")
-
-    # → back to Omnigent (the default): the override is removed and the stored
-    # key cleared, since the default reverts to the base brand tokens.
     _pick_palette(page, "Xwav")
     expect(_color_theme_select(page)).to_contain_text("Xwav")
-    assert _data_theme(page) is None, "<html> kept data-theme after returning to Xwav"
-    assert _stored_palette(page) is None, "the palette key was not cleared for the default"
+    assert _data_theme(page) is None
+    assert _stored_palette(page) == '"omni"'
+    page.reload()
+    expect(_color_theme_select(page)).to_contain_text("Xwav")
+    assert _data_theme(page) is None
+
+    _pick_palette(page, "GitHub")
+    expect(_color_theme_select(page)).to_contain_text("GitHub")
+    assert _data_theme(page) == "github"
+    assert _stored_palette(page) is None
+    page.reload()
+    expect(_color_theme_select(page)).to_contain_text("GitHub")
+    assert _data_theme(page) == "github"
 
 
 def test_color_palette_composes_with_dark_mode(
@@ -480,14 +469,12 @@ def test_custom_theme_colors_can_be_randomized(
     assert stored["tint"] == "#3ad2d2"
 
 
-def test_omnigent_selection_keeps_the_brand_tint(
+def test_xwav_selection_keeps_the_brand_tint(
     page: Page, chat_session_contract: ChatSessionContract
 ) -> None:
     """Selected chat text on the default palette is the translucent brand pink.
 
-    Omnigent's selection is the sidebar's active-item tint, not an opaque
-    primary-colour block: ``rgba(240, 1, 150, 0.1)`` with plum text in light
-    mode and ``rgba(240, 1, 150, 0.15)`` with pink text in dark mode.
+    The optional Xwav palette retains its mint selection tint in both modes.
     """
     base_url, session_id = chat_session_contract.base_url, chat_session_contract.session_id
     chat_session_contract.set_items(
@@ -499,8 +486,8 @@ def test_omnigent_selection_keeps_the_brand_tint(
         ]
     )
     expected = {
-        "Light": ["rgba(240, 1, 150, 0.1)", "rgb(101, 18, 73)"],
-        "Dark": ["rgba(240, 1, 150, 0.15)", "rgb(249, 168, 212)"],
+        "Light": ["rgba(8, 127, 112, 0.15)", "rgb(7, 94, 83)"],
+        "Dark": ["rgba(110, 231, 210, 0.15)", "rgb(178, 245, 232)"],
     }
     _open_appearance(page, base_url)
     _pick_palette(page, "Xwav")
@@ -523,3 +510,36 @@ def test_omnigent_selection_keeps_the_brand_tint(
             }"""
         )
         assert selection == colors, mode
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+@pytest.mark.parametrize("width", [390, 1280], ids=["mobile", "desktop"])
+def test_github_is_the_default_in_both_modes(
+    page: Page, chat_session_contract: ChatSessionContract, mode: str, width: int
+) -> None:
+    """A fresh browser receives real GitHub tokens, not just the picker label."""
+    page.set_viewport_size({"width": width, "height": 900})
+    page.emulate_media(color_scheme=mode)
+    _open_appearance(page, chat_session_contract.base_url)
+    expect(_color_theme_select(page)).to_contain_text("GitHub")
+    expected = "#0d1117" if mode == "dark" else "#f6f8fa"
+    page.wait_for_function(
+        "expected => getComputedStyle(document.documentElement)"
+        ".getPropertyValue('--background').trim() === expected",
+        arg=expected,
+    )
+    assert _data_theme(page) == "github"
+    assert _html_has_dark(page) is (mode == "dark")
+    rail = page.locator(".xwav-rail")
+    if width >= 768:
+        expect(rail).to_be_visible()
+        colors = rail.evaluate(
+            "el => [getComputedStyle(el).backgroundColor, getComputedStyle(el).color]"
+        )
+        assert colors == (
+            ["rgba(13, 17, 23, 0.75)", "rgb(230, 237, 243)"]
+            if mode == "dark"
+            else ["rgb(246, 248, 250)", "rgb(31, 35, 40)"]
+        )
+    assert _stored_palette(page) is None
+    page.screenshot(path=f"/tmp/xwav-github-{mode}-{width}.png", full_page=True)

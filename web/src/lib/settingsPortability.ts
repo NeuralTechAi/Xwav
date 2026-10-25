@@ -6,6 +6,7 @@
 // field for future compatibility, plus one entry per localStorage key that
 // holds a non-default value.
 
+import { DEFAULT_CHAT_HARNESS_STORAGE_KEY } from "./defaultHarnessPreferences";
 import { DELETE_WORKTREES_ON_ARCHIVE_STORAGE_KEY } from "./archiveWorktreePreferences";
 import { COMPOSER_SEND_SHORTCUT_STORAGE_KEY } from "./composerSendShortcutPreferences";
 import {
@@ -20,6 +21,7 @@ import {
 
 /** localStorage keys that constitute exportable user preferences. */
 const EXPORTABLE_KEYS = [
+  DEFAULT_CHAT_HARNESS_STORAGE_KEY,
   "omnigent:ui-font-size",
   "omnigent:ui-font-family",
   "omnigent:code-font-size",

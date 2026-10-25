@@ -1,3 +1,4 @@
+import { downloadLatestProjectWorkspace } from "@/lib/workspaceDownload";
 import { filterSessionScope } from "@/lib/sessionVisibility";
 import { useGridSessions } from "@/grid/GridSessionsContext";
 import { GridSidebar } from "@/grid/GridWorkspace";
@@ -31,13 +32,14 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  DownloadIcon,
   ArchiveIcon,
   ArrowUpDownIcon,
   ArchiveRestoreIcon,
   CheckIcon as CheckMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  ClockIcon,
+  CalendarClockIcon,
   CircleAlertIcon,
   CircleStopIcon,
   FolderGit2Icon,
@@ -51,7 +53,7 @@ import {
   GitPullRequestClosedIcon,
   GitPullRequestDraftIcon,
   GitPullRequestIcon,
-  InboxIcon,
+  BellRingIcon,
   ListChecksIcon,
   ListFilterIcon,
   LaptopIcon,
@@ -60,7 +62,7 @@ import {
   MailIcon,
   MailOpenIcon,
   MessageCircleDashedIcon,
-  MessageCirclePlusIcon,
+  BriefcaseBusinessIcon,
   Maximize2Icon,
   Minimize2Icon,
   MoreHorizontalIcon,
@@ -481,7 +483,7 @@ interface SidebarProps {
 }
 
 /**
- * Which top-level nav button (New session / Inbox) is active for the current
+ * Which top-level nav button (New Job / Inbox) is active for the current
  * route.
  *
  * The inbox route has no param to key off, and the sidebar is basename-agnostic
@@ -520,6 +522,11 @@ function useActiveNavItem(): {
   const isNewSessionRoute =
     activeConversationId == null &&
     (gridId == null || !isFeatureEnabled(serverInfo, "grid_sessions_display_ui")) &&
+    location.pathname !== "/preview" &&
+    leaf !== "preproduction" &&
+    leaf !== "loadtesting" &&
+    leaf !== "deployments" &&
+    leaf !== "installables" &&
     !isInboxPage &&
     !isCanvasPage &&
     !isTasksPage &&
@@ -530,8 +537,8 @@ function useActiveNavItem(): {
     : null;
   const newSessionProjectName = requestedProject || null;
   // Exclude non-composer routes: they also have no `:conversationId`, so they
-  // would otherwise light up the "New session" button. A project-prefilled
-  // new session belongs to that project row instead of the global nav item.
+  // would otherwise light up the "New Job" button. A project-prefilled
+  // new job belongs to that project row instead of the global nav item.
   const isNewChatPage = isNewSessionRoute && newSessionProjectName == null;
   return {
     isNewChatPage,
@@ -755,7 +762,7 @@ function SidebarImpl({
   // re-enters per tab) instead of carrying stale rows across. Every path that
   // changes the tab must go through here — not a bare setActiveTab — or the
   // selection cleanup and the persisted preference are skipped (e.g. the
-  // "New session" snap-back below).
+  // "New Job" snap-back below).
   const switchTab = useCallback(
     (tab: SidebarTab) => {
       if (selectionMode) exitSelectionMode();
@@ -1163,7 +1170,7 @@ function SidebarImpl({
             </div>
 
             <div className="flex flex-col gap-px px-2 pt-2 pb-0" data-testid="sidebar-primary-nav">
-              {/* "New session" routes to the home composer ("/"), which now owns
+              {/* "New Job" routes to the home composer ("/"), which now owns
             session creation end-to-end (host/workspace/worktree chips +
             send). Rendered as a Link so cmd/middle-click opens it in a new
             tab; onNavClick still closes the sidebar on a plain mobile tap. */}
@@ -1183,7 +1190,7 @@ function SidebarImpl({
                 variant="ghost"
                 data-testid="new-chat-button"
               >
-                {/* New session always creates a session the viewer owns, which
+                {/* New Job always creates a session the viewer owns, which
               lands under "My sessions" — so snap the tab back there on click
               (the button stays visible on both tabs). */}
                 <Link
@@ -1195,7 +1202,7 @@ function SidebarImpl({
                     onNavClick(e);
                   }}
                 >
-                  <MessageCirclePlusIcon
+                  <BriefcaseBusinessIcon
                     className={cn(
                       "ui-icon",
                       isNewChatPage
@@ -1203,18 +1210,18 @@ function SidebarImpl({
                         : "text-muted-foreground",
                     )}
                   />
-                  New session
+                  New Job
                   <CompactShortcutKeys
                     keys={newSessionShortcutKeys()}
                     className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 opacity-0 transition-opacity group-focus-visible/new-session:opacity-100 [&_kbd]:w-auto [&_kbd]:min-w-4 [&_kbd]:px-0.5 [&_kbd]:font-sans [&_kbd]:text-[10px] [@media((hover:hover)_and_(pointer:fine))]:group-hover/new-session:opacity-100"
                   />
                 </Link>
               </Button>
-              {/* Keep Scheduled in the primary nav group with the same row treatment as New session. */}
+              {/* Keep Scheduled in the primary nav group with the same row treatment as New Job. */}
               <Button
                 asChild
                 className={cn(
-                  // Same shared nav-row construct as "New session" / "Inbox" so
+                  // Same shared nav-row construct as "New Job" / "Notifications" so
                   // the active-pill, hover, insets, icon column, and text weight
                   // all match post-refactor.
                   SIDEBAR_ROW,
@@ -1226,7 +1233,7 @@ function SidebarImpl({
                 data-testid="scheduled-tasks-nav"
               >
                 <Link to="/tasks" onClick={onNavClick} componentId="sidebar.tasks">
-                  <ClockIcon
+                  <CalendarClockIcon
                     className={cn(
                       "ui-icon",
                       isTasksPage
@@ -1234,7 +1241,7 @@ function SidebarImpl({
                         : "text-muted-foreground",
                     )}
                   />
-                  Automations
+                  Scheduler
                 </Link>
               </Button>
               <Button
@@ -1249,7 +1256,7 @@ function SidebarImpl({
                 data-testid="inbox-button"
               >
                 <Link to="/inbox" onClick={onNavClick} componentId="sidebar.inbox">
-                  <InboxIcon
+                  <BellRingIcon
                     className={cn(
                       "ui-icon",
                       isInboxPage
@@ -1257,13 +1264,13 @@ function SidebarImpl({
                         : "text-muted-foreground",
                     )}
                   />
-                  Inbox
+                  Notifications
                   {inboxCount > 0 && (
                     <span
                       aria-label={
                         inboxCount === 1
-                          ? "1 inbox item waiting"
-                          : `${inboxCount} inbox items waiting`
+                          ? "1 notification waiting"
+                          : `${inboxCount} notifications waiting`
                       }
                       className={cn(
                         "ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-10 font-medium text-[var(--sidebar-active-foreground)] tabular-nums",
@@ -1620,7 +1627,7 @@ function ProjectFolder({
                   onRowClick(e);
                 }}
               >
-                new session
+                new job
               </Link>
               .
             </span>
@@ -2569,7 +2576,7 @@ function ConversationList({
             asChild
             variant="ghost"
             size="icon-xs"
-            aria-label="New session"
+            aria-label="New Job"
             data-testid="sessions-new-session"
             className="text-muted-foreground"
           >
@@ -2582,11 +2589,11 @@ function ConversationList({
                 onRowClick(event);
               }}
             >
-              <MessageCirclePlusIcon className="size-3.5" />
+              <BriefcaseBusinessIcon className="size-3.5" />
             </Link>
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">New session</TooltipContent>
+        <TooltipContent side="bottom">New Job</TooltipContent>
       </Tooltip>
       {!unifiedSelection && selectSessionsButton}
     </div>
@@ -3156,13 +3163,16 @@ function SectionHeader({
   // Touch and narrow layouts reserve space for the visible controls. On hover
   // desktops the marker returns to the right edge until the controls appear.
   const clusterRestMargin = showsMarker ? (icon ? "-mr-1" : "mr-1") : "mr-2";
-  const clusterHoverDesktopMargin = hasPersistentAction
-    ? "[@media((hover:hover)_and_(pointer:fine))]:md:mr-7"
-    : showsMarker
-      ? icon
-        ? "[@media((hover:hover)_and_(pointer:fine))]:md:-mr-1"
-        : "[@media((hover:hover)_and_(pointer:fine))]:md:mr-1"
-      : "[@media((hover:hover)_and_(pointer:fine))]:md:mr-2";
+  const clusterHoverDesktopMargin =
+    icon && hasAction
+      ? "[@media((hover:hover)_and_(pointer:fine))]:md:mr-14"
+      : hasPersistentAction
+        ? "[@media((hover:hover)_and_(pointer:fine))]:md:mr-7"
+        : showsMarker
+          ? icon
+            ? "[@media((hover:hover)_and_(pointer:fine))]:md:-mr-1"
+            : "[@media((hover:hover)_and_(pointer:fine))]:md:mr-1"
+          : "[@media((hover:hover)_and_(pointer:fine))]:md:mr-2";
   const markerFade =
     "[@media((hover:hover)_and_(pointer:fine))]:md:group-hover/section:opacity-0 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-state=open]]/header:opacity-0";
   const actionFocusFade = actionFocusVisible
@@ -3207,9 +3217,7 @@ function SectionHeader({
               SIDEBAR_HOVER_HIGHLIGHT,
               contextMenu && SIDEBAR_OPEN_MENU_HIGHLIGHT,
               active && SIDEBAR_ACTIVE_HIGHLIGHT,
-              hasAction &&
-                !showsMarker &&
-                "pr-8 [@media((hover:hover)_and_(pointer:fine))]:pr-14 [@media((hover:hover)_and_(pointer:fine))]:md:pr-2 [@media((hover:hover)_and_(pointer:fine))]:md:group-hover/header:pr-14 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-header-controls]:focus-within]/header:pr-14 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-state=open]]/header:pr-14",
+              hasAction && !showsMarker && "pr-14",
             )
           : "group flex h-7 w-full items-center gap-1 border-0 pr-0 pl-2 text-left text-sm font-normal text-muted-foreground transition-colors hover:text-foreground",
         status && "w-auto min-w-0 max-w-1/2 shrink-0",
@@ -3267,7 +3275,7 @@ function SectionHeader({
             isDotMarker(marker) && "w-6",
             // Fade out so the revealed kebab takes the marker's place,
             // mirroring a row's time/marker slot.
-            hasAction && cn(markerFade, actionFocusFade),
+            hasAction && !icon && cn(markerFade, actionFocusFade),
           )}
         >
           <SessionStateBadge state={marker} />
@@ -3503,71 +3511,67 @@ function ProjectHeaderActions({
   const allExpanded =
     projectNames.length > 0 && projectNames.every((name) => expandedProjects.includes(name));
   const anyExpanded = projectNames.some((name) => expandedProjects.includes(name));
-  // Hide the menu when there are no projects or sessions to organize.
-  const showMenu = showExpandControls || hasProjectSessions || projectNames.length > 0;
 
   return (
     <div className="flex items-center gap-0.5">
       <NewProjectButton onCreated={onProjectCreated} />
-      {showMenu && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Project list actions"
-              data-testid="project-list-actions"
-              className="text-muted-foreground"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <MoreHorizontalIcon className="size-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-40">
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger disabled={orderDisabled}>
-                Sort projects by
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="min-w-40">
-                <DropdownMenuRadioGroup
-                  value={manualOrder ? "manual" : "alphabetical"}
-                  onValueChange={(value) => onOrderChange(value === "manual")}
-                >
-                  <DropdownMenuRadioItem value="alphabetical">Alphabetically</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="manual">Manual order</DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            {/* Gated independently: each hides only when it would be a no-op, so
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Project list actions"
+            data-testid="project-list-actions"
+            className="text-muted-foreground"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <MoreHorizontalIcon className="size-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-40">
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger disabled={orderDisabled}>
+              Sort projects by
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="min-w-40">
+              <DropdownMenuRadioGroup
+                value={manualOrder ? "manual" : "alphabetical"}
+                onValueChange={(value) => onOrderChange(value === "manual")}
+              >
+                <DropdownMenuRadioItem value="alphabetical">Alphabetically</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="manual">Manual order</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          {/* Gated independently: each hides only when it would be a no-op, so
                 a mixed set offers both. */}
-            {showExpandControls && !allExpanded && (
-              <DropdownMenuItem
-                data-testid="expand-all-projects"
-                onSelect={() => onExpandAll(projectNames)}
-              >
-                <Maximize2Icon className="size-3.5" />
-                Expand all
-              </DropdownMenuItem>
-            )}
-            {showExpandControls && anyExpanded && (
-              <DropdownMenuItem data-testid="collapse-all-projects" onSelect={onCollapseAll}>
-                <Minimize2Icon className="size-3.5" />
-                Collapse all
-              </DropdownMenuItem>
-            )}
-            {hasProjectSessions && (
-              <DropdownMenuItem
-                data-testid="projects-select-sessions"
-                onSelect={() => onEnterSelectionMode()}
-              >
-                <ListChecksIcon className="size-3.5" />
-                Select sessions
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+          {showExpandControls && !allExpanded && (
+            <DropdownMenuItem
+              data-testid="expand-all-projects"
+              onSelect={() => onExpandAll(projectNames)}
+            >
+              <Maximize2Icon className="size-3.5" />
+              Expand all
+            </DropdownMenuItem>
+          )}
+          {showExpandControls && anyExpanded && (
+            <DropdownMenuItem data-testid="collapse-all-projects" onSelect={onCollapseAll}>
+              <Minimize2Icon className="size-3.5" />
+              Collapse all
+            </DropdownMenuItem>
+          )}
+          {hasProjectSessions && (
+            <DropdownMenuItem
+              data-testid="projects-select-sessions"
+              onSelect={() => onEnterSelectionMode()}
+            >
+              <ListChecksIcon className="size-3.5" />
+              Select sessions
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -3598,6 +3602,7 @@ function SectionGroup({
   afterHeader?: ReactNode;
   children: ReactNode;
 }) {
+  const alwaysVisible = title === "Projects";
   return (
     <section>
       <div className="group/header relative">
@@ -3623,18 +3628,15 @@ function SectionGroup({
           </div>
         ) : (
           headerAction && (
-            // Always visible (and hit-testable) except on md+ displays with a
-            // fine, hover-capable primary pointer — phones, touch tablets and
-            // coarse-pointer convertibles have no reliable hover, and the "New
-            // project" control lives here (the only way to create a project).
-            // On mouse/trackpad desktops it's hover/keyboard-focus-revealed.
-            // Reveal on :focus-visible (keyboard) — NOT :focus-within — so
-            // clicking the button with the mouse doesn't leave it stuck visible:
-            // React reuses the same node when it swaps expand↔revert, so the
-            // clicked button keeps focus afterward.
+            // Project creation and organization stay visible on every device.
+            // Other section controls retain their hover/focus reveal.
             <div
               data-header-controls
-              className="-translate-y-1/2 absolute top-1/2 right-1 flex items-center transition-opacity [@media((hover:hover)_and_(pointer:fine))]:md:opacity-0 [@media((hover:hover)_and_(pointer:fine))]:md:has-[:focus-visible]:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-state=open]]/header:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:group-hover/header:opacity-100"
+              className={cn(
+                "-translate-y-1/2 absolute top-1/2 right-1 flex items-center",
+                !alwaysVisible &&
+                  "transition-opacity [@media((hover:hover)_and_(pointer:fine))]:md:opacity-0 [@media((hover:hover)_and_(pointer:fine))]:md:has-[:focus-visible]:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-state=open]]/header:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:group-hover/header:opacity-100",
+              )}
             >
               {headerAction}
             </div>
@@ -3763,6 +3765,7 @@ function ConversationSection({
                   ? "ml-auto flex shrink-0 items-center gap-0.5 pr-1"
                   : "-translate-y-1/2 absolute top-1/2 right-1 flex items-center gap-0.5",
                 protectsCollapsedBadge &&
+                  !icon &&
                   "[@media((hover:hover)_and_(pointer:fine))]:md:pointer-events-none [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-header-controls]:focus-within]/header:pointer-events-auto [@media((hover:hover)_and_(pointer:fine))]:md:group-hover/header:pointer-events-auto [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-state=open]]/header:pointer-events-auto [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-testid=session-filter][aria-expanded=true]]/header:pointer-events-auto [@media((hover:hover)_and_(pointer:fine))]:md:has-[[aria-expanded=true]]:pointer-events-auto",
               )}
             >
@@ -3775,7 +3778,8 @@ function ConversationSection({
                 <div
                   className={cn(
                     "flex items-center rounded transition-opacity",
-                    "[@media((hover:hover)_and_(pointer:fine))]:md:opacity-0 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-header-controls]:focus-within]/header:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:group-hover/header:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-state=open]]/header:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-testid=session-filter][aria-expanded=true]]/header:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:has-[[aria-expanded=true]]:opacity-100",
+                    !icon &&
+                      "[@media((hover:hover)_and_(pointer:fine))]:md:opacity-0 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-header-controls]:focus-within]/header:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:group-hover/header:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-state=open]]/header:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-testid=session-filter][aria-expanded=true]]/header:opacity-100 [@media((hover:hover)_and_(pointer:fine))]:md:has-[[aria-expanded=true]]:opacity-100",
                   )}
                 >
                   {headerAction}
@@ -5765,7 +5769,7 @@ function ProjectFolderActions({
             asChild
             variant="ghost"
             size="icon-xs"
-            aria-label={`New session in ${projectName}`}
+            aria-label={`New Job in ${projectName}`}
             data-testid="project-new-session"
             className="hidden text-muted-foreground [@media((hover:hover)_and_(pointer:fine))]:flex"
           >
@@ -5776,11 +5780,11 @@ function ProjectFolderActions({
                 onNavigate(e);
               }}
             >
-              <MessageCirclePlusIcon className="size-3.5" data-icon-size="14" />
+              <BriefcaseBusinessIcon className="size-3.5" data-icon-size="14" />
             </Link>
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">New session in project</TooltipContent>
+        <TooltipContent side="bottom">New Job in project</TooltipContent>
       </Tooltip>
       <ProjectFolderMenu projectName={projectName} onNavigate={onNavigate} actions={actions} />
     </div>
@@ -5825,9 +5829,17 @@ function ProjectFolderMenuItems({
             onNavigate(e);
           }}
         >
-          <MessageCirclePlusIcon className="size-3.5" />
-          New session
+          <BriefcaseBusinessIcon className="size-3.5" />
+          New Job
         </Link>
+      </C.Item>
+      <C.Item
+        data-testid="download-project"
+        disabled={actions.downloadBusy}
+        onSelect={actions.downloadProject}
+      >
+        <DownloadIcon className="size-3.5" />
+        {actions.downloadBusy ? "Preparing project ZIP…" : "Download latest job (ZIP)"}
       </C.Item>
       <C.Item data-testid="rename-project" onSelect={actions.openRename}>
         <PencilIcon className="size-3.5" />
@@ -5879,6 +5891,8 @@ interface ProjectFolderMenuActions {
     last: boolean;
     move: (destination: "up" | "down" | "top" | "bottom") => void;
   };
+  downloadProject?: () => void;
+  downloadBusy?: boolean;
   openRename: () => void;
   openSettings: () => void;
   openDelete: () => void;
@@ -5893,6 +5907,18 @@ function useProjectFolderMenu(
   projectId: string | null,
   icon?: string | null,
 ): { actions: ProjectFolderMenuActions; dialogs: ReactNode } {
+  const [downloadBusy, setDownloadBusy] = useState(false);
+  const downloadProject = useCallback(async () => {
+    if (downloadBusy) return;
+    setDownloadBusy(true);
+    try {
+      await downloadLatestProjectWorkspace(projectName);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not download project");
+    } finally {
+      setDownloadBusy(false);
+    }
+  }, [projectName, downloadBusy]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -5929,6 +5955,8 @@ function useProjectFolderMenu(
 
   const actions = useMemo<ProjectFolderMenuActions>(
     () => ({
+      downloadProject,
+      downloadBusy,
       openRename: () => {
         menuOpenedDialogRef.current = true;
         setRenameValue(projectName);
@@ -5953,7 +5981,7 @@ function useProjectFolderMenu(
         if (menuOpenedDialogRef.current) event.preventDefault();
       },
     }),
-    [projectName],
+    [projectName, downloadProject, downloadBusy],
   );
 
   const dialogs = (

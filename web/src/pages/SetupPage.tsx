@@ -59,7 +59,7 @@ export function SetupPage() {
     setSubmitting(true);
     const result = await setupRequest({ username, password });
     if (result.ok) {
-      // Hard-navigate so identity.ts re-runs against the new session.
+      // Hard-navigate so identity.ts re-runs against the new job.
       window.location.href = withBasePath("/");
       return;
     }

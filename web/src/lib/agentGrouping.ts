@@ -61,11 +61,11 @@ export function isAcpHarnessAgent(
 // desc), so pin the order users expect; any agent not listed here falls
 // after, in server order.
 export const AGENT_DISPLAY_ORDER = [
+  "Pi",
   "Claude Code",
   "Codex",
   "OpenCode",
   "Cursor",
-  "Pi",
   "Kiro",
   "Antigravity",
   "Qwen Code",

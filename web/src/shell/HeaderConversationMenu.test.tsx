@@ -32,9 +32,12 @@ const mocks = vi.hoisted(() => ({
   markUnread: vi.fn(),
   fork: vi.fn(),
   exportTranscript: vi.fn(),
+  downloadWorkspace: vi.fn().mockResolvedValue(undefined),
   triggerDownload: vi.fn(),
   toastError: vi.fn(),
 }));
+
+vi.mock("@/lib/workspaceDownload", () => ({ downloadJobWorkspace: mocks.downloadWorkspace }));
 
 vi.mock("@/hooks/useIsMobileViewport", () => ({
   useIsMobileViewport: () => mocks.isMobile,
@@ -171,6 +174,7 @@ describe("HeaderConversationMenu", () => {
       "Pin",
       "Share",
       "Fork",
+      "Download project (ZIP)",
       "Export",
       "Rename",
       "Mark as unread",
@@ -534,6 +538,7 @@ describe("HeaderConversationMenu", () => {
       "Pin",
       "Share",
       "Fork",
+      "Download project (ZIP)",
       "Export",
       "Rename",
       "Mark as unread",
@@ -556,6 +561,7 @@ describe("HeaderConversationMenu", () => {
       "Pin",
       "Share",
       "Fork",
+      "Download project (ZIP)",
       "Export",
       "Rename",
       "Mark as unread",
@@ -683,4 +689,11 @@ describe("HeaderConversationMenu", () => {
     expect(share).toHaveAttribute("data-disabled");
     expect(share).toHaveAttribute("title", "Sharing is unavailable from a local server.");
   });
+});
+
+it("downloads the current job workspace from the job menu", async () => {
+  renderMenu();
+  openMenu();
+  fireEvent.click(screen.getByTestId("download-job-workspace"));
+  await waitFor(() => expect(mocks.downloadWorkspace).toHaveBeenCalledWith("conv-1"));
 });

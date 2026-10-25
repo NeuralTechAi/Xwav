@@ -266,7 +266,9 @@ import {
   readBackgroundSessionTitlesEnabled,
   writeBackgroundSessionTitlesEnabled,
 } from "@/lib/backgroundSessionTitlesPreferences";
+import { DefaultHarnessControl } from "@/components/DefaultHarnessControl";
 import { SettingsHarnessesSection } from "./settings/SettingsHarnessesSection";
+import { SettingsExtensionsSection } from "./settings/SettingsExtensionsSection";
 import { SettingsCustomAgentsSection } from "./settings/SettingsCustomAgentsSection";
 
 // Admin-only management surfaces, rendered as the Members / Policies settings
@@ -340,6 +342,7 @@ export function SettingsPage() {
       className="[scrollbar-gutter:stable]"
       {...pageWrapperSettings}
     >
+      {section === "extensions" && <SettingsExtensionsSection />}
       {section === "appearance" && <AppearanceSection />}
       {section === "general" && <GeneralSection />}
       {section === "harnesses" && <SettingsHarnessesSection />}
@@ -1237,6 +1240,9 @@ function GitSection() {
           </div>
         )}
       </SettingsGroup>
+      <SettingsGroup title="GitHub account">
+        <GithubIntegrationControl />
+      </SettingsGroup>
     </Section>
   );
 }
@@ -1339,6 +1345,14 @@ function GithubIntegrationControl() {
   if (status === null) {
     return <p className="text-sm text-muted-foreground">GitHub status is unavailable.</p>;
   }
+  if (!status.enabled)
+    return (
+      <p className="text-sm text-muted-foreground" role="status">
+        GitHub App sign-in is not configured on this server. Configure a GitHub App to enable
+        browser sign-in and per-user repository access in new sandboxes. Existing Git and gh logins
+        on connected hosts can still be used.
+      </p>
+    );
 
   return (
     <div className="flex flex-col gap-4">
@@ -1416,7 +1430,7 @@ function GithubIntegrationControl() {
 }
 
 /**
- * Global default: start every new session in a git workspace in a fresh
+ * Global default: start every new job in a git workspace in a fresh
  * randomly-named worktree, regardless of which folder the composer lands in.
  * Per-project "Random worktree" settings override this in either direction —
  * this only decides the default for workspaces a project hasn't set a choice on.
@@ -1434,7 +1448,7 @@ function AlwaysUseWorktreeControl() {
         label="Always use a random worktree"
         labelId={labelId}
         className="flex-1"
-        description="Start new sessions in a fresh randomly-named git worktree in any git workspace. A project's own Random worktree setting overrides this."
+        description="Start new jobs in a fresh randomly-named git worktree in any git workspace. A project's own Random worktree setting overrides this."
         descriptionClassName="text-ui"
       />
       <Switch
@@ -1727,7 +1741,7 @@ function BackgroundSessionTitlesControl() {
   return (
     <div className="flex items-start justify-between gap-6">
       <SettingsLabel
-        label="Automatically name new sessions"
+        label="Automatically name new jobs"
         labelId={labelId}
         descriptionId={descriptionId}
         className="flex-1"
@@ -1830,7 +1844,10 @@ function GeneralSection() {
           </div>
         </SettingsGroup>
         <SettingsGroup title="Sessions" testId="settings-group-sessions">
-          <BackgroundSessionTitlesControl />
+          <DefaultHarnessControl />
+          <div className="mt-4 border-t border-border pt-4">
+            <BackgroundSessionTitlesControl />
+          </div>
         </SettingsGroup>
         <SettingsGroup title="Terminal" testId="settings-group-terminal">
           <TerminalClipboardControl />

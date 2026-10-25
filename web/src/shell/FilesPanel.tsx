@@ -255,7 +255,7 @@ export function FilesPanel({
   // is "failed", set by `_on_runner_disconnect` server-side when the
   // runner's tunnel drops (and also client-side in chatStore when the
   // SSE stream itself dies). Either way the session can't be reached and
-  // a message reconnects it. A brand-new session whose runner just hasn't
+  // a message reconnects it. A brand-new job whose runner just hasn't
   // started is never "failed", so this distinguishes "asleep, send a
   // message to reconnect" from a fresh session that should show the
   // normal empty state — a real liveness signal, not an inference from

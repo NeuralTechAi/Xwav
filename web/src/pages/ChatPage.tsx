@@ -1,3 +1,4 @@
+import { ComposerPreviewLink } from "@/components/composer/ComposerPreviewLink";
 import { SelectionPopup } from "@/components/chat/SelectionPopup";
 import { useLoadedConversations } from "@/hooks/useSidebarData";
 import { useConversationRedirect } from "@/hooks/useConversationRedirect";
@@ -813,10 +814,10 @@ export function ChatPage() {
   // Browser tab title: "● Title" while the main session is working so
   // background tabs signal parent activity without duplicating child-session
   // badges from the sidebar/Agents rail. An open-but-untitled session
-  // (no synthesized title yet) reads as "New session" to match its
+  // (no synthesized title yet) reads as "New Job" to match its
   // sidebar row; the landing page (no active session) stays "Xwav".
   // Sub-agent (child) sessions are absent from the sidebar list, so
-  // ``activeConv`` is null and the title would otherwise read "New session";
+  // ``activeConv`` is null and the title would otherwise read "New Job";
   // name the tab after the sub-agent instead, mirroring the header.
   const subAgentTabTitle =
     activeSession?.parentSessionId != null
@@ -1113,7 +1114,7 @@ export function ChatPage() {
         navigate("/");
         return;
       }
-      toast.error("Couldn't open a new session in this project. Please try again.");
+      toast.error("Couldn't open a new job in this project. Please try again.");
     }
   }, [newSessionProjectId, newSessionProjectLabel, navigate]);
 
@@ -3574,6 +3575,7 @@ function ComposerImpl(
             SubagentComposerTray). Truthy (not just non-null) so an empty
             label never peeks a nameless tray. */}
         {subAgentLabel ? <SubagentComposerTray label={subAgentLabel} /> : null}
+        <ComposerPreviewLink sessionId={conversationId} />
         <ComposerWorkspaceBar
           data-testid="composer-workspace-controls"
           className={cn(

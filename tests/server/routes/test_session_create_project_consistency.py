@@ -564,3 +564,98 @@ async def test_import_with_unowned_or_unknown_project_is_404(
         )
         assert response.status_code == 404, response.text
         assert "Project not found" in response.text
+
+
+@pytest.mark.parametrize(
+    "explicit", [{}, {"workspace": None}, {"workspaces": ["https://github.com/org/override"]}]
+)
+async def test_isolated_project_defaults_clone_source_without_machine_paths(
+    project_create_client: httpx.AsyncClient, db_uri: str, explicit: dict
+) -> None:
+    project_id = await _project(
+        project_create_client,
+        {
+            "agent_id": CUSTOM_AGENT_ID,
+            "workspace": "/private/shared",
+            "repository_url": "https://github.com/org/project#main",
+            "git": {"branch": "legacy"},
+        },
+    )
+    body = ProjectSessionCreateRequest(project_id=project_id, host_type="managed", **explicit)
+    result = await resolve_project_session_create(
+        body=body,
+        user_id=ALICE,
+        project_store=SqlAlchemyProjectStore(db_uri),
+        sandbox_isolation=True,
+    )
+    assert result.body.host_type == "managed"
+    assert result.body.host_id is None
+    assert result.body.git is None
+    if not explicit:
+        assert result.body.workspace == "https://github.com/org/project#main"
+    elif "workspace" in explicit:
+        assert result.body.workspace is None
+    else:
+        assert result.body.workspaces == explicit["workspaces"]
+
+
+async def test_isolation_rejects_explicit_shared_directory(
+    project_create_client: httpx.AsyncClient,
+    db_uri: str,
+) -> None:
+    from omnigent.errors import OmnigentError
+
+    project_id = await _project(project_create_client, {"agent_id": CUSTOM_AGENT_ID})
+    with pytest.raises(OmnigentError):
+        await resolve_project_session_create(
+            body=ProjectSessionCreateRequest(project_id=project_id, workspace="/shared"),
+            user_id=ALICE,
+            project_store=SqlAlchemyProjectStore(db_uri),
+            sandbox_isolation=True,
+        )
+
+
+async def test_source_folder_project_keeps_selected_host_and_workspace(
+    project_create_client: httpx.AsyncClient, db_uri: str
+) -> None:
+    project_id = await _project(
+        project_create_client,
+        {
+            "agent_id": CUSTOM_AGENT_ID,
+            "source_folder": True,
+            "host_id": "chosen-host",
+            "workspace": "/work/my-app",
+        },
+    )
+    result = await resolve_project_session_create(
+        body=ProjectSessionCreateRequest(project_id=project_id),
+        user_id=ALICE,
+        project_store=SqlAlchemyProjectStore(db_uri),
+        sandbox_isolation=True,
+    )
+    assert result.body.host_type == "external"
+    assert result.body.host_id == "chosen-host"
+    assert result.body.workspace == "/work/my-app"
+
+
+async def test_source_folder_project_can_explicitly_start_a_managed_job(
+    project_create_client: httpx.AsyncClient, db_uri: str
+) -> None:
+    project_id = await _project(
+        project_create_client,
+        {
+            "agent_id": CUSTOM_AGENT_ID,
+            "source_folder": True,
+            "host_id": "chosen-host",
+            "workspace": "/work/my-app",
+        },
+    )
+    result = await resolve_project_session_create(
+        body=ProjectSessionCreateRequest(project_id=project_id, host_type="managed"),
+        user_id=ALICE,
+        project_store=SqlAlchemyProjectStore(db_uri),
+        sandbox_isolation=True,
+    )
+    assert result.body.host_type == "managed"
+    assert result.body.host_id is None
+    assert result.body.workspace is None

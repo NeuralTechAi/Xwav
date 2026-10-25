@@ -155,10 +155,7 @@ function shortcutGroupsFor(
     if (group.title === "General") {
       return {
         ...group,
-        items: [
-          { label: "Start a new session", keys: newSessionShortcutKeys(native) },
-          ...group.items,
-        ],
+        items: [{ label: "Start a new job", keys: newSessionShortcutKeys(native) }, ...group.items],
       };
     }
     if (group.title === "In chats" && !preventsKeyboardSubmit) {

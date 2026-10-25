@@ -136,6 +136,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Standalone benchmark optimizer; never selected as an interactive chat executor.
+harness2 = [
+    "harness2 @ git+https://github.com/google-research/harness2.git@1cfe254e8d25b15f37048c3730134686abe60335 ; python_version < '3.14' and sys_platform == 'linux'",
+]
 # Retained as no-op aliases so existing `--extra` invocations keep
 # working; the underlying packages are now default deps above.
 claude-sdk = []
@@ -458,7 +462,8 @@ where = ["."]
 include = ["omnigent*"]
 
 [tool.setuptools.package-data]
-"omnigent.native_skills" = ["*.json", "skills/**/*"]
+"omnigent" = ["release_templates/*.yml", "release_templates/*.py"]
+"omnigent.native_skills" = ["*.json", "*.cjs", "skills/**/*"]
 "omnigent.db" = ["alembic.ini"]
 "omnigent.db.migrations" = ["script.py.mako"]
 "omnigent.resources.examples" = ["*.yaml", "*.sh", "debby/**/*", "polly/**/*"]

@@ -2,7 +2,7 @@ import type { Branding } from "./capabilities";
 import { useServerInfo } from "./CapabilitiesContext";
 
 export const DEFAULT_APP_NAME = "Xwav";
-export const DEFAULT_HEADING = "What should we build?";
+export const DEFAULT_HEADING = "Start your next task.";
 
 const EMPTY_BRANDING: Branding = {
   app_name: null,

@@ -195,8 +195,8 @@ describe("CommandPalette — sessions", () => {
 
     expect(screen.getByText("Fix the parser")).toBeTruthy();
     expect(screen.getByText("research-agent")).toBeTruthy();
-    // Null title → conversationDisplayLabel's "New session" fallback.
-    expect(screen.getByText("New session")).toBeTruthy();
+    // Null title → conversationDisplayLabel's "New Job" fallback.
+    expect(screen.getByText("New Job")).toBeTruthy();
   });
 
   it("navigates to the session and closes when an item is selected", () => {

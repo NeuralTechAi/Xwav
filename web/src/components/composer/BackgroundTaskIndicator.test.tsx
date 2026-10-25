@@ -173,7 +173,7 @@ describe("BackgroundTaskIndicator", () => {
     expect(badge("2 background tasks still running")).toBeInTheDocument();
   });
 
-  it("does not send focus to the new session's trigger when a switch closes the panel", async () => {
+  it("does not send focus to the new job's trigger when a switch closes the panel", async () => {
     // WHY: the switch-close goes through the store effect, not a user gesture;
     // with focus still inside the panel, Radix's default close-autofocus would
     // yank it to the NEW session's trigger (Sol P1). Focus must drop neutrally.
@@ -183,7 +183,7 @@ describe("BackgroundTaskIndicator", () => {
     const dialog = screen.getByRole("dialog");
     expect(dialog.contains(document.activeElement)).toBe(true);
 
-    act(() => setBackground(1, [{ description: "New session task" }], "conv-new"));
+    act(() => setBackground(1, [{ description: "New Job task" }], "conv-new"));
     await flushRadix();
 
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -205,7 +205,7 @@ describe("BackgroundTaskIndicator", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     screen.getByTestId("composer").focus();
-    act(() => setBackground(1, [{ description: "New session task" }], "conv-new"));
+    act(() => setBackground(1, [{ description: "New Job task" }], "conv-new"));
     await flushRadix();
 
     expect(screen.queryByRole("dialog")).toBeNull();

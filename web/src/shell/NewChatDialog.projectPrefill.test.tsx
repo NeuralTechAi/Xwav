@@ -33,7 +33,7 @@ import type * as AgentLabelsModule from "@/lib/agentLabels";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { ReactNode, AnchorHTMLAttributes } from "react";
 
 import { authenticatedFetch } from "@/lib/identity";
 import type { Host } from "@/hooks/useHosts";
@@ -62,6 +62,9 @@ const REPO = "/Users/corey/projects/alpha";
 // screen stays mounted; only the param changes).
 let searchParams = new URLSearchParams("project=Alpha");
 vi.mock("@/lib/routing", () => ({
+  Link: ({ to, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { to: string }) => (
+    <a href={to} {...props} />
+  ),
   useNavigate: () => navigateMock,
   useSearchParams: () => [searchParams, vi.fn()],
 }));
@@ -213,7 +216,7 @@ function renderLanding(): { rerender: (ui: ReactNode) => void; unmount: () => vo
 }
 
 /** Same as renderLanding, but with the managed-sandbox host option enabled. */
-function renderSandboxLanding(): { rerender: (ui: ReactNode) => void } {
+function renderSandboxLanding(projectIsolation = false): { rerender: (ui: ReactNode) => void } {
   const info: ServerInfo = {
     accounts_enabled: false,
     single_user: false,
@@ -228,7 +231,7 @@ function renderSandboxLanding(): { rerender: (ui: ReactNode) => void } {
     server_version: null,
     smart_routing_enabled: false,
     smart_routing_sources: { external: false, oss: false },
-    features: { harness_install: false },
+    features: { harness_install: false, project_sandbox_isolation: projectIsolation },
     harness_install_enabled: false,
     installable_harnesses: [],
     dictation_available: false,
@@ -996,7 +999,7 @@ describe("NewChatLandingScreen project prefill", () => {
 });
 
 // The user-global "always use a worktree" default (Settings › Git, stored in
-// localStorage) makes new sessions in any git workspace start in a fresh
+// localStorage) makes new jobs in any git workspace start in a fresh
 // worktree. Precedence: a project's explicit `use_worktree` (true OR false)
 // wins; an unset project falls through to this global default. These cases pin
 // the full global × project matrix.
@@ -1126,4 +1129,58 @@ describe("NewChatLandingScreen global always-use-worktree default", () => {
     expect(body.workspace).toBe(REPO);
     expect(body.git).toBeUndefined();
   });
+});
+
+describe("isolated project jobs", () => {
+  it("honors an explicitly selected source-folder project on its connected computer", async () => {
+    setProjectConfig({ host_id: "host_1", workspace: REPO, source_folder: true });
+    renderSandboxLanding(true);
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-workspace-chip")).toHaveTextContent("alpha"),
+    );
+    expect(screen.queryByTestId("project-sandbox-notice")).toBeNull();
+    const body = await submitAndReadBody();
+    expect(body.host_type).not.toBe("managed");
+    expect(body.host_id).toBe("host_1");
+    // The server fills the workspace from the stored project defaults.
+    expect(body.workspace).toBeUndefined();
+  });
+
+  it("forces a fresh sandbox and clones the project repository instead of its shared path", async () => {
+    setProjectConfig({
+      host_id: "host_1",
+      workspace: REPO,
+      repository_url: "https://github.com/org/alpha",
+    });
+    renderSandboxLanding(true);
+    expect(await screen.findByTestId("project-sandbox-notice")).toHaveTextContent("own sandbox");
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-repo-chip")).toHaveTextContent("alpha"),
+    );
+    const body = await submitAndReadBody();
+    expect(body.host_type).toBe("managed");
+    expect(body.host_id).toBeUndefined();
+    // The server provisions a fresh host when no reusable host id is sent.
+    expect(body.host_id).toBeUndefined();
+    expect(body.workspaces).toEqual(["https://github.com/org/alpha"]);
+    expect(body.workspace).toBeNull();
+    expect(body.git).toBeNull();
+  });
+});
+
+it("seeds each isolated project's own repository when switching in place", async () => {
+  setProjectConfig({ repository_url: "https://github.com/org/alpha" });
+  const { rerender } = renderSandboxLanding(true);
+  await waitFor(() =>
+    expect(screen.getByTestId("new-chat-landing-repo-chip")).toHaveTextContent("alpha"),
+  );
+  setProjectConfig({ repository_url: "https://github.com/org/beta" });
+  searchParams = new URLSearchParams("project=Beta");
+  rerender(<NewChatLandingScreen />);
+  await waitFor(() =>
+    expect(screen.getByTestId("new-chat-landing-repo-chip")).toHaveTextContent("beta"),
+  );
+  const body = await submitAndReadBody();
+  expect(body.workspaces).toEqual(["https://github.com/org/beta"]);
+  expect(body.project_id).toBe("proj_beta");
 });

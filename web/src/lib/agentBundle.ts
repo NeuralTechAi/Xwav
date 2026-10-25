@@ -33,6 +33,8 @@ export interface AgentBundleInput {
   model: string;
   /** MCP server declarations to include as inline tools entries. */
   mcpServers?: MCPServerInput[];
+  /** Portable skill instructions bundled with this reusable agent. */
+  skills?: { name: string; content: string }[];
 }
 
 /**
@@ -45,7 +47,7 @@ export interface AgentBundleInput {
 export async function buildAgentBundle(input: AgentBundleInput): Promise<File> {
   // Build config.yaml content
   const lines: string[] = ["spec_version: 1", ""];
-  lines.push(`name: ${input.name}`);
+  lines.push(`name: ${yamlQuote(input.name)}`);
   if (input.description) {
     lines.push(`description: ${yamlQuote(input.description)}`);
   }
@@ -53,9 +55,9 @@ export async function buildAgentBundle(input: AgentBundleInput): Promise<File> {
 
   lines.push("executor:");
   lines.push("  type: omnigent");
-  lines.push(`  model: ${input.model}`);
+  lines.push(`  model: ${yamlQuote(input.model)}`);
   lines.push("  config:");
-  lines.push(`    harness: ${input.harness}`);
+  lines.push(`    harness: ${yamlQuote(input.harness)}`);
   lines.push("");
 
   lines.push("tools:");
@@ -65,7 +67,7 @@ export async function buildAgentBundle(input: AgentBundleInput): Promise<File> {
   // Inline MCP server declarations (parsed by _parse_inline_mcp_servers).
   if (input.mcpServers?.length) {
     for (const mcp of input.mcpServers) {
-      lines.push(`  ${mcp.name}:`);
+      lines.push(`  ${yamlQuote(mcp.name)}:`);
       lines.push("    type: mcp");
       if (mcp.transport === "stdio") {
         if (mcp.command) lines.push(`    command: ${yamlQuote(mcp.command)}`);
@@ -106,6 +108,20 @@ export async function buildAgentBundle(input: AgentBundleInput): Promise<File> {
     files.push({ name: "AGENTS.md", content: new TextEncoder().encode(input.instructions) });
   }
 
+  const names = new Set<string>();
+  for (const skill of input.skills ?? []) {
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(skill.name))
+      throw new Error("Skill names must use 1–64 letters, numbers, hyphens or underscores.");
+    if (names.has(skill.name.toLowerCase())) throw new Error(`Duplicate skill: ${skill.name}`);
+    names.add(skill.name.toLowerCase());
+    if (!skill.content.trim()) throw new Error(`${skill.name}: skill instructions are empty.`);
+    if (new TextEncoder().encode(skill.content).length > 256_000)
+      throw new Error(`${skill.name}: skill instructions exceed 256 KB.`);
+    files.push({
+      name: `skills/${skill.name}/SKILL.md`,
+      content: new TextEncoder().encode(skill.content),
+    });
+  }
   const tarBytes = createTar(files);
   const gzipped = await gzip(tarBytes);
   return new File([gzipped.buffer as ArrayBuffer], "agent.tar.gz", {

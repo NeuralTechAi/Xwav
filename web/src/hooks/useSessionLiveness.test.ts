@@ -225,7 +225,7 @@ describe("useSessionLiveness — derivation truth table", () => {
 
   describe("startup grace (fresh session, runner not yet registered)", () => {
     it("starting for a just-created session whose runner is offline", () => {
-      // A brand-new session's runner hasn't registered its tunnel yet, so the
+      // A brand-new job's runner hasn't registered its tunnel yet, so the
       // poll reads `false` — but within the grace window that's cold-boot, not
       // stranded. Without the grace this would be local_stranded (host null)
       // and flash a reconnect banner over a session that's simply starting.

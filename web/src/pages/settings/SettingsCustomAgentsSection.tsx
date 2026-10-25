@@ -271,7 +271,7 @@ export function SettingsCustomAgentsSection() {
           emptyText={
             search
               ? "No matching agents in the loaded results."
-              : "No custom agents yet. Create an agent to keep it available for new sessions."
+              : "No custom agents yet. Create an agent to keep it available for new jobs."
           }
         />
       </section>

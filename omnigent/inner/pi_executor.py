@@ -2197,6 +2197,13 @@ class PiExecutor(Executor):
         # ``_build_env_and_dir`` copies ``self._extra_args`` so this
         # extension is read-only after init.
         self._extra_args.extend(_resolve_pi_skill_args(skills_filter, bundle_dir))
+        from omnigent.native_skills.pi import pi_native_skill_launch
+
+        native_skill_args, native_skill_env = pi_native_skill_launch(
+            skills_filter, self._pi_version
+        )
+        self._extra_args.extend(native_skill_args)
+        self._env.update(native_skill_env)
         self._extra_args.extend(_resolve_pi_bundle_extension_args(bundle_dir))
         # The bundle-root context file is an automatic context file like the
         # workspace ones Pi discovers, so ``context_files=False`` drops it too.
@@ -2237,7 +2244,14 @@ class PiExecutor(Executor):
             os_env,
             cwd,
             spawn_env_names=[*self._env, "PI_CODING_AGENT_DIR"],
-            extra_read_roots=_pi_bundle_resource_roots(bundle_dir, self._extra_args),
+            extra_read_roots=(
+                _pi_bundle_resource_roots(bundle_dir, self._extra_args)
+                + (
+                    [pathlib.Path(__file__).parents[1] / "native_skills"]
+                    if native_skill_args
+                    else []
+                )
+            ),
         )
         self._pi_launch_path = sandboxed.launch_path
         self._sandboxed = sandboxed.sandboxed

@@ -54,6 +54,7 @@ from omnigent.cli_config import (
     _warn_missing_harness_dependencies,
 )
 from omnigent.cli_diagnostics import printable as _printable
+from omnigent.cli_harness2 import harness2 as _harness2_group
 from omnigent.cli_invocation import WRAPPER_COMMAND_ENV, cli_invocation
 from omnigent.cli_native import register_native_commands as _register_native_commands
 from omnigent.cli_sandbox import lakebox as _lakebox_alias_group
@@ -915,7 +916,7 @@ def _bundled_example_path(name: str) -> str:
 def _pick_first_run_harness() -> _FirstRunPlan | None:
     """Pick the harness a bare first ``run`` should launch, by configured creds.
 
-    Priority Claude → Codex → Pi over the ambient-merged config (a detected env
+    Priority Pi → Claude → Codex over the ambient-merged config (a detected env
     key / CLI login counts as configured). Claude gets the bundled polly
     orchestrator as its default agent; Codex / Pi launch a bare harness REPL.
     Shared with ``configure harnesses`` via
@@ -932,12 +933,12 @@ def _pick_first_run_harness() -> _FirstRunPlan | None:
     )
 
     config = effective_config_with_detected(load_config())
+    if default_provider_for_harness(config, "pi") is not None:
+        return _FirstRunPlan(harness="pi", agent=None)
     if default_provider_for_harness(config, "claude-sdk") is not None:
         return _FirstRunPlan(harness="claude-sdk", agent=_bundled_example_path("polly"))
     if default_provider_for_harness(config, "codex") is not None:
         return _FirstRunPlan(harness="codex", agent=None)
-    if default_provider_for_harness(config, "pi") is not None:
-        return _FirstRunPlan(harness="pi", agent=None)
     # Kimi authenticates against its own backend (``kimi login`` OAuth or a
     # Moonshot API key) rather than the ambient-detected provider config, so
     # ``default_provider_for_harness`` can't gate it. Fall back to "binary
@@ -954,16 +955,16 @@ def _resolve_first_run_plan() -> _FirstRunPlan | None:
     """Resolve the harness + default agent for a bare ``omnigent run``.
 
     Adopts ambient-detected credentials, then picks a harness from what's
-    configured (Claude→polly / Codex / Pi). When nothing is configured,
+    configured (Pi / Claude→polly / Codex). When nothing is configured,
     prints a notice, drops the user into ``configure harnesses``, then
     re-checks once.
 
     The pick is **deliberately not persisted** as a global default: it is
     derived state, recomputed on every bare ``run`` from the *current*
-    credentials. So a user who starts with only Codex (→ a codex REPL) and
-    later adds Claude is promoted to polly on their next bare ``run`` —
-    keeping polly as the primary experience — rather than being pinned to
-    the earlier fallback. An *explicit* default (a user-set global
+    credentials. Pi is preferred whenever its provider is configured; users
+    without a Pi-compatible provider keep the configured Claude or Codex
+    fallback. Adding Pi credentials changes the next bare launch rather than
+    pinning the user to an earlier fallback. An *explicit* default (a user-set global
     ``harness`` / ``default_agent``, or ``run <agent>`` / ``--harness``)
     still short-circuits this path upstream and is always honored.
 
@@ -14445,6 +14446,7 @@ _register_native_commands(cli)
 
 
 cli.add_command(_skills_group)
+cli.add_command(_harness2_group)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """Tests for omnigent.onboarding.ambient — machine credential detection.
 
 Detection reads the environment, two CLI-login files under ``$HOME``, a single
-localhost TCP probe for Ollama, and — on macOS only — a ``claude auth status``
+localhost model-capability probes for Ollama, and — on macOS only — a ``claude auth status``
 fallback for the Keychain-stored Claude credential. These tests redirect
 ``$HOME`` to a tmp dir, control the environment explicitly, and monkeypatch
 both :func:`omnigent.onboarding.ambient._ollama_reachable` and
@@ -1032,3 +1032,32 @@ def test_claude_managed_model_picker_reads_replacement_options(tmp_path: Path) -
         ("gateway-opus", "Opus"),
         ("gateway-sonnet", "Sonnet"),
     )
+
+
+@pytest.mark.parametrize(
+    "capabilities,expected", [(["embedding"], False), (["completion", "tools"], True), ([], False)]
+)
+def test_ollama_requires_generation_capability(monkeypatch, capabilities, expected):
+    from unittest.mock import MagicMock
+
+    connection = MagicMock()
+    tags = MagicMock(status=200)
+    tags.read.return_value = json.dumps({"models": [{"name": "installed-model"}]}).encode()
+    details = MagicMock(status=200)
+    details.read.return_value = json.dumps({"capabilities": capabilities}).encode()
+    connection.getresponse.side_effect = [tags, details]
+    monkeypatch.setattr(ambient.http.client, "HTTPConnection", lambda *args, **kwargs: connection)
+    assert ambient._ollama_reachable() is expected
+    connection.close.assert_called_once()
+
+
+@pytest.mark.parametrize("payload", [{"models": []}, {"models": "invalid"}, [], None])
+def test_ollama_empty_or_malformed_catalog_is_not_chat_provider(monkeypatch, payload):
+    from unittest.mock import MagicMock
+
+    connection = MagicMock()
+    response = MagicMock(status=200)
+    response.read.return_value = json.dumps(payload).encode()
+    connection.getresponse.return_value = response
+    monkeypatch.setattr(ambient.http.client, "HTTPConnection", lambda *args, **kwargs: connection)
+    assert not ambient._ollama_reachable()

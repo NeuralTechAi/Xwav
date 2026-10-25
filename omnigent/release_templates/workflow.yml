@@ -1,0 +1,95 @@
+name: Xwav release
+run-name: xwav-${{ inputs.request_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        required: true
+        type: string
+      source_sha:
+        required: true
+        type: string
+      target:
+        required: true
+        type: choice
+        options: [web, android, ios, windows]
+      operation:
+        required: true
+        type: choice
+        options: [build, deploy]
+      channel:
+        required: true
+        type: choice
+        default: testing
+        options: [testing, production]
+      provider:
+        type: string
+        default: vercel
+      site:
+        type: string
+      accept_android_licenses:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: xwav-${{ inputs.request_id }}
+  cancel-in-progress: false
+jobs:
+  release:
+    timeout-minutes: 45
+    runs-on: ${{ inputs.target == 'ios' && 'macos-15' || inputs.target == 'windows' && 'windows-2022' || 'ubuntu-24.04' }}
+    environment: ${{ inputs.operation == 'build' && 'xwav-build' || inputs.channel == 'production' && 'xwav-production' || 'xwav-testing' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.source_sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        if: inputs.target == 'android'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: ruby/setup-ruby@v1
+        if: inputs.operation == 'deploy' && (inputs.target == 'android' || inputs.target == 'ios')
+        with:
+          ruby-version: '3.3'
+      - name: Install store uploader
+        if: inputs.operation == 'deploy' && (inputs.target == 'android' || inputs.target == 'ios')
+        run: gem install fastlane --version 2.228.0 --no-document
+      - name: Build, sign and optionally publish
+        shell: bash
+        run: python .xwav/cloud/entry.py
+        env:
+          XWAV_REQUEST: ${{ toJSON(inputs) }}
+          XWAV_ANDROID_KEYSTORE_B64: ${{ secrets.XWAV_ANDROID_KEYSTORE_B64 }}
+          XWAV_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.XWAV_ANDROID_KEYSTORE_PASSWORD }}
+          XWAV_ANDROID_KEY_ALIAS: ${{ secrets.XWAV_ANDROID_KEY_ALIAS }}
+          XWAV_ANDROID_KEY_PASSWORD: ${{ secrets.XWAV_ANDROID_KEY_PASSWORD }}
+          XWAV_GOOGLE_PLAY_JSON: ${{ secrets.XWAV_GOOGLE_PLAY_JSON }}
+          XWAV_IOS_CERTIFICATE_B64: ${{ secrets.XWAV_IOS_CERTIFICATE_B64 }}
+          XWAV_IOS_CERTIFICATE_PASSWORD: ${{ secrets.XWAV_IOS_CERTIFICATE_PASSWORD }}
+          XWAV_IOS_PROFILE_B64: ${{ secrets.XWAV_IOS_PROFILE_B64 }}
+          XWAV_IOS_EXPORT_OPTIONS_B64: ${{ secrets.XWAV_IOS_EXPORT_OPTIONS_B64 }}
+          XWAV_APPLE_API_JSON: ${{ secrets.XWAV_APPLE_API_JSON }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          XWAV_STAGING_CONFIRMED: ${{ vars.XWAV_STAGING_CONFIRMED }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xwav-${{ inputs.request_id }}
+          path: .xwav/cloud-export/*
+          if-no-files-found: error
+          retention-days: 7

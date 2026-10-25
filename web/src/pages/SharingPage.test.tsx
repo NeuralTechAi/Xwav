@@ -315,8 +315,8 @@ describe("SharingPage", () => {
     });
   });
 
-  describe("default sharing for new sessions", () => {
-    const TOGGLE = "Share new sessions by default";
+  describe("default sharing for new jobs", () => {
+    const TOGGLE = "Share new jobs by default";
     const GROUP = "Automatically share";
 
     it("shows only the scope options when automatic sharing is enabled", async () => {
@@ -462,7 +462,7 @@ describe("SharingPage", () => {
       expect(toggle).toBeDisabled();
       expect(toggle).not.toBeChecked();
       expect(screen.getByText("Turn sharing on to use public access.")).toBeInTheDocument();
-      const defaultToggle = screen.getByRole("switch", { name: "Share new sessions by default" });
+      const defaultToggle = screen.getByRole("switch", { name: "Share new jobs by default" });
       expect(defaultToggle).toBeDisabled();
       expect(defaultToggle).not.toBeChecked();
       expect(screen.queryByRole("group", { name: "Automatically share" })).not.toBeInTheDocument();

@@ -10,6 +10,18 @@ and steers messages while the agent is busy.
 
 ## Sub-features
 
+- `launch-goal-plan`: on the landing composer, Add → Session → Goal saves an
+  editable completion condition without submitting the draft. Plan toggles native
+  plan mode when available, otherwise adds a request to plan before changing state.
+  Both survive a settings detour and are included with the first task. Portable
+  planning is a prompt instruction; native approval controls remain authoritative.
+
+
+- `xwav-workbench`: the Xwav landing uses draft-only task starters, a desktop
+  navigation rail, and a stacked mobile layout. Test both themes and viewports
+  with `tests/e2e_ui/sessions/test_xwav_workbench.py`; existing session composer
+  permission and submit behaviors remain covered by the scenarios below.
+
 - `offline-hosts`: the new-session host picker keeps other offline hosts collapsed,
   revealing five at a time in server recency order in a scrollable list. The selected
   offline host and desktop reconnect action stay visible. Closing the menu resets it.
@@ -487,3 +499,10 @@ Other connection providers alone do not enable the managed MCP picker.
   server when available. A verification instance without a transcription engine
   depends on browser support; a missing microphone there does not prove that
   dictation is unavailable on a configured server.
+
+### Project jobs
+
+Navigation calls the composer **New Job**, inbox **Notifications**, and tasks
+**Scheduler**. On sandbox-configured servers, project jobs always launch on a
+fresh managed host; project settings select a clone URL rather than a shared
+machine directory. See [project sandbox configuration](../docs/PROJECT_SANDBOXES.md).

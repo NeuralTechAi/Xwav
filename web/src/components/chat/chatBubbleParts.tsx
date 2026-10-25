@@ -80,6 +80,7 @@ import { useWorkingLabelTick } from "@/hooks/useWorkingLabelTick";
 import { useForkDialog } from "@/shell/ForkDialogContext";
 import { DisabledActionTooltip } from "@/components/DisabledActionTooltip";
 import { InlineImage, SessionImage } from "@/components/SessionImage";
+import { RevertMessageAction } from "@/components/chat/RevertMessageAction";
 import { buildMessageDeepLink } from "@/lib/messageDeepLink";
 import { copyText } from "@/lib/clipboard";
 import { copyMarkdown } from "@/lib/copyMarkdown";
@@ -941,6 +942,11 @@ function UserBubble({ bubble }: { bubble: Extract<Bubble, { kind: "user" }> }) {
                 {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
               </MessageAction>
             )}
+            <RevertMessageAction
+              sessionId={sessionId}
+              itemId={bubble.itemId}
+              disabled={bubble.pending}
+            />
             <MessageAction
               tooltip={isLinkCopied ? "Copied!" : "Copy link"}
               size="icon-xxs"
@@ -1163,6 +1169,11 @@ function AssistantBubble({
                   </MessageAction>
                 </DisabledActionTooltip>
               )}
+              <RevertMessageAction
+                sessionId={conversationId}
+                itemId={bubble.items.find((item) => item.itemId)?.itemId ?? null}
+                disabled={bubble.lifecycle === "streaming"}
+              />
               <MessageAction
                 tooltip={isLinkCopied ? "Copied!" : "Copy link"}
                 size="icon-xxs"

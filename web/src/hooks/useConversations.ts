@@ -2505,7 +2505,7 @@ export async function fetchProjectSessionIds(project: string, limit = 2): Promis
 }
 
 /** One page of the viewer's active sessions in a project, newest-first. */
-async function fetchProjectSessionsPage(
+export async function fetchProjectSessionsPage(
   project: string,
   after?: string,
   limit = 20,
@@ -2634,8 +2634,18 @@ export function useDeleteProject() {
 export function useCreateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ name, icon }: { name: string; icon?: string }) =>
-      apiCreateProject(name, icon ? { icon } : undefined),
+    mutationFn: ({
+      name,
+      icon,
+      config,
+    }: {
+      name: string;
+      icon?: string;
+      config?: ProjectConfig;
+    }) => {
+      const defaults = { ...config, ...(icon ? { icon } : {}) };
+      return apiCreateProject(name, Object.keys(defaults).length ? defaults : undefined);
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
     },

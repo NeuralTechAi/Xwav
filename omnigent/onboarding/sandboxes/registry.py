@@ -164,6 +164,11 @@ def _builtin_contribution() -> SandboxProviderContribution:
                 launcher_class="omnigent.onboarding.sandboxes.blaxel:BlaxelSandboxLauncher",
                 managed_token_ttl_s=7 * 24 * 3600,
             ),
+            "docker": SandboxProviderMetadata(
+                name="docker",
+                launcher_class="omnigent.onboarding.sandboxes.docker:DockerSandboxLauncher",
+                managed_token_ttl_s=7 * 24 * 3600,
+            ),
             "boxlite": SandboxProviderMetadata(
                 name="boxlite",
                 launcher_class="omnigent.onboarding.sandboxes.boxlite:BoxliteSandboxLauncher",

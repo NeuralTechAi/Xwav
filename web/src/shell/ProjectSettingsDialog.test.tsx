@@ -39,9 +39,8 @@ function pickerAgent(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
-vi.mock("@/lib/CapabilitiesContext", () => ({
-  useServerInfo: () => ({ managed_sandboxes_enabled: false, sandbox_provider: null }),
-}));
+const { serverInfoMock } = vi.hoisted(() => ({ serverInfoMock: vi.fn() }));
+vi.mock("@/lib/CapabilitiesContext", () => ({ useServerInfo: serverInfoMock }));
 // The filesystem browser owns its own data-fetching; stub its explicit commit
 // action so this suite can drive the shared dialog without filesystem plumbing.
 vi.mock("./WorkspacePicker", () => ({
@@ -76,6 +75,7 @@ function renderDialog(projectId: string | null = "p_1") {
 }
 
 beforeEach(() => {
+  serverInfoMock.mockReturnValue({ managed_sandboxes_enabled: false, sandbox_provider: null });
   getProjectMock.mockReset();
   updateMock.mockReset();
   createMock.mockReset();
@@ -418,6 +418,28 @@ describe("ProjectSettingsDialog", () => {
     fireEvent.click(screen.getByTestId("project-settings-save"));
     await waitFor(() =>
       expect(updateMock).toHaveBeenCalledWith("p_1", { agent_id: "ag_claude", model: "opus" }),
+    );
+  });
+});
+
+describe("isolated project source", () => {
+  it("saves a repository URL and hides shared machine paths", async () => {
+    serverInfoMock.mockReturnValue({
+      managed_sandboxes_enabled: true,
+      features: { project_sandbox_isolation: true },
+    });
+    getProjectMock.mockResolvedValue({ id: "p_1", name: "Work", config: {} });
+    renderDialog();
+    const input = await screen.findByTestId("project-settings-repository");
+    await waitFor(() => expect(screen.getByTestId("project-settings-save")).toBeEnabled());
+    expect(screen.queryByTestId("project-settings-workspace")).toBeNull();
+    fireEvent.change(input, { target: { value: "https://github.com/org/project#main" } });
+    fireEvent.click(screen.getByTestId("project-settings-save"));
+    await waitFor(() =>
+      expect(updateMock).toHaveBeenCalledWith(
+        "p_1",
+        expect.objectContaining({ repository_url: "https://github.com/org/project#main" }),
+      ),
     );
   });
 });

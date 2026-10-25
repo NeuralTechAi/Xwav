@@ -62,7 +62,7 @@ describe("mergeItemsIntoPages", () => {
     });
     // Untouched row keeps its identity (no needless re-render churn).
     expect(after!.pages[0].data[1]).toBe(before.pages[0].data[1]);
-    // `found` reports the id so the caller doesn't treat it as a new session.
+    // `found` reports the id so the caller doesn't treat it as a new job.
     expect(found).toEqual(new Set(["a"]));
   });
 
@@ -134,7 +134,7 @@ describe("mergeItemsIntoPages", () => {
     const before = data([conv("a")]);
     const items = new Map<string, SessionListWireItem>([
       ["a", { id: "a", title: "t" }],
-      ["zzz", { id: "zzz", title: "new session" }],
+      ["zzz", { id: "zzz", title: "new job" }],
     ]);
 
     const { found } = mergeItemsIntoPages(before, items, DEFAULT_FILTERS, NO_ACTIVE);

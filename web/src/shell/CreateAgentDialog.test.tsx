@@ -145,3 +145,36 @@ describe("CreateAgentDialog", () => {
     expect(screen.getByTestId("create-agent-name")).toHaveValue("");
   });
 });
+
+it("attaches, replaces and removes skill files without duplicate commands", async () => {
+  const onCreate = vi.fn();
+  renderDialog({ onCreate });
+  const content = "---\nname: review\ndescription: Review a diff\n---\nReview carefully.";
+  const file = (body: string) => new File([body], "SKILL.md", { type: "text/markdown" });
+  fireEvent.change(screen.getByLabelText("Skills"), { target: { files: [file(content)] } });
+  expect(await screen.findByText("/review")).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Skills"), {
+    target: { files: [file(content + " Updated.")] },
+  });
+  await waitFor(() => expect(screen.getAllByText("/review")).toHaveLength(1));
+  fireEvent.change(screen.getByTestId("create-agent-name"), { target: { value: "reviewer" } });
+  fireEvent.change(screen.getByTestId("create-agent-model"), { target: { value: "test" } });
+  await waitFor(() => expect(screen.getByTestId("create-agent-submit")).toBeEnabled());
+  fireEvent.click(screen.getByTestId("create-agent-submit"));
+  expect(onCreate).toHaveBeenCalledWith(
+    expect.objectContaining({ skills: [{ name: "review", content: content + " Updated." }] }),
+  );
+  fireEvent.change(screen.getByLabelText("Skills"), { target: { files: [file(content)] } });
+  await screen.findByText("/review");
+  fireEvent.click(screen.getByRole("button", { name: "Remove skill review" }));
+  expect(screen.queryByText("/review")).toBeNull();
+});
+
+it("reports invalid skill frontmatter without adding it", async () => {
+  renderDialog();
+  fireEvent.change(screen.getByLabelText("Skills"), {
+    target: { files: [new File(["no metadata"], "SKILL.md")] },
+  });
+  expect(await screen.findByRole("alert")).toHaveTextContent("frontmatter");
+  expect(screen.queryByRole("button", { name: /Remove skill/ })).toBeNull();
+});

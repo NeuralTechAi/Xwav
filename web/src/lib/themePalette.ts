@@ -8,8 +8,8 @@
 //
 // A palette is applied as a `data-theme` attribute on <html>, so it composes
 // with the mode class: `:root:not(.dark)[data-theme="github"]` is GitHub-light
-// and `.dark[data-theme="github"]` is GitHub-dark. The default "omni" palette
-// carries no data attribute, so selecting it restores the brand look. Everything
+// and `.dark[data-theme="github"]` is GitHub-dark. GitHub is the default. The
+// optional "omni" palette carries no data attribute and restores the brand look. Everything
 // is expressed through the existing CSS custom properties (--background,
 // --primary, --sidebar, …), so a palette re-skins the whole app without any
 // component knowing a theme changed.
@@ -26,11 +26,11 @@ import { getThemeRoots } from "./host.ts";
 
 const STORAGE_KEY = "omnigent:ui-theme-palette";
 
-/** Selectable color palettes. The first entry is the default (brand) look. */
+/** Selectable color palettes, with the default first. */
 export const themePalettes = [
+  "github",
   "omni",
   "dracula",
-  "github",
   "catppuccin",
   "gruvbox",
   "solarized",
@@ -43,8 +43,8 @@ export type ThemePalette = (typeof themePalettes)[number];
 export const themeSelections = [...themePalettes, "custom"] as const;
 export type ThemeSelection = (typeof themeSelections)[number];
 
-/** Default palette: the Omni brand tokens already defined in `:root` / `.dark`. */
-export const DEFAULT_PALETTE: ThemePalette = "omni";
+/** Default palette shared by every Xwav surface. */
+export const DEFAULT_PALETTE: ThemePalette = "github";
 
 /** A few representative colors used to render a palette's preview swatch. */
 export interface PaletteSwatch {
@@ -214,6 +214,64 @@ export interface PaletteMeta {
 // Swatch colors are a hand-picked summary used for mini-previews.
 export const PALETTES: readonly PaletteMeta[] = [
   {
+    id: "github",
+    label: "GitHub",
+    blurb: "Clean neutrals with a signal blue.",
+    light: {
+      bg: "#f6f8fa",
+      card: "#ffffff",
+      accent: "#0969da",
+      border: "#d1d9e0",
+      text: "#1f2328",
+    },
+    dark: { bg: "#0d1117", card: "#161b22", accent: "#58a6ff", border: "#30363d", text: "#e6edf3" },
+    tokens: {
+      light: paletteTokens({
+        background: "#f6f8fa",
+        selectionBackground: "rgba(31, 136, 61, 0.15)",
+        foreground: "#1f2328",
+        card: "#ffffff",
+        cardSolid: "#ffffff",
+        primary: "#1f883d",
+        link: "#0968d9",
+        primaryForeground: "#ffffff",
+        secondary: "#eaeef2",
+        muted: "#eaeef2",
+        mutedForeground: "#59636e",
+        codeBackground: "#eff1f3",
+        accent: "#ddf4ff",
+        accentForeground: "#0550ae",
+        border: "#d1d9e0",
+        borderStrong: "#afb8c1",
+        ring: "#0969da",
+        sidebar: "#f6f8fa",
+        shellBackground: "linear-gradient(180deg, #fbfcfd 0%, #f6f8fa 100%)",
+      }),
+      dark: paletteTokens({
+        background: "#0d1117",
+        selectionBackground: "rgba(35, 134, 54, 0.39)",
+        foreground: "#e6edf3",
+        card: "rgba(22, 27, 34, 0.72)",
+        cardSolid: "#161b22",
+        popover: "rgba(22, 27, 34, 0.9)",
+        primary: "#238636",
+        primaryForeground: "#ffffff",
+        secondary: "#21262d",
+        muted: "#21262d",
+        mutedForeground: "#8b949e",
+        codeBackground: "#1c2128",
+        accent: "#121d2f",
+        accentForeground: "#58a6ff",
+        border: "#30363d",
+        borderStrong: "#444c56",
+        ring: "#58a6ff",
+        sidebar: "rgba(13, 17, 23, 0.75)",
+        sidebarPrimaryForeground: "#0d1117",
+        shellBackground: "linear-gradient(160deg, #0d1117 0%, #0a0e14 100%)",
+      }),
+    },
+  },
+  {
     id: "omni",
     label: "Xwav",
     blurb: "Navy, mint, and periwinkle. The Xwav signature.",
@@ -227,44 +285,44 @@ export const PALETTES: readonly PaletteMeta[] = [
     dark: { bg: "#101923", card: "#182731", accent: "#087F70", border: "#2B3C49", text: "#f4f5f7" },
     tokens: {
       light: paletteTokens({
-        background: "#ffffff",
-        foreground: "#27272a",
+        background: "#f5f6f2",
+        foreground: "#193136",
         card: "#ffffff",
         cardSolid: "#ffffff",
         popoverForeground: "#11171c",
-        primary: "#11171c",
+        primary: "#086b60",
         link: "#1967b5",
         primaryForeground: "#ffffff",
         // Selection is the brand tint that also marks the sidebar's active
         // row, not an opaque primary block (near-black on this palette).
-        selectionBackground: "rgba(8, 127, 112, 0.12)",
+        selectionBackground: "rgba(8, 127, 112, 0.15)",
         selectionForeground: "#075E53",
         secondary: "#eceef1",
         muted: "#0000000f",
-        mutedForeground: "#71717a",
+        mutedForeground: "#3d514d",
         codeBackground: "#0000000f",
         accent: "#d7edfe",
         accentForeground: "#04355d",
         border: "#e4e4e7",
         borderStrong: "#a1a1aa",
-        buttonBorder: "#d6d6d6",
-        ring: "#11171c",
+        buttonBorder: "#c8d6cf",
+        ring: "#086b60",
         brandAccent: "#087F70",
-        sidebar: "#f7fbfa",
+        sidebar: "#eaf0e9",
         sidebarPrimary: "#2272b4",
         sidebarRing: "#2272b4",
         sidebarActive: "rgba(8, 127, 112, 0.12)",
         sidebarActiveForeground: "#075E53",
-        sidebarBackground: "linear-gradient(90deg, #f8fcfb, #eff8f5)",
+        sidebarBackground: "#eaf0e9",
         shellBackground: "var(--background)",
       }),
       dark: paletteTokens({
-        background: "#0e1013",
+        background: "#101b1e",
         foreground: "oklch(0.965 0.003 240)",
-        card: "rgba(31, 39, 45, 0.6)",
-        cardSolid: "#181f25",
+        card: "#19272b",
+        cardSolid: "#19272b",
         popover: "rgba(26, 33, 41, 0.8)",
-        primary: "#e8ecf0",
+        primary: "#95ead6",
         link: "#72b7f5",
         primaryForeground: "#11171c",
         // A lighter mint than the sidebar accent keeps selected text legible.
@@ -275,17 +333,17 @@ export const PALETTES: readonly PaletteMeta[] = [
         secondary: "#1f272d",
         secondaryForeground: "#e8ecf0",
         muted: "color-mix(in srgb, #92a4b3 15%, #262f36)",
-        mutedForeground: "#92a4b3",
+        mutedForeground: "#bdcbc8",
         codeBackground: "oklch(0.38 0.005 240)",
         accent: "#04355d",
         accentForeground: "#4299e0",
         border: "oklch(0.28 0.005 240)",
         borderStrong: "#a1a1aa",
-        buttonBorder: "#d6d6d6",
+        buttonBorder: "#c8d6cf",
         input: "oklch(0.28 0.005 240)",
         ring: "#e8ecf0",
         brandAccent: "#6EE7D2",
-        sidebar: "rgba(17, 23, 28, 0.75)",
+        sidebar: "#142226",
         sidebarPrimary: "oklch(0.64 0.22 254)",
         sidebarPrimaryForeground: "oklch(0.12 0.004 240)",
         sidebarAccent: "oklch(0.245 0.005 240)",
@@ -294,10 +352,8 @@ export const PALETTES: readonly PaletteMeta[] = [
         sidebarRing: "oklch(0.92 0.003 240 / 0.4)",
         sidebarActive: "rgba(110, 231, 210, 0.15)",
         sidebarActiveForeground: "#6EE7D2",
-        sidebarBackground:
-          "linear-gradient(transparent 35%, rgba(48, 108, 99, 0.2)), linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 60%)",
-        shellBackground:
-          "radial-gradient(rgba(110, 231, 210, 0.07), transparent 50%), radial-gradient(at 80% 20%, rgba(137, 169, 255, 0.08), transparent 45%), linear-gradient(145deg, #101f29, #0e1418, #101923)",
+        sidebarBackground: "#142226",
+        shellBackground: "var(--background)",
       }),
     },
   },
@@ -358,64 +414,6 @@ export const PALETTES: readonly PaletteMeta[] = [
         sidebar: "rgba(33, 34, 44, 0.8)",
         shellBackground:
           "radial-gradient(ellipse at 20% 40%, rgba(189, 147, 249, 0.14) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(255, 121, 198, 0.1) 0%, transparent 45%), linear-gradient(160deg, #2a2c3a 0%, #282a36 55%, #21222c 100%)",
-      }),
-    },
-  },
-  {
-    id: "github",
-    label: "GitHub",
-    blurb: "Clean neutrals with a signal blue.",
-    light: {
-      bg: "#f6f8fa",
-      card: "#ffffff",
-      accent: "#0969da",
-      border: "#d1d9e0",
-      text: "#1f2328",
-    },
-    dark: { bg: "#0d1117", card: "#161b22", accent: "#58a6ff", border: "#30363d", text: "#e6edf3" },
-    tokens: {
-      light: paletteTokens({
-        background: "#f6f8fa",
-        selectionBackground: "rgba(31, 136, 61, 0.15)",
-        foreground: "#1f2328",
-        card: "#ffffff",
-        cardSolid: "#ffffff",
-        primary: "#1f883d",
-        link: "#0968d9",
-        primaryForeground: "#ffffff",
-        secondary: "#eaeef2",
-        muted: "#eaeef2",
-        mutedForeground: "#59636e",
-        codeBackground: "#eff1f3",
-        accent: "#ddf4ff",
-        accentForeground: "#0550ae",
-        border: "#d1d9e0",
-        borderStrong: "#afb8c1",
-        ring: "#0969da",
-        sidebar: "#f6f8fa",
-        shellBackground: "linear-gradient(180deg, #fbfcfd 0%, #f6f8fa 100%)",
-      }),
-      dark: paletteTokens({
-        background: "#0d1117",
-        selectionBackground: "rgba(35, 134, 54, 0.39)",
-        foreground: "#e6edf3",
-        card: "rgba(22, 27, 34, 0.72)",
-        cardSolid: "#161b22",
-        popover: "rgba(22, 27, 34, 0.9)",
-        primary: "#238636",
-        primaryForeground: "#ffffff",
-        secondary: "#21262d",
-        muted: "#21262d",
-        mutedForeground: "#8b949e",
-        codeBackground: "#1c2128",
-        accent: "#121d2f",
-        accentForeground: "#58a6ff",
-        border: "#30363d",
-        borderStrong: "#444c56",
-        ring: "#58a6ff",
-        sidebar: "rgba(13, 17, 23, 0.75)",
-        sidebarPrimaryForeground: "#0d1117",
-        shellBackground: "linear-gradient(160deg, #0d1117 0%, #0a0e14 100%)",
       }),
     },
   },
@@ -732,8 +730,8 @@ export function writeThemePalette(palette: ThemeSelection): void {
 
 /**
  * Apply the palette to the DOM by setting `data-theme` on the theme roots.
- * The generated `[data-theme]` blocks re-point the color tokens; the default
- * "omni" palette removes the attribute. This composes with the `.dark` mode
+ * The generated `[data-theme]` blocks re-point the color tokens; the legacy
+ * "omni" brand palette removes the attribute. This composes with the `.dark` mode
  * class untouched.
  *
  * Embedded, `getThemeRoots()` returns both the scope root (matched by the light
@@ -746,7 +744,7 @@ export function applyThemePalette(palette: ThemeSelection): void {
   if (roots.length === 0) return;
   const next = isThemeSelection(palette) ? palette : DEFAULT_PALETTE;
   for (const root of roots) {
-    if (next === DEFAULT_PALETTE) {
+    if (next === "omni") {
       root.removeAttribute("data-theme");
     } else {
       root.setAttribute("data-theme", next);

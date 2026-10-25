@@ -124,6 +124,7 @@ import { PullRequestPanel } from "./PullRequestPanel";
 import { MobilePanelDrawer } from "./MobilePanelDrawer";
 import { isMobileViewport, Sidebar } from "./Sidebar";
 import { SidebarHeaderActions } from "./SidebarHeaderActions";
+import { WorkbenchRail } from "./WorkbenchRail";
 import { useSettingsRoute } from "./settingsNav";
 import { SubagentsPanel } from "./SubagentsPanel";
 import { useRootSessionId, useSession } from "@/hooks/useSession";
@@ -471,7 +472,7 @@ function AppShellImpl() {
   const [githubPanelOpen, setGithubPanelOpen] = useState(false);
   const [sideChatsPanelOpen, setSideChatsPanelOpen] = useState(false);
   // The right "Workspace" rail (WorkspacePanel) remembers its open/closed
-  // state per session. A brand-new session (no saved `open`) follows the
+  // state per session. A brand-new job (no saved `open`) follows the
   // Appearance "Workspace panel" default; reopening a session restores how
   // the user last left it. Toggled via the header's PanelRightIcon, mirroring
   // the sidebar collapse. With no conversation the rail can't render, so the
@@ -686,10 +687,10 @@ function AppShellImpl() {
   // conversation normally, or its immediate parent when inside a sub-agent
   // (whose own row the sidebar omits, so its title falls back to the parent
   // snapshot). The parent title also links back out, replacing the old "Back"
-  // button. A child always gets a title (fallback "New session") so that
+  // button. A child always gets a title (fallback "New Job") so that
   // climb-out does not wait on the parent row or snapshot. Prefer a real
   // list/snapshot title over conversationDisplayLabel — that helper's
-  // "New session" fallback would otherwise shadow a titled snapshot.
+  // "New Job" fallback would otherwise shadow a titled snapshot.
   // Project membership lives only on the list row (`Conversation`), never
   // the snapshot, so a parent outside the loaded window shows no folder.
   const { session: parentSession } = useSession(activeSession?.parentSessionId);
@@ -1117,8 +1118,8 @@ function AppShellImpl() {
     setFilesPanelShowHidden(true);
     // Drop shell interaction state carried from the outgoing session: a
     // still-armed create ref would otherwise auto-focus an unrelated shell in
-    // the new session, and an open "Close shell?" dialog would target a
-    // terminal absent from the new session's list.
+    // the new job, and an open "Close shell?" dialog would target a
+    // terminal absent from the new job's list.
     pendingShellCreateRef.current = null;
     setTerminalPendingClose(null);
     setFileNavigation(undefined);
@@ -2430,6 +2431,7 @@ function AppShellImpl() {
           header — which is taller and also anchored at top-0 — so a centered
           "<thread> — <host>" label here collided with the header's action
           cluster on a narrow window. The strip stays pure drag surface. */}
+            {!isEmbedded && <WorkbenchRail onSearch={handleOpenSearch} />}
             <Sidebar
               open={sidebarOpen}
               onOpen={handleSidebarOpen}

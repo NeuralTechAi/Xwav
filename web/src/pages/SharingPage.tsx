@@ -330,16 +330,15 @@ export function SharingPage() {
                   <BlockedBy reason={defaultPublicBlockedReason}>
                     <div className="flex items-center justify-between gap-4">
                       <SettingsLabel
-                        label="Share new sessions by default"
+                        label="Share new jobs by default"
                         labelId="default-public-label"
                         descriptionId="default-public-description"
                         descriptionClassName="max-md:block"
                         className="flex-1"
                         description={
                           <>
-                            New sessions start with public read access for anyone with the link who
-                            can sign in. Owners can revoke it in Share. Existing sessions are
-                            unchanged.
+                            New Jobs start with public read access for anyone with the link who can
+                            sign in. Owners can revoke it in Share. Existing sessions are unchanged.
                             {!defaultPublicEditable && (
                               <span className="mt-1 block">
                                 Managed by this deployment and can&apos;t be changed here.

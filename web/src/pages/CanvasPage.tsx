@@ -686,8 +686,8 @@ function CanvasSurface({ selectedSessionId }: { selectedSessionId?: string | nul
         <Button
           type="button"
           size="icon-lg"
-          aria-label="New session"
-          title="New session"
+          aria-label="New Job"
+          title="New Job"
           data-testid="canvas-new-session"
           className={cn(
             "absolute bottom-6 right-6 z-10 size-12 rounded-full bg-brand-accent text-white shadow-lg",

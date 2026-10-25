@@ -137,7 +137,7 @@ export function CommandPalette({
         id: "new-chat",
         label: "New chat",
         icon: SquarePenIcon,
-        keywords: ["compose", "start", "new session"],
+        keywords: ["compose", "start", "new job"],
         run: () => navigate("/"),
       },
       {

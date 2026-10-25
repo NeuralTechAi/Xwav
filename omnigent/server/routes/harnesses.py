@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
+from omnigent.cli_harness2 import installation_status
 from omnigent.harness_plugins import harness_catalog, harness_setup_steps_by_spelling
 from omnigent.server.auth import AuthProvider
 from omnigent.server.routes._auth_helpers import require_user
@@ -28,5 +29,10 @@ def create_harnesses_router(*, auth_provider: AuthProvider | None = None) -> API
             "data": harness_catalog(),
             "setup_steps": harness_setup_steps_by_spelling(),
         }
+
+    @router.get("/harnesses/harness2/status")
+    async def harness2_status(request: Request) -> dict[str, Any]:
+        require_user(request, auth_provider)
+        return installation_status()
 
     return router

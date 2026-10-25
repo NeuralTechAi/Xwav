@@ -152,7 +152,7 @@ export function TasksPage() {
     <PageScroll contentClassName="px-4 md:px-6">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold">Automations</h1>
+          <h1 className="text-2xl font-semibold">Scheduler</h1>
           <p className="text-ui text-muted-foreground">
             Run agent sessions on a recurring schedule.
           </p>

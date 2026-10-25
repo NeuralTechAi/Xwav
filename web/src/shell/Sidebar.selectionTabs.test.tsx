@@ -110,7 +110,7 @@ describe("scope filter during selection mode", () => {
     expect(screen.getByText("0 selected")).toBeInTheDocument();
   });
 
-  it("exits selection mode when 'New session' snaps the tab back to mine", () => {
+  it("exits selection mode when 'New Job' snaps the tab back to mine", () => {
     renderSidebar();
 
     // Enter selection mode on the Shared tab and pick the shared session.
@@ -119,7 +119,7 @@ describe("scope filter during selection mode", () => {
     fireEvent.click(screen.getByRole("link", { name: /conv_shared/ }));
     expect(screen.getByText("1 selected")).toBeInTheDocument();
 
-    // "New session" snaps the tab back to "mine" outside the Tabs
+    // "New Job" snaps the tab back to "mine" outside the Tabs
     // onValueChange path; it must still drop selection mode (not strand a
     // stale shared-scope count under the My-sessions header).
     fireEvent.click(screen.getByTestId("new-chat-button"));

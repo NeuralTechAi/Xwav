@@ -17,25 +17,31 @@ export interface CommandGoalDialogProps {
   readOnly: boolean;
   onStartGoal: (condition: string) => void;
   backendLabel?: string;
+  description?: string;
+  submitLabel?: string;
+  initialCondition?: string;
 }
 
-/** Start a vendor goal by sending its native slash command as the next turn. */
+/** Edit a completion condition for a native goal or the first task. */
 export function CommandGoalDialog({
   open,
   onOpenChange,
   readOnly,
   onStartGoal,
   backendLabel = "The agent",
+  description,
+  submitLabel = "Start goal",
+  initialCondition = "",
 }: CommandGoalDialogProps) {
   const [condition, setCondition] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      setCondition("");
+    if (open) {
+      setCondition(initialCondition);
       setError(null);
     }
-  }, [open]);
+  }, [open, initialCondition]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -58,8 +64,8 @@ export function CommandGoalDialog({
               <span>Goal</span>
             </DialogTitle>
             <DialogDescription>
-              {backendLabel} keeps working until this condition is met. Progress and completion
-              appear in the conversation.
+              {description ??
+                `${backendLabel} keeps working until this condition is met. Progress and completion appear in the conversation.`}
             </DialogDescription>
           </DialogHeader>
 
@@ -85,7 +91,7 @@ export function CommandGoalDialog({
 
           <DialogFooter>
             <Button type="submit" disabled={readOnly} data-testid="goal-start">
-              Start goal
+              {submitLabel}
             </Button>
           </DialogFooter>
         </form>

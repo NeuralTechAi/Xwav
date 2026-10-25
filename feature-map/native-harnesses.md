@@ -9,6 +9,13 @@ implements them separately, so a fix for one harness does not reach the others.
 
 ## Sub-features
 
+- `google-harness2`: Settings → Harnesses → Google Harness², or the landing
+  harness picker’s benchmark entry, opens the benchmark workflow. Search includes
+  the Google name. Configured reflects the server runtime, independently of the
+  chat host. Details expose status refresh and copyable benchmark commands.
+  Harness² optimizes benchmarks; it does not launch interactive chat sessions.
+
+
 - `launch-web`: pick the harness in the new-session composer and start a session.
 - `launch-cli`: `omnigent <name>` starts the harness in the user's terminal with
   an Omnigent session behind it.

@@ -100,8 +100,8 @@ describe("FolderTree runner-offline state", () => {
     expect(screen.queryByText(/failed to load/i)).not.toBeInTheDocument();
   });
 
-  it("shows the empty state (not the asleep hint) for a new session that hasn't started", () => {
-    // A new session 503s while connecting but never went "failed" — show
+  it("shows the empty state (not the asleep hint) for a new job that hasn't started", () => {
+    // A new job 503s while connecting but never went "failed" — show
     // the normal empty state, not the asleep alarm.
     renderTree({ isError: true, error: new RunnerOfflineError(), runnerWentOffline: false });
 

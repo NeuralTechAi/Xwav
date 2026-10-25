@@ -19,6 +19,20 @@ function agent(overrides: Partial<AvailableAgent> & Pick<AvailableAgent, "name">
 }
 
 describe("selectableSessionAgents", () => {
+  it("ranks Pi first for a fresh session without changing the input catalog", () => {
+    const catalog = [
+      agent({ name: "claude-native-ui", harness: "claude-native" }),
+      agent({ name: "codex-native-ui", harness: "codex-native" }),
+      agent({ name: "pi-native-ui", harness: "pi-native" }),
+    ];
+    expect(selectableSessionAgents(catalog).map((a) => a.harness)).toEqual([
+      "pi-native",
+      "claude-native",
+      "codex-native",
+    ]);
+    expect(catalog[0].harness).toBe("claude-native");
+  });
+
   it("drops the hidden agents every session-creation surface must exclude", () => {
     // Shared by the composer picker AND project settings — filter parity is
     // what stops a project from pinning a default the composer can't show.

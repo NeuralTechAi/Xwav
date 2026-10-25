@@ -1,3 +1,5 @@
+import { ComposerPreviewLink } from "@/components/composer/ComposerPreviewLink";
+import { WorkbenchStarters } from "./WorkbenchStarters";
 import { useLoadedConversations } from "@/hooks/useSidebarData";
 import { useComposerContext } from "@/hooks/useComposerContext";
 import { useSlashCompletion } from "@/hooks/useSlashCompletion";
@@ -21,6 +23,8 @@ import {
   ComposerConfigTooltipRows,
   ComposerMenuTooltip,
 } from "@/components/composer/ComposerControls";
+import { CommandGoalDialog } from "@/components/goal/CommandGoalDialog";
+import { composeLaunchIntent } from "@/lib/launchIntent";
 import { ComposerAddMenu } from "@/components/composer/ComposerAddMenu";
 import {
   COMPOSER_HARNESS_MENU_SIZE,
@@ -169,6 +173,7 @@ import {
 } from "./projectPrefill";
 import { getCliServerUrl, getOmnigentHostConfig } from "@/lib/host";
 import { quoteShellArgument } from "@/lib/shell";
+import { readDefaultChatHarness } from "@/lib/defaultHarnessPreferences";
 import { readLastAgentId, writeLastAgentId } from "@/lib/agentPreferences";
 import {
   readLastHostChoice,
@@ -797,13 +802,13 @@ export async function describeCreateError(res: Response): Promise<string> {
 }
 
 /**
- * The pre-feature "run omni setup" guidance (ReactNode), shown under the
+ * The pre-feature "run xwav setup" guidance (ReactNode), shown under the
  * composer when the UI-driven setup feature is OFF.
  *
  * The ``needs-auth`` / ``binary-missing`` copy is Codex-specific ("run codex
  * login" / "set OMNIGENT_CODEX_PATH"), so it's gated on {@link isCodexHarness}.
  * Other harnesses that report those structured reasons (claude-native /
- * opencode-native now do) fall through to the generic "run omni setup"
+ * opencode-native now do) fall through to the generic "run xwav setup"
  * message — matching the pre-feature behavior, where only Codex ever produced
  * these reasons and everything else showed the generic text.
  */
@@ -836,14 +841,14 @@ function harnessWarningMessage(
   if (reason === "version-too-low") {
     return (
       <>
-        {agentName} has an outdated CLI on {hostName} — run <code>omni setup</code>, or upgrade the
+        {agentName} has an outdated CLI on {hostName} — run <code>xwav setup</code>, or upgrade the
         CLI directly on that machine.
       </>
     );
   }
   return (
     <>
-      {agentName} isn&apos;t configured on {hostName} — run <code>omni setup</code> on that machine.
+      {agentName} isn&apos;t configured on {hostName} — run <code>xwav setup</code> on that machine.
     </>
   );
 }
@@ -1263,7 +1268,7 @@ export function deriveHomeDir(entries: HostFilesystemEntry[]): string | null {
  * Owns session creation end-to-end: the textarea is the first message and the
  * workspace shell plus the compact host, permission, and agent controls supply
  * every required parameter. Hitting send POSTs /v1/sessions and
- * navigates to the new session — there is no modal.
+ * navigates to the new job — there is no modal.
  */
 const COMPOSER_HARNESS_ICONS: Record<
   string,
@@ -1426,7 +1431,9 @@ export function AgentHarnessPicker({
   openNonce = 0,
   blockedReasons,
   onPrefetchEntries,
+  onOpenBenchmark,
 }: {
+  onOpenBenchmark?: () => void;
   agentEntries: AvailableAgent[];
   harnessEntries: AvailableAgent[];
   effectiveAgentId: string | null;
@@ -1724,8 +1731,8 @@ export function AgentHarnessPicker({
   const { readyHarnessEntries, moreHarnessEntries } = useMemo(() => {
     const ready: AvailableAgent[] = [];
     const more: AvailableAgent[] = [];
-    const primaryOrder = ["claude", "cursor", "codex"];
-    const secondaryOrder = ["opencode", "pi"];
+    const primaryOrder = ["pi", "claude", "cursor", "codex"];
+    const secondaryOrder = ["opencode"];
     for (const agent of harnessEntries) {
       const selected = agent.id === effectiveAgentId;
       const readiness = harnessReadinessOnHost(agent.harness, host);
@@ -2093,6 +2100,11 @@ export function AgentHarnessPicker({
             ))}
           {/* No custom agents to group: surface the create action directly so
             it stays discoverable instead of hiding behind an empty submenu. */}
+          {onOpenBenchmark && (
+            <DropdownMenuItem onSelect={onOpenBenchmark} data-testid="harness2-workflow-link">
+              Google Harness² · Benchmarks
+            </DropdownMenuItem>
+          )}
           {!hasCustomGroup && createAgentItem}
         </>
       )}
@@ -2105,6 +2117,9 @@ export function AgentHarnessPicker({
 // when the user navigates into an existing session and back. Module-scoped,
 // not persisted to storage (a page refresh starts clean); cleared on create.
 interface LandingDraft {
+  defaultHarness: string | null;
+  goalCondition: string;
+  planRequested: boolean;
   mcpRegistryServices: string[];
   // `?project=` context the draft was composed under ("" = plain visit).
   // A draft restored under a DIFFERENT project only brings back its text and
@@ -2169,7 +2184,7 @@ export function NewChatLandingScreen() {
   const poweredBy = usePoweredBy();
   const serverUrl = getCliServerUrl();
 
-  // Project driving this visit, when the sidebar's per-project "new session"
+  // Project driving this visit, when the sidebar's per-project "new job"
   // pencil landed here with a `?project=` query param. Empty otherwise.
   const projectParam = searchParams.get("project") ?? "";
   const [cacheUser, setCacheUser] = useState(getCurrentUserId);
@@ -2243,7 +2258,7 @@ export function NewChatLandingScreen() {
   } = useAvailableAgents({
     pinnedAgentIds: prefillConfig?.agentId != null ? [prefillConfig.agentId] : [],
   });
-  // refetchOnFocus: returning from a terminal `omni setup` must clear the
+  // refetchOnFocus: returning from a terminal `xwav setup` must clear the
   // readiness badge even if the live push was missed while the tab was hidden.
   const {
     data: hosts,
@@ -2297,7 +2312,7 @@ export function NewChatLandingScreen() {
 
   // Surface element backing the iOS native server switcher overlay, which
   // the in-session view shows too — the picker stays reachable while starting
-  // a new session. The hook hides it whenever the sidebar covers the surface.
+  // a new job. The hook hides it whenever the sidebar covers the surface.
   const [landingSurface, setLandingSurface] = useState<HTMLElement | null>(null);
   useNativeServerSwitcherForMainSurface(landingSurface, true);
 
@@ -2306,11 +2321,30 @@ export function NewChatLandingScreen() {
   // visit (or a plain one) must not beat THIS visit's project defaults —
   // strip them so the prefill machine (fill-empty-only) can seed. Read once
   // per mount; only the lazy state initializers below consume it.
-  const restoredDraft: LandingDraft | null =
-    landingDraft === null || landingDraft.project === projectParam
-      ? landingDraft
-      : {
+  const defaultHarness = readDefaultChatHarness();
+  const preferredHarnessAgent = harnessEntries.find(
+    (agent) =>
+      nativeCodingAgentForAvailableAgent(agent)?.harness === defaultHarness ||
+      agent.harness === defaultHarness,
+  );
+  const preservedDraft =
+    landingDraft !== null && landingDraft.defaultHarness !== defaultHarness
+      ? {
           ...landingDraft,
+          pickedAgentId: null,
+          pickedHarness: null,
+          agentFromConfig: false,
+          pickedModel: "",
+          pickedEffort: "",
+          bypassSandbox: false,
+          costControlMode: null,
+        }
+      : landingDraft;
+  const restoredDraft: LandingDraft | null =
+    preservedDraft === null || preservedDraft.project === projectParam
+      ? preservedDraft
+      : {
+          ...preservedDraft,
           pickedAgentId: null,
           pickedHarness: null,
           selectedHostId: null,
@@ -2329,6 +2363,9 @@ export function NewChatLandingScreen() {
         };
 
   const [message, setMessage] = useState<string>(() => restoredDraft?.message ?? "");
+  const [goalCondition, setGoalCondition] = useState(restoredDraft?.goalCondition ?? "");
+  const [goalDialogOpen, setGoalDialogOpen] = useState(false);
+  const [planRequested, setPlanRequested] = useState(restoredDraft?.planRequested ?? false);
   const [checkingDbcert, setCheckingDbcert] = useState(false);
   const [mcpAuthorizing, setMcpAuthorizing] = useState(false);
   // Composer text captured when voice dictation starts, so Esc can revert to it.
@@ -2371,6 +2408,14 @@ export function NewChatLandingScreen() {
   // fails closed (option hidden) until the boot probe resolves.
   const info = useServerInfo();
   const managedSandboxesEnabled = info !== "loading" && info.managed_sandboxes_enabled;
+  const projectSandboxRequired =
+    projectParam !== "" &&
+    isFeatureEnabled(info, "project_sandbox_isolation") &&
+    !(
+      storedProjectConfig?.source_folder === true &&
+      storedProjectConfig.host_id &&
+      storedProjectConfig.workspace
+    );
   const mcpRegistryEnabled = info !== "loading" && !!info.enabled_connections?.includes("mcp");
   const {
     selected: mcpRegistryServices,
@@ -2388,7 +2433,7 @@ export function NewChatLandingScreen() {
   const ossRoutingConfigured = info !== "loading" && info.smart_routing_sources.oss;
   // Gates the whole UI-driven setup experience (Set up affordance + dialog +
   // collapsed badge). OFF → the composer/picker fall back to the original
-  // "run omni setup" guidance, so a disabled flag is a no-op on the UI.
+  // "run xwav setup" guidance, so a disabled flag is a no-op on the UI.
   const harnessInstallEnabled = isFeatureEnabled(info, "harness_install");
   // Unfiltered brain-harness labels: safe for membership checks and for
   // labelling an existing pick, but the OPTIONS offered in the gear modal use
@@ -2425,13 +2470,12 @@ export function NewChatLandingScreen() {
   const databricksGitCredentialsTooltipContent = docsLinks?.databricksGitCredentials;
   const showDisabledSandboxWithDocs = !managedSandboxesEnabled && !!newSandboxTooltipContent;
 
-  // Seeded from the persisted last pick so a returning user starts on the
-  // agent they used last; validated against the live list in
-  // effectiveAgentId below (a stale id falls back to the default). A
-  // project-driven visit defers to the project-prefill effect instead
-  // (which falls back to the same last pick).
+  // A draft or project pick wins. With a pinned default, defer to the live
+  // harness catalog; otherwise restore the last-used agent.
   const [pickedAgentId, setPickedAgentId] = useState<string | null>(
-    () => restoredDraft?.pickedAgentId ?? (projectParam !== "" ? null : readLastAgentId()),
+    () =>
+      restoredDraft?.pickedAgentId ??
+      (projectParam !== "" || defaultHarness !== null ? null : readLastAgentId()),
   );
   const agentExplicitlySelectedRef = useRef(false);
   const [selectedHostId, setSelectedHostId] = useState<string | null>(
@@ -2443,9 +2487,10 @@ export function NewChatLandingScreen() {
   // True when the user picked the sandbox option instead of a connected
   // host — the server provisions a sandbox host at create time
   // (host_type: "managed"), so no host_id or workspace is sent.
-  const [sandboxSelected, setSandboxSelected] = useState(
+  const [sandboxSelection, setSandboxSelected] = useState(
     () => restoredDraft?.sandboxSelected ?? false,
   );
+  const sandboxSelected = projectSandboxRequired || sandboxSelection;
   // Provider the sandbox pick launches on. Seeded to the sticky last pick (or
   // the first offered row) once the picker rows load; null both before that
   // seed and for a single-provider server that names no provider.
@@ -2500,8 +2545,14 @@ export function NewChatLandingScreen() {
   // combobox derives its selection from each URL, so a remembered repo the
   // account can no longer access just shows unselected.
   const [sandboxRepoSelections, setSandboxRepoSelections] = useState<LastSandboxRepo[]>(
-    () => restoredDraft?.sandboxRepoSelections ?? readLastSandboxRepos(),
+    () =>
+      restoredDraft?.sandboxRepoSelections ?? (projectParam !== "" ? [] : readLastSandboxRepos()),
   );
+  const projectRepoSeeded = useRef<string | null>(null);
+  const projectDraftRestored = useRef(
+    preservedDraft?.project === projectParam && preservedDraft?.sandboxRepoSelections !== undefined,
+  );
+
   // Whether the launch provider clones several repos (server-declared per
   // provider via /v1/info). A single-repo provider caps the picker at one, so
   // it reads as a plain single-repo picker and never offers a multi-repo menu.
@@ -2582,11 +2633,11 @@ export function NewChatLandingScreen() {
     setBaseBranchEdited(true);
   }, []);
 
-  // Project to file the new session under. Empty = unfiled. Stamped as the
+  // Project to file the new job under. Empty = unfiled. Stamped as the
   // `omni_project` label at create (so the row is filed from its first sidebar
   // appearance), then promoted to first-class `project_id` right after.
   // Pre-filled from the `?project=` param so the sidebar's per-project
-  // "new session" pencil lands here with the project already selected.
+  // "new job" pencil lands here with the project already selected.
   const [selectedProject, setSelectedProject] = useState<string>(() => projectParam);
   // The landing screen stays mounted while the `?project=` param changes (e.g.
   // clicking a different project's pencil), so the lazy initializer above won't
@@ -2627,7 +2678,10 @@ export function NewChatLandingScreen() {
   const [pickedHarness, setPickedHarness] = useState<string | null>(
     () =>
       restoredDraft?.pickedHarness ??
-      readLastHarness(restoredDraft?.pickedAgentId ?? readLastAgentId()),
+      readLastHarness(
+        restoredDraft?.pickedAgentId ??
+          (defaultHarness !== null ? preferredHarnessAgent?.id : readLastAgentId()),
+      ),
   );
   // Per-session model + reasoning effort for the claude-native model picker.
   // "" = unselected: nothing is checked and `model_override` / `reasoning_effort`
@@ -2701,6 +2755,9 @@ export function NewChatLandingScreen() {
   const onScreenRef = useRef(true);
   const draftRef = useRef<LandingDraft>(null as unknown as LandingDraft);
   draftRef.current = {
+    defaultHarness,
+    goalCondition,
+    planRequested,
     mcpRegistryServices,
     project: projectParam,
     message,
@@ -2842,7 +2899,7 @@ export function NewChatLandingScreen() {
     if (!projectChanged && !configChanged) return;
     setSandboxSelected(false);
     setSelectedHostId(null);
-    setPickedAgentId(projectParam !== "" ? null : readLastAgentId());
+    setPickedAgentId(projectParam !== "" || defaultHarness !== null ? null : readLastAgentId());
     agentExplicitlySelectedRef.current = false;
     setWorkspace("");
     setBranchName("");
@@ -2850,6 +2907,8 @@ export function NewChatLandingScreen() {
     // Drafted sandbox repo fields are location state too — left in place they
     // would clone the previous project's repo into this project's sandbox.
     setSandboxRepoSelections([]);
+    projectRepoSeeded.current = null;
+    projectDraftRestored.current = false;
     setPendingRepoUrl("");
     agentFromConfigRef.current = false;
     workspaceFromConfigRef.current = false;
@@ -2858,7 +2917,20 @@ export function NewChatLandingScreen() {
     setPickerEdits(null);
     seededConfigSigRef.current = prefillConfigSig;
     setPrefill(initialPrefillState(projectParam));
-  }, [projectParam, prefill.project, prefillConfigSig]);
+  }, [projectParam, prefill.project, prefillConfigSig, defaultHarness]);
+
+  useEffect(() => {
+    if (!projectSandboxRequired || storedProjectConfig === undefined) return;
+    const seedKey = `${projectParam}:${storedProjectConfig?.repository_url ?? ""}`;
+    if (projectRepoSeeded.current === seedKey) return;
+    projectRepoSeeded.current = seedKey;
+    if (projectDraftRestored.current) {
+      projectDraftRestored.current = false;
+      return;
+    }
+    const repository = storedProjectConfig?.repository_url;
+    setSandboxRepoSelections(repository ? [splitSandboxWorkspace(repository)] : []);
+  }, [projectParam, projectSandboxRequired, storedProjectConfig]);
 
   // Record the config the machine settled from, once it's loaded and the
   // machine is done, so the reseed effect above can spot a later change to it
@@ -3118,6 +3190,7 @@ export function NewChatLandingScreen() {
     [harnessEntries, harnessWarningHost, rememberedNativeAgent?.harness],
   );
   const automaticHarnessFallback =
+    defaultHarness === null &&
     projectParam === "" &&
     !sandboxSelected &&
     !agentExplicitlySelectedRef.current &&
@@ -3125,17 +3198,24 @@ export function NewChatLandingScreen() {
     rememberedHarnessResolution.source === "fallback"
       ? rememberedHarnessResolution
       : null;
+  const defaultHarnessUnavailable =
+    defaultHarness !== null &&
+    pickedAgentId === null &&
+    prefillConfig?.agentId == null &&
+    agents !== undefined &&
+    !agentsArePlaceholder &&
+    preferredHarnessAgent === undefined;
   const defaultEffectiveAgentId =
     pickedAgentId === PENDING_AGENT_ID && pendingAgentAllowedOnTarget
       ? PENDING_AGENT_ID
       : agentList.some((a) => a.id === pickedAgentId)
         ? pickedAgentId
-        : configuredAgentUnavailable || pickUnresolvedOnPlaceholder
+        : configuredAgentUnavailable || defaultHarnessUnavailable || pickUnresolvedOnPlaceholder
           ? null
           : (agentsLoading || prefillConfig === undefined) &&
               agentList.some((agent) => agent.id === cachedPickerOptions?.agent.id)
             ? cachedPickerOptions!.agent.id
-            : (agentList[0]?.id ?? null);
+            : (preferredHarnessAgent?.id ?? agentList[0]?.id ?? null);
   const effectiveAgentId = automaticHarnessFallback?.candidate?.value.id ?? defaultEffectiveAgentId;
   const selectedAgent = useMemo(
     () =>
@@ -4215,7 +4295,7 @@ export function NewChatLandingScreen() {
       : null;
   // Seed the harness's knobs from the user's last picks when the selected
   // harness changes (including the first mount), so a returning user starts a
-  // new session on the options they used last for that harness instead of the
+  // new job on the options they used last for that harness instead of the
   // default. Keyed on the harness so an in-composer edit isn't clobbered on
   // re-render — only a harness switch reseeds.
   useEffect(() => {
@@ -4700,7 +4780,8 @@ export function NewChatLandingScreen() {
       sandboxSelected,
       managedSandboxesEnabled,
       selectedHostId,
-      lastAgentId: readLastAgentId(),
+      lastAgentId:
+        defaultHarness !== null ? (preferredHarnessAgent?.id ?? null) : readLastAgentId(),
       config: prefillConfig,
     });
     if (step === null) return;
@@ -4740,6 +4821,8 @@ export function NewChatLandingScreen() {
     managedSandboxesEnabled,
     selectedHostId,
     pickedAgentId,
+    defaultHarness,
+    preferredHarnessAgent?.id,
     prefillConfig,
     defaultSandboxProvider,
   ]);
@@ -5073,6 +5156,7 @@ export function NewChatLandingScreen() {
   }, [pickerLoading, pickerSelectionError, pickerEdits]);
 
   const canSubmit =
+    (!projectSandboxRequired || managedSandboxesEnabled) &&
     (message.trim().length > 0 || files.length > 0) &&
     !mcpAuthorizing &&
     mcpSelectionError === null &&
@@ -5625,7 +5709,7 @@ export function NewChatLandingScreen() {
       // prompt the agent actually receives, not the raw textarea value.
       const initialPrompt =
         buildMentionPreamble(mentionedItems, selectedAgent?.harness ?? null) +
-        sanitizeInitialPrompt(message);
+        composeLaunchIntent(sanitizeInitialPrompt(message), goalCondition, planRequested);
       // Native terminal agents open terminal-first: `omnigent.ui: terminal`
       // tells the UI to render the terminal wrapper, and `omnigent.wrapper`
       // selects which CLI bridge the runner launches — the values are the
@@ -5907,7 +5991,7 @@ export function NewChatLandingScreen() {
             id: string;
             labels?: Record<string, string>;
           };
-          // Route the new session's first requests by its chosen host id
+          // Route the new job's first requests by its chosen host id
           // before any snapshot of it loads. Only seeds: a null here would
           // erase a host the session's snapshot already recorded.
           const requestedHostId = sessionRoutingHostId(null, created.labels);
@@ -6014,7 +6098,7 @@ export function NewChatLandingScreen() {
       // merely browsed past never earns a primary slot.
       if (selectedNativeHarness !== null) addRecentHarness(selectedNativeHarness);
       // SDK invocations resolve on the runner after create; native CLIs receive plain text.
-      // Scope the recall entry to the new session id so ArrowUp surfaces it in
+      // Scope the recall entry to the new job id so ArrowUp surfaces it in
       // the freshly-opened chat. Sanitized text so recall reproduces what was sent.
       appendPromptHistoryEntry(initialPrompt, data.id);
       // The session was created — drop any draft a detour back to this
@@ -6071,8 +6155,8 @@ export function NewChatLandingScreen() {
   }
 
   const placeholderText = selectedProject
-    ? `Start a new session in ${selectedProject}`
-    : "Describe a task to start a new session…";
+    ? `Start a new job in ${selectedProject}`
+    : "Describe a task to start a new job…";
 
   const isCloudHostEntry = (host: Host) =>
     !!host.sandbox_provider || host.name.toLowerCase().includes("cloud");
@@ -6194,15 +6278,55 @@ export function NewChatLandingScreen() {
     // Desktop keeps the centered composition; mobile docks the composer.
     <div
       ref={setLandingSurface}
-      className="relative flex min-h-0 flex-1 items-stretch justify-center md:items-center md:pb-24"
+      className="xwav-launch relative flex min-h-0 flex-1 items-stretch justify-center"
       data-testid="new-chat-landing"
     >
       {/* Padding lives inside the 800px cap, so the composer surface reaches
           its shared 48rem column (800 − 32 = 768px) on desktop. px-4 (16px
           gutters) keeps the composer from feeling cramped against the
           viewport edges on phones. */}
-      <div className="flex min-h-0 w-full max-w-[800px] flex-col items-center px-4 pt-8 pb-[max(20px,env(safe-area-inset-bottom))] md:pb-16 md:select-none">
-        <div className="mb-6 flex w-full flex-1 flex-col items-center justify-center gap-3.5 md:flex-none">
+      <div className="xwav-launch-content flex min-h-0 w-full flex-col px-4 pb-[max(20px,env(safe-area-inset-bottom))] md:select-none">
+        {(goalCondition || planRequested) && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-sm" aria-live="polite">
+            {goalCondition && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="max-w-full"
+                  onClick={() => setGoalDialogOpen(true)}
+                  disabled={creating}
+                >
+                  <span className="truncate">Goal: {goalCondition}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Remove goal"
+                  onClick={() => setGoalCondition("")}
+                  disabled={creating}
+                >
+                  Remove goal
+                </Button>
+              </>
+            )}
+            {planRequested && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPlanRequested(false)}
+                disabled={creating}
+              >
+                Plan first · Remove
+              </Button>
+            )}
+          </div>
+        )}
+        <div className="xwav-launch-heading mb-6 flex w-full flex-col items-start gap-3.5">
+          <div className="xwav-workbench-label">
+            <span className="xwav-workbench-dot" /> XWAV WORKBENCH{" "}
+            <span className="xwav-workbench-divider">/</span> NEW JOB
+          </div>
           {selectedProject ? (
             // Landing inside a project: swap Otto's eyes for the project's
             // icon — the default pink folder, or a chosen emoji — and name the
@@ -6222,24 +6346,28 @@ export function NewChatLandingScreen() {
               }
             />
           ) : (
-            <BrandLogo variant="eyes" className="h-14 w-auto shrink-0" />
+            <BrandLogo variant="eyes" className="xwav-launch-mark h-14 w-auto shrink-0" />
           )}
           {selectedProject || heading ? (
             <h1 className="min-w-0 break-words text-center text-[24px] md:text-[2.15em] font-normal tracking-[-0.05em] text-foreground line-clamp-2 sm:text-left">
               {selectedProject || heading}
             </h1>
           ) : null}
+          <p className="xwav-launch-description">
+            A clear space to think. A capable team to build.
+          </p>
         </div>
         {/* Drop cue, spanning the landing surface. */}
         {isDragActive && landingSurface ? <FileDropOverlay container={landingSurface} /> : null}
         <fieldset
           disabled={checkingDbcert}
           className={cn(
-            "relative flex min-w-0 flex-col gap-0 max-md:w-[calc(100%-1rem)]",
+            "xwav-launch-composer relative flex min-w-0 flex-col gap-0",
             COMPOSER_COLUMN_WIDTH,
           )}
           data-testid="new-chat-landing-composer-surface"
         >
+          <ComposerPreviewLink project={projectParam || null} />
           {/* Keep the tray mounted while the execution target changes. */}
           {sandboxSelected && (
             <ComposerWorkspaceBar
@@ -6868,14 +6996,34 @@ export function NewChatLandingScreen() {
                         testIdPrefix="new-chat-landing"
                         disabled={creating}
                         onAttach={() => fileInputRef.current?.click()}
-                        onPlan={
-                          directModeOptions.some((mode) => mode.value === "plan")
-                            ? () => selectDirectMode("plan")
-                            : undefined
+                        onGoal={() => setGoalDialogOpen(true)}
+                        goalActive={Boolean(goalCondition)}
+                        goalDescription={
+                          goalCondition ? "Edit completion condition" : "Set a completion condition"
                         }
+                        onPlan={() => {
+                          if (directModeOptions.some((mode) => mode.value === "plan")) {
+                            const active =
+                              planRequested ||
+                              (supportsPermissionMode && permissionMode === "plan") ||
+                              (supportsCursorMode && cursorExecMode === "plan");
+                            selectDirectMode(active ? "default" : "plan");
+                            setPlanRequested(false);
+                          } else {
+                            setPlanRequested((active) => !active);
+                          }
+                        }}
                         planActive={
+                          planRequested ||
                           (supportsPermissionMode && permissionMode === "plan") ||
                           (supportsCursorMode && cursorExecMode === "plan")
+                        }
+                        planDescription={
+                          directModeOptions.some((mode) => mode.value === "plan")
+                            ? undefined
+                            : planRequested
+                              ? "Planning request is on"
+                              : "Ask for a plan before making changes"
                         }
                         projects={projectList ?? []}
                         onProjectSelect={(name) => {
@@ -7007,7 +7155,7 @@ export function NewChatLandingScreen() {
                               </Tooltip>
                             </DropdownMenuItem>
                           ))}
-                        {cloudHosts.map(renderHostMenuItem)}
+                        {!projectSandboxRequired && cloudHosts.map(renderHostMenuItem)}
                         {showArcaOption && (
                           <DropdownMenuItem
                             onSelect={() => {
@@ -7033,10 +7181,10 @@ export function NewChatLandingScreen() {
                               {myMachinesEmptyText}
                             </div>
                           )}
-                        {localHosts.map(renderHostMenuItem)}
+                        {!projectSandboxRequired && localHosts.map(renderHostMenuItem)}
                         {/* Desktop shell, no active host and machine not listed:
                     show the disconnected local-machine state inline. */}
-                        {showConnectThisMachine && (
+                        {!projectSandboxRequired && showConnectThisMachine && (
                           <DropdownMenuItem
                             onSelect={() => {
                               pendingConnectRef.current = true;
@@ -7062,7 +7210,7 @@ export function NewChatLandingScreen() {
                             </span>
                           </DropdownMenuItem>
                         )}
-                        {otherOfflineHosts.length > 0 && (
+                        {!projectSandboxRequired && otherOfflineHosts.length > 0 && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -7177,6 +7325,7 @@ export function NewChatLandingScreen() {
                       {/* One trigger combines the harness glyph with model / effort;
                     the selected entry's submenu owns run configuration. */}
                       <AgentHarnessPicker
+                        onOpenBenchmark={() => navigate("/settings/harnesses/harness2")}
                         openNonce={modelPickerOpenNonce}
                         agentEntries={agentEntries}
                         harnessEntries={harnessEntries}
@@ -7281,7 +7430,7 @@ export function NewChatLandingScreen() {
             onOpenChange={setWorkspacePickerOpen}
             hostId={selectedHostId}
             initialPath={workspacePickerInitialPath}
-            description="Choose a folder for the new session."
+            description="Choose a folder for the new job."
             onConfirm={(path) => {
               workspaceFromConfigRef.current = false;
               setWorkspace(path);
@@ -7353,6 +7502,23 @@ export function NewChatLandingScreen() {
             </p>
           )}
 
+          {projectSandboxRequired && (
+            <p
+              role="status"
+              className="text-sm text-muted-foreground"
+              data-testid="project-sandbox-notice"
+            >
+              Every project job starts in its own sandbox. Jobs in different projects can run at the
+              same time.
+              {!managedSandboxesEnabled && " Configure a sandbox provider to start this job."}
+            </p>
+          )}
+          {defaultHarnessUnavailable && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Your default harness is unavailable here. Choose another harness or change your
+              default in settings.
+            </p>
+          )}
           {automaticHarnessFallback?.candidate && automaticHarnessFallback.rejectedPreference && (
             <p
               className="flex items-center gap-2 pl-2 text-xs text-amber-600 dark:text-amber-500"
@@ -7458,6 +7624,13 @@ export function NewChatLandingScreen() {
             </p>
           )}
         </div>
+        <WorkbenchStarters
+          disabled={creating || checkingDbcert}
+          onPick={(prompt) => {
+            setMessage(prompt);
+            textareaRef.current?.focus();
+          }}
+        />
         {hasNoSessions ? (
           <div className="mt-5 flex flex-col items-center gap-2">
             <Button
@@ -7481,6 +7654,15 @@ export function NewChatLandingScreen() {
 
       {/* Connect-host instructions, reachable from the host dropdown even when
           no hosts are online — the zero-host escape hatch. */}
+      <CommandGoalDialog
+        open={goalDialogOpen}
+        onOpenChange={setGoalDialogOpen}
+        readOnly={creating}
+        initialCondition={goalCondition}
+        description="Add a completion condition to the first task. The agent receives this with your message; automatic goal tracking depends on the harness."
+        submitLabel="Save goal"
+        onStartGoal={setGoalCondition}
+      />
       <Dialog open={connectOpen} onOpenChange={setConnectOpen}>
         <DialogContent className="sm:max-w-lg" data-testid="connect-host-dialog">
           <DialogHeader>

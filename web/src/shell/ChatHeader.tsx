@@ -142,7 +142,7 @@ interface ChatHeaderProps {
    * Breadcrumb title: the active conversation's display name, or its
    * immediate parent's when viewing a sub-agent. ``null`` while unresolved.
    * A child still renders the breadcrumb (and the parent link) when
-   * ``titleLinkTo`` is set — the title falls back to "New session".
+   * ``titleLinkTo`` is set — the title falls back to "New Job".
    */
   conversationTitle: string | null;
   /**

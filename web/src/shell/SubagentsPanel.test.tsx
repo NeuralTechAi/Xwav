@@ -1230,7 +1230,7 @@ describe("SubagentsPanel", () => {
     // Regression guard for the bug where clicking a sub-agent row
     // preserved the previous session's ``?file=…`` query param. The
     // conversation-switch effect in AppShell would then re-open the
-    // file viewer for that path against the new session — yanking
+    // file viewer for that path against the new job — yanking
     // the user into the file rail unexpectedly.
     //
     // The fix strips ``file``/``diff``/``comment``/``view`` on rail

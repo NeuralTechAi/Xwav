@@ -138,7 +138,7 @@ describe("SessionCard", () => {
 
   it("uses explicit fallbacks for missing fields", () => {
     renderCard({ conversation: conversation({ title: null, workspace: null, status: "failed" }) });
-    expect(screen.getByText("New session")).toBeInTheDocument();
+    expect(screen.getByText("New Job")).toBeInTheDocument();
     expect(screen.getByText("No working directory")).toBeInTheDocument();
     expect(screen.getByText("Failed")).toBeInTheDocument();
   });

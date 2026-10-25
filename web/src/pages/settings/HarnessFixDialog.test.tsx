@@ -113,11 +113,11 @@ describe("HarnessFixDialog", () => {
         screen.getByText((_, element) =>
           Boolean(
             element?.tagName === "P" &&
-            element.textContent === "Run omni setup on Local laptop to finish setting up Cursor.",
+            element.textContent === "Run xwav setup on Local laptop to finish setting up Cursor.",
           ),
         ),
       ).toBeVisible();
-      expect(screen.getByRole("button", { name: "Copy omni setup" })).toBeVisible();
+      expect(screen.getByRole("button", { name: "Copy xwav setup" })).toBeVisible();
       expect(
         screen
           .getAllByRole("button", { name: "Close" })
@@ -151,7 +151,7 @@ describe("HarnessFixDialog", () => {
     expect(
       screen.getByText("Run this in a terminal on Local laptop, then come back."),
     ).toBeVisible();
-    expect(screen.getByText("omni setup")).toBeVisible();
+    expect(screen.getByText("xwav setup")).toBeVisible();
     expect(
       screen.getByText("Choose Codex, then the Databricks Unity Gateway credential."),
     ).toBeVisible();
@@ -267,14 +267,14 @@ describe("HarnessFixDialog", () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByRole("button", { name: "Authenticate" }));
-    await user.click(screen.getByRole("button", { name: "Copy omni setup" }));
+    await user.click(screen.getByRole("button", { name: "Copy xwav setup" }));
 
     await waitFor(() =>
       expect(showToast).toHaveBeenCalledWith("Couldn't copy — select and copy manually.", {
         duration: 0,
       }),
     );
-    expect(screen.getByRole("button", { name: "Copy omni setup" })).toHaveTextContent("Copy");
+    expect(screen.getByRole("button", { name: "Copy xwav setup" })).toHaveTextContent("Copy");
   });
 
   it("keeps Codex open with an inline message when Check again is not ready", async () => {
@@ -517,7 +517,7 @@ describe("HarnessFixDialog", () => {
     expect(screen.queryByText("Sign in with your subscription")).not.toBeInTheDocument();
   });
 
-  it("installs a cardless harness before showing the omni setup fallback", async () => {
+  it("installs a cardless harness before showing the xwav setup fallback", async () => {
     vi.mocked(authenticatedFetch).mockImplementation(async (input, init) => {
       const url = String(input);
       if (url === "/v1/harnesses") return json(catalog);
@@ -542,7 +542,7 @@ describe("HarnessFixDialog", () => {
     expect(
       await screen.findByRole("heading", { name: "Set up OpenCode on Local laptop" }),
     ).toBeVisible();
-    expect(screen.getAllByText("omni setup")).toHaveLength(2);
+    expect(screen.getAllByText("xwav setup")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Check again" })).toBeVisible();
     expect(
       vi
@@ -555,7 +555,7 @@ describe("HarnessFixDialog", () => {
     renderDialog({ harness: "qwen-native", harnessLabel: "Qwen" });
 
     expect(screen.getByRole("heading", { name: "Set up Qwen on Local laptop" })).toBeVisible();
-    expect(screen.getAllByText("omni setup")).toHaveLength(2);
+    expect(screen.getAllByText("xwav setup")).toHaveLength(2);
     expect(screen.queryByText("Use an API key")).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Paste an API key")).not.toBeInTheDocument();
   });

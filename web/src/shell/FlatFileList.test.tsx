@@ -45,8 +45,8 @@ describe("FlatFileList runner-offline state", () => {
     expect(screen.queryByText(/failed to load/i)).not.toBeInTheDocument();
   });
 
-  it("shows the empty state (not the asleep hint) for a new session that hasn't started", () => {
-    // A brand-new session also 503s while its runner connects, but it never
+  it("shows the empty state (not the asleep hint) for a new job that hasn't started", () => {
+    // A brand-new job also 503s while its runner connects, but it never
     // went "failed" — runnerWentOffline is false, so it must read as the
     // normal empty state, not alarm the user that the agent is asleep.
     renderList({ isError: true, error: new RunnerOfflineError(), runnerWentOffline: false });

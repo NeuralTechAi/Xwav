@@ -3108,6 +3108,14 @@ async def _persist_external_conversation_item_unlocked(
         if drained is not None:
             cleared_pending_id = drained.pending_id
             item = _merge_pending_file_blocks(item, drained.content)
+            if isinstance(item.data, MessageData) and match_method != "fifo_fallback":
+                item = item.model_copy(
+                    update={
+                        "data": item.data.model_copy(
+                            update={"workspace_checkpoint_id": drained.stable_id}
+                        )
+                    }
+                )
             # A text match preserves the sender recorded at POST time. FIFO
             # settlement alone does not establish authorship of the mirror.
             if (
@@ -3270,6 +3278,10 @@ def _new_external_conversation_item(
 ) -> NewConversationItem:
     """Parse an external item event, keyed by its ``source_id`` when it has one."""
     item = _parse_external_conversation_item(body)
+    if isinstance(item.data, MessageData):
+        item = item.model_copy(
+            update={"data": item.data.model_copy(update={"workspace_checkpoint_id": None})}
+        )
     return_id = body.data.get("subagent_return_id")
     if (
         isinstance(return_id, str)
@@ -7672,8 +7684,13 @@ async def _dispatch_session_event_to_runner(*args: Any, **kwargs: Any) -> Any:
     session_id = kwargs.get("session_id", args[0] if args else None)
     if not isinstance(session_id, str):
         return await _facade._dispatch_session_event_to_runner(*args, **kwargs)
-    with _mark_dispatch_in_flight(session_id):
-        return await _facade._dispatch_session_event_to_runner(*args, **kwargs)
+    from omnigent.server.workspace_history import history_lock
+
+    conv = kwargs.get("conv", args[1] if len(args) > 1 else None)
+    family_id = (conv.root_conversation_id if conv is not None else None) or session_id
+    async with history_lock(family_id):
+        with _mark_dispatch_in_flight(session_id):
+            return await _facade._dispatch_session_event_to_runner(*args, **kwargs)
 
 
 async def _forward_codex_side_chat_turn(
@@ -7849,6 +7866,19 @@ async def _dispatch_session_event_to_runner_impl(
         await asyncio.to_thread(runner_router.require_mcp_registry_support, conv)
     if body.type == "message":
         disconnect_outcome.note_user_turn(conv.id)
+        stable_id = body.data.get("stable_id")
+        if (
+            body.data.get("role") == "user"
+            and isinstance(stable_id, str)
+            and re.fullmatch(r"[0-9a-f]{32}", stable_id)
+            and conv.parent_conversation_id is None
+            and not _is_native_terminal_session(conv)
+        ):
+            from omnigent.server.workspace_history import capture_before_message
+
+            await capture_before_message(
+                runner_client, session_id, stable_id, workspace=conv.workspace
+            )
     if body.type == "message" and conv.kind == "sub_agent" and _is_codex_native_subagent(conv):
         # Codex /side follow-up: drive the child on its own Codex thread via the
         # parent's runner/bridge; do not persist AP-side (the forwarder mirrors
@@ -7892,6 +7922,17 @@ async def _dispatch_session_event_to_runner_impl(
                 session_id,
                 conversation_store,
                 ensure_outcome.policy_notice,
+            )
+        stable_id = body.data.get("stable_id")
+        if (
+            isinstance(stable_id, str)
+            and re.fullmatch(r"[0-9a-f]{32}", stable_id)
+            and conv.parent_conversation_id is None
+        ):
+            from omnigent.server.workspace_history import capture_before_message
+
+            await capture_before_message(
+                runner_client, session_id, stable_id, workspace=conv.workspace
             )
         # Record the optimistic bubble before forwarding so it's known
         # server-side immediately (replayed into the snapshot). Roll it

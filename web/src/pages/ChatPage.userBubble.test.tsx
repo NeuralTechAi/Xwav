@@ -548,3 +548,15 @@ describe("UserBubble @-mention attachment chips", () => {
     expect(screen.queryByText(/uploads\/image\.png/)).toBeNull();
   });
 });
+
+describe("Chat revert action placement", () => {
+  it.each([userBubble("edit this"), assistantBubble("completed")])(
+    "places Revert before Copy link",
+    (bubble) => {
+      renderBubble(bubble);
+      const revert = screen.getByRole("button", { name: "Revert changes" });
+      const link = screen.getByRole("button", { name: "Copy link" });
+      expect(revert.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    },
+  );
+});

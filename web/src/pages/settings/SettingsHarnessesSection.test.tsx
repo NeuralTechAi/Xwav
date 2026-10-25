@@ -4,17 +4,26 @@
 // host inventory, and the heavy composer/dialog imports are mocked so it renders
 // without a backend.
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type * as IdentityModule from "@/lib/identity";
+import { authenticatedFetch } from "@/lib/identity";
 import type { SkillContent } from "@/hooks/useSkillContent";
 import type { HarnessInventory } from "@/hooks/useHarnessInventory";
 import { ApiError } from "@/lib/sessionsApi";
 import type { HarnessStartup, Host } from "@/hooks/useHosts";
 import { SettingsHarnessesSection } from "./SettingsHarnessesSection";
+
+vi.mock("@/lib/identity", async (original) => ({
+  ...(await original<typeof IdentityModule>()),
+  authenticatedFetch: vi.fn(
+    async () => new Response(JSON.stringify({ installed: true, pinned: true, version: "0.1.0" })),
+  ),
+}));
 
 let pluginMetadataRequested = false;
 const CONTENT: SkillContent = {
@@ -343,8 +352,8 @@ describe("Harnesses grid", () => {
 
     fireEvent.change(screen.getByTestId("harness-search"), { target: { value: "codex" } });
 
-    expect(screen.getByText("Codex")).toBeTruthy();
-    expect(screen.queryByText("Claude Code")).toBeNull();
+    expect(screen.getByTestId("harness-card-codex-native")).toBeVisible();
+    expect(screen.queryByTestId("harness-card-claude-native")).toBeNull();
   });
 
   it("shows only ready harnesses under the Installed filter", () => {
@@ -1050,4 +1059,51 @@ it("requests a host update instead of guessing installed MCP identity", () => {
   expect(screen.getByText("Update my-laptop to inspect installed plugin MCP tools.")).toBeTruthy();
   expect(screen.getByTestId("catalog-row-docs").tagName).not.toBe("BUTTON");
   expect(mcpSources).toEqual([]);
+});
+
+describe("Google benchmark harness", () => {
+  it.each([
+    [503, {}, "Runtime status unavailable. Retry or check from the terminal."],
+    [
+      200,
+      { installed: false, pinned: false },
+      "Optional runtime is not installed. Run the status command for setup instructions.",
+    ],
+    [
+      200,
+      { installed: true, pinned: false },
+      "Installed runtime differs from the reviewed revision. Run the status command for setup instructions.",
+    ],
+  ])(
+    "distinguishes missing, unverified and unavailable runtimes (%s, %j)",
+    async (status, body, message) => {
+      vi.mocked(authenticatedFetch).mockResolvedValueOnce(
+        new Response(JSON.stringify(body), { status }),
+      );
+      renderHarnesses("harness2");
+      expect(await screen.findByText(message)).toBeVisible();
+      fireEvent.click(screen.getByRole("button", { name: "Refresh status" }));
+      expect(await screen.findByText("Configured · version 0.1.0")).toBeVisible();
+    },
+  );
+  it("is listed and searchable independently of chat hosts", async () => {
+    renderHarnesses();
+    expect(card("harness2")).toHaveAttribute("href", "/settings/harnesses/harness2");
+    fireEvent.change(screen.getByTestId("harness-search"), { target: { value: "google" } });
+    expect(card("harness2")).toBeVisible();
+    await waitFor(() =>
+      expect(within(card("harness2")).getByText(/Configured on this server/)).toBeVisible(),
+    );
+    selectTab("Configured");
+    expect(card("harness2")).toBeVisible();
+    fireEvent.change(screen.getByTestId("harness-search"), { target: { value: "nonexistent" } });
+    expect(screen.queryByTestId("harness-card-harness2")).toBeNull();
+  });
+  it("opens the benchmark workflow with runtime status and explicit commands", async () => {
+    renderHarnesses("harness2");
+    expect(screen.getByRole("heading", { name: "Google Harness²" })).toBeVisible();
+    expect(screen.getByText(/Chat sessions use a separate interactive harness/)).toBeVisible();
+    await screen.findByText("Configured · version 0.1.0");
+    expect(screen.getByRole("button", { name: "Copy xwav harness2 demo" })).toBeEnabled();
+  });
 });

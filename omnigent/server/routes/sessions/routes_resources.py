@@ -7,6 +7,7 @@ import contextlib
 import functools
 import mimetypes
 import ntpath
+import re
 import urllib.parse
 import weakref
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
@@ -387,6 +388,45 @@ def register_resources_routes(
         if conv is None:
             raise _session_not_found()
         return conv
+
+    @router.get("/sessions/{session_id}/download")
+    async def download_job_workspace(session_id: str, request: Request) -> Response:
+        from starlette.background import BackgroundTask
+
+        from omnigent.server.workspace_archive import build_workspace_archive
+
+        conv, _owner = await _authorize_browse_read_with_owner(session_id, request, "")
+        runner = await _get_runner_client_for_resource_access(session_id, conversation=conv)
+        if runner is None:
+            raise HTTPException(503, "Job workspace is unavailable. Resume the job and retry.")
+        try:
+            archive = await build_workspace_archive(runner, session_id, workspace=conv.workspace)
+        except (httpx.HTTPError, ConnectionError) as exc:
+            raise HTTPException(
+                503, "Job workspace is unavailable. Resume the job and retry."
+            ) from exc
+        size = archive.seek(0, 2)
+        archive.seek(0)
+
+        async def chunks():
+            try:
+                while chunk := await asyncio.to_thread(archive.read, 64 * 1024):
+                    yield chunk
+            finally:
+                archive.close()
+
+        skip_gzip(request)
+        return StreamingResponse(
+            chunks(),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="xwav-job-{session_id[:12]}.zip"',
+                "Content-Length": str(size),
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+            },
+            background=BackgroundTask(archive.close),
+        )
 
     # Per-chunk read budget for a direct HTTP runner client; no total timeout,
     # since a large file legitimately outlives any. The WebSocket tunnel
@@ -3093,6 +3133,361 @@ def register_resources_routes(
             environment_id=environment_id,
             publish_invalidation=False,
         )
+
+    @router.post(
+        "/sessions/{session_id}/preview",
+        dependencies=[Depends(require_json_content_type)],
+    )
+    async def project_preview(session_id: str, request: Request) -> dict[str, Any]:
+        """Discover/start the owner's workspace app through its existing runner."""
+        import json
+
+        from omnigent import preview_runtime
+
+        source = Path(preview_runtime.__file__).read_text()
+        result = await _proxy_fs_response(
+            session_id,
+            "POST",
+            f"/v1/sessions/{session_id}/resources/environments/default/shell",
+            {
+                "command": "python3 - <<'XWAV_PREVIEW_RUNTIME'\n"
+                + source
+                + "\nXWAV_PREVIEW_RUNTIME",
+                "timeout": 12,
+            },
+            request=request,
+            required_level=LEVEL_OWNER,
+            publish_invalidation=False,
+        )
+        try:
+            payload = json.loads(result["stdout"].strip().splitlines()[-1])
+            if not isinstance(payload, dict) or payload.get("state") not in {
+                "ready",
+                "starting",
+                "waiting",
+                "error",
+            }:
+                raise ValueError("Invalid preview status")
+            return payload
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise HTTPException(
+                status_code=502, detail="The job runtime could not inspect its app preview"
+            ) from exc
+
+    @router.get("/sessions/{session_id}/loadtesting")
+    @router.post(
+        "/sessions/{session_id}/loadtesting",
+        dependencies=[Depends(require_json_content_type)],
+    )
+    @router.get("/sessions/{session_id}/preproduction")
+    @router.post(
+        "/sessions/{session_id}/preproduction",
+        dependencies=[Depends(require_json_content_type)],
+    )
+    async def project_preproduction(session_id: str, request: Request) -> dict[str, Any]:
+        """Run/retrieve persistent owner-authorized workspace test reports."""
+        import json
+
+        from omnigent.server.loadtesting import loadtesting_command
+        from omnigent.server.preproduction import preproduction_command
+
+        command = (
+            loadtesting_command
+            if request.url.path.endswith("/loadtesting")
+            else preproduction_command
+        )
+        conv = await _validate_session(session_id, request, LEVEL_OWNER)
+        body = await request.json() if request.method == "POST" else {"action": "status"}
+        if (
+            not isinstance(body, dict)
+            or not isinstance(body.get("action"), str)
+            or body.get("action")
+            not in {
+                "ensure",
+                "start",
+                "status",
+                "cancel",
+            }
+        ):
+            raise HTTPException(400, "Choose ensure, start, status or cancel")
+        options = {}
+        if "max_requests" in body:
+            if command is not loadtesting_command or body["action"] != "start":
+                raise HTTPException(400, "Request count can only be set when starting a load test")
+            from omnigent.loadtesting_runtime import validate_request_count
+
+            try:
+                options["max_requests"] = validate_request_count(body["max_requests"])
+            except ValueError as exc:
+                raise HTTPException(400, str(exc)) from exc
+        result = await _proxy_fs_response(
+            session_id,
+            "POST",
+            f"/v1/sessions/{session_id}/resources/environments/default/shell",
+            {
+                "command": command(session_id, conv.workspace, body["action"], **options),
+                "timeout": 15,
+            },
+            request=request,
+            required_level=LEVEL_OWNER,
+            publish_invalidation=False,
+        )
+        try:
+            payload = json.loads(result["stdout"].strip().splitlines()[-1])
+            if (
+                not isinstance(payload, dict)
+                or payload.get("state")
+                not in {"empty", "running", "complete", "cancelled", "error"}
+                or not isinstance(payload.get("checks"), list)
+            ):
+                raise ValueError("Invalid test report")
+            return payload
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise HTTPException(502, "The job runtime could not return its test report") from exc
+
+    @router.get("/sessions/{session_id}/releases")
+    @router.post(
+        "/sessions/{session_id}/releases",
+        dependencies=[Depends(require_json_content_type)],
+    )
+    async def project_releases(session_id: str, request: Request) -> dict[str, Any]:
+        """Plan, build or publish only after an owner explicitly starts a release."""
+        import json
+
+        from omnigent.server.releases import release_command
+
+        conv = await _validate_session(session_id, request, LEVEL_OWNER)
+        body = await request.json() if request.method == "POST" else dict(request.query_params)
+        if not isinstance(body, dict):
+            raise HTTPException(400, "A release request must be an object")
+        action = body.get("action", "status")
+        options = {
+            "target": body.get("target", "web"),
+            "operation": body.get("operation", "build"),
+            "provider": body.get("provider", "vercel"),
+            "site": body.get("site", ""),
+            "engine": body.get("engine", "local"),
+            "channel": body.get("channel", "testing"),
+            "repository": body.get("repository", ""),
+        }
+        if request.method == "GET" and action != "status":
+            raise HTTPException(400, "Use POST to start or cancel a release")
+        if any(not isinstance(value, str) for value in [action, *options.values()]):
+            raise HTTPException(400, "Release options must be strings")
+        if len(options["site"]) > 200 or (
+            options["site"] and not re.fullmatch(r"[A-Za-z0-9_.-]+", options["site"])
+        ):
+            raise HTTPException(400, "Invalid destination project identifier")
+        accept_licenses = body.get("accept_android_licenses", False)
+        if not isinstance(accept_licenses, bool):
+            raise HTTPException(400, "Android licence acceptance must be a boolean")
+        try:
+            command = release_command(
+                session_id,
+                conv.workspace,
+                action,
+                **options,
+                accept_android_licenses=accept_licenses,
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        result = await _proxy_fs_response(
+            session_id,
+            "POST",
+            f"/v1/sessions/{session_id}/resources/environments/default/shell",
+            {"command": command, "timeout": 90 if action == "verify" else 15},
+            request=request,
+            required_level=LEVEL_OWNER,
+            publish_invalidation=False,
+        )
+        try:
+            payload = json.loads(result["stdout"].strip().splitlines()[-1])
+            if (
+                not isinstance(payload, dict)
+                or payload.get("state")
+                not in {"empty", "running", "complete", "cancelled", "error"}
+                or not isinstance(payload.get("checks"), list)
+                or not isinstance(payload.get("artifacts", []), list)
+            ):
+                raise ValueError("Invalid release report")
+            return payload
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise HTTPException(
+                502, "The job runtime could not return its release report"
+            ) from exc
+
+    @router.get("/sessions/{session_id}/releases/{run_id}/{filename}")
+    async def download_release_artifact(
+        session_id: str, run_id: str, filename: str, request: Request
+    ) -> Response:
+        conv = await _validate_session(session_id, request, LEVEL_OWNER)
+        if (
+            not re.fullmatch(r"[0-9a-f]{32}", run_id)
+            or filename in {".", ".."}
+            or any(char in filename for char in ("/", "\\", "\0"))
+        ):
+            raise HTTPException(400, "Invalid release artifact")
+        report = await project_releases(session_id, request)
+        path = f".xwav/releases/artifacts/{run_id}/{filename}"
+        if (
+            report.get("state") != "complete"
+            or report.get("source_changed")
+            or report.get("id") != run_id
+            or not any(
+                isinstance(item, dict) and item.get("path") == path
+                for item in report.get("artifacts", [])
+            )
+        ):
+            raise HTTPException(
+                409, "Only verified artifacts from the latest completed release can be downloaded"
+            )
+        import json
+
+        from omnigent.server.releases import artifact_verification_command
+
+        artifact = next(
+            item
+            for item in report["artifacts"]
+            if isinstance(item, dict) and item.get("path") == path
+        )
+        try:
+            size = artifact.get("bytes")
+            checksum = artifact.get("sha256")
+            if not isinstance(size, int) or not isinstance(checksum, str):
+                raise ValueError("Missing artifact size or checksum")
+            command = artifact_verification_command(conv.workspace, path, size, checksum)
+        except ValueError as exc:
+            raise HTTPException(
+                409, "Rebuild this package to verify its size and checksum"
+            ) from exc
+        verification = await _proxy_fs_response(
+            session_id,
+            "POST",
+            f"/v1/sessions/{session_id}/resources/environments/default/shell",
+            {"command": command, "timeout": 30},
+            request=request,
+            required_level=LEVEL_OWNER,
+            publish_invalidation=False,
+        )
+        try:
+            valid = json.loads(verification["stdout"]).get("valid") is True
+        except (KeyError, TypeError, ValueError):
+            valid = False
+        if not valid:
+            raise HTTPException(
+                409, "Package changed or is unavailable. Build it again before downloading"
+            )
+        absolute = bool(conv.workspace and conv.workspace.startswith("/"))
+        if absolute and conv.workspace:
+            path = conv.workspace.rstrip("/") + "/" + path
+        encoded = _runner_path_segment(path, absolute=absolute)
+        response = await _stream_download_from_runner(
+            request,
+            session_id,
+            conv,
+            f"/v1/sessions/{session_id}/resources/environments/default/filesystem/{encoded}?download=true",
+        )
+        response.headers["X-Artifact-SHA256"] = artifact["sha256"]
+        response.headers["ETag"] = '"' + artifact["sha256"] + '"'
+        return response
+
+    @router.post(
+        "/sessions/{session_id}/revert",
+        dependencies=[Depends(require_json_content_type)],
+    )
+    async def revert_chat_files(session_id: str, request: Request) -> dict[str, Any]:
+        """Review or restore pre-message files while retaining the conversation."""
+        import json
+
+        from omnigent.server.routes._sessions.orchestration import _session_is_starting
+        from omnigent.server.workspace_history import checkpoint_command, history_lock
+
+        conv = await _validate_session(session_id, request, LEVEL_OWNER)
+        if conv.parent_conversation_id is not None:
+            raise HTTPException(409, "Revert files from the main project chat")
+        body = await request.json()
+        if (
+            not isinstance(body, dict)
+            or not isinstance(body.get("action"), str)
+            or body["action"] not in {"plan", "apply"}
+        ):
+            raise HTTPException(400, "Choose plan or apply")
+        backup_id = body.get("backup_id")
+        if isinstance(backup_id, str) and re.fullmatch(r"undo_[0-9a-f]{32}", backup_id):
+            anchor = backup_id
+        else:
+            item_id = body.get("item_id")
+            if not isinstance(item_id, str):
+                raise HTTPException(400, "A saved message is required")
+            item = await asyncio.to_thread(conversation_store.get_item, session_id, item_id)
+            if item is None:
+                raise HTTPException(404, "Message not found in this chat")
+            if getattr(item.data, "role", None) != "user":
+                page = await asyncio.to_thread(
+                    conversation_store.list_items,
+                    session_id,
+                    limit=100,
+                    after=item.id,
+                    order="desc",
+                    type="message",
+                )
+                item = next(
+                    (row for row in page.data if getattr(row.data, "role", None) == "user"), None
+                )
+            if item is None:
+                raise HTTPException(404, "No user message checkpoint for this response")
+            anchor = getattr(item.data, "workspace_checkpoint_id", None) or item.id
+        async with history_lock(conv.root_conversation_id or session_id):
+            if _session_is_starting(session_id):
+                raise HTTPException(409, "Wait for the job to finish or stop it before reverting")
+            client = await _get_runner_client_for_resource_access(session_id)
+            if client is None:
+                raise HTTPException(409, "Reconnect this job before reverting")
+            # A fresh probe, rather than cached display status, gates workspace writes.
+            try:
+                status_response = await client.get(f"/v1/sessions/{session_id}", timeout=5)
+                status = status_response.json() if status_response.status_code == 200 else {}
+            except (httpx.HTTPError, ValueError) as exc:
+                raise HTTPException(409, "Reconnect this job before reverting") from exc
+            if not isinstance(status, dict) or status.get("status") not in {"idle", "failed"}:
+                raise HTTPException(409, "Wait for the job to finish or stop it before reverting")
+            children = await asyncio.to_thread(
+                conversation_store.list_conversations,
+                root_conversation_id=conv.root_conversation_id or session_id,
+                limit=1000,
+            )
+            if any(
+                row.id != session_id and row.live_status in {"running", "waiting"}
+                for row in children.data
+            ):
+                raise HTTPException(409, "Stop active subagents before reverting project files")
+            result = await _proxy_fs_response(
+                session_id,
+                "POST",
+                f"/v1/sessions/{session_id}/resources/environments/default/shell",
+                {
+                    "command": checkpoint_command(
+                        session_id,
+                        anchor,
+                        body["action"],
+                        body.get("token"),
+                        workspace=conv.workspace,
+                    ),
+                    "timeout": 25,
+                },
+                request=request,
+                required_level=LEVEL_OWNER,
+                publish_invalidation=body["action"] == "apply",
+            )
+        try:
+            payload = json.loads(result["stdout"].strip().splitlines()[-1])
+            if not isinstance(payload, dict):
+                raise ValueError("Invalid checkpoint result")
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise HTTPException(502, "The workspace could not restore this checkpoint") from exc
+        if payload.get("state") not in {"ready", "restored"}:
+            raise HTTPException(409, payload.get("message", "Checkpoint unavailable"))
+        return payload
 
     # ── GitHub integration (read-only) ───────────────────────────
     # Registered BEFORE the generic ``/{resource_id}`` lookup so

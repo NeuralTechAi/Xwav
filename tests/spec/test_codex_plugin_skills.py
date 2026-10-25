@@ -9,6 +9,8 @@ import pytest
 
 from omnigent.spec.skill_sources import SkillSourceContext, resolve_harness_skills
 
+pytestmark = pytest.mark.usefixtures("isolated_native_skill_catalog")
+
 
 def _skill(root: Path, name: str = "review", *, hidden: bool = False) -> Path:
     directory = root / name

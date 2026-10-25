@@ -6,9 +6,8 @@ environment, a logged-in ``claude`` / ``codex`` CLI, or a local Ollama
 server — so the setup flow can offer them as one-tap choices instead of
 asking the user to paste keys they already have.
 
-Detection is almost entirely pure standard library (``os``, ``socket``,
-``pathlib``) and performs no network I/O beyond a single non-blocking
-localhost TCP probe for Ollama. The one exception is macOS Claude detection:
+Detection uses the standard library and bounded loopback HTTP probes to
+check installed Ollama model capabilities. The one exception is macOS Claude detection:
 Claude Code stores its subscription OAuth in the macOS Keychain (not a file),
 so on macOS — and only when the file check comes up empty — Claude detection
 falls back to a ``claude auth status`` subprocess (see
@@ -24,10 +23,10 @@ logins, then a local server). The caller maps each detection's
 from __future__ import annotations
 
 import concurrent.futures
+import http.client
 import json
 import os
 import shlex
-import socket
 import sys
 import threading
 import time
@@ -59,7 +58,7 @@ _OLLAMA_HOST = "localhost"
 _OLLAMA_PORT = 11434
 _OLLAMA_URL = f"http://{_OLLAMA_HOST}:{_OLLAMA_PORT}"
 
-# Timeout (seconds) for the Ollama TCP probe — short so setup stays snappy
+# Timeout per loopback HTTP operation — keep ambient detection responsive
 # when nothing is listening.
 _OLLAMA_PROBE_TIMEOUT = 0.25
 
@@ -660,19 +659,48 @@ def _claude_login_detected() -> bool:
 
 
 def _ollama_reachable() -> bool:
-    """Return whether a local Ollama server accepts TCP connections.
+    """Detect a usable local generation model, not merely an open Ollama port.
 
-    Performs a single short-timeout connect to ``localhost:11434``. Isolated
-    in its own helper so tests can monkeypatch it without real network I/O.
-
-    :returns: ``True`` when ``localhost:11434`` accepts a TCP connection,
-        ``False`` on refusal, timeout, or any socket error.
+    Embedding-only installations cannot serve agent turns. Read each installed
+    model's capabilities before advertising Ollama as a chat provider. Probes
+    stay on loopback, bypass environment proxies and use bounded timeouts.
     """
+    connection = http.client.HTTPConnection(
+        _OLLAMA_HOST, _OLLAMA_PORT, timeout=_OLLAMA_PROBE_TIMEOUT
+    )
     try:
-        with socket.create_connection((_OLLAMA_HOST, _OLLAMA_PORT), timeout=_OLLAMA_PROBE_TIMEOUT):
-            return True
-    except OSError:
+        connection.request("GET", "/api/tags")
+        response = connection.getresponse()
+        if response.status != 200:
+            return False
+        catalog = json.loads(response.read(1024 * 1024))
+        if not isinstance(catalog, dict) or not isinstance(catalog.get("models"), list):
+            return False
+        for model in catalog["models"][:8]:
+            if not isinstance(model, dict) or not isinstance(model.get("name"), str):
+                continue
+            connection.request(
+                "POST",
+                "/api/show",
+                json.dumps({"model": model["name"]}),
+                {"Content-Type": "application/json"},
+            )
+            response = connection.getresponse()
+            payload = response.read(1024 * 1024)
+            if response.status != 200:
+                continue
+            details = json.loads(payload)
+            if (
+                isinstance(details, dict)
+                and isinstance(details.get("capabilities"), list)
+                and "completion" in details["capabilities"]
+            ):
+                return True
         return False
+    except (OSError, ValueError, http.client.HTTPException):
+        return False
+    finally:
+        connection.close()
 
 
 # One-shot prewarmed detection result, produced by
@@ -737,9 +765,9 @@ def detect_providers() -> list[DetectedProvider]:
        resolution (config.toml's default provider beats auth.json).
     4. A logged-in Codex CLI (``~/.codex/auth.json`` exists *and* carries a
        usable credential — see :func:`codex_auth_has_credential`).
-    5. A reachable local Ollama (``localhost:11434`` TCP-connectable).
+    5. Local Ollama with an installed completion-capable model.
 
-    No network I/O is performed except the single Ollama probe (see
+    No network I/O is performed except bounded loopback Ollama probes (see
     :func:`_ollama_reachable`). On macOS, a ``claude auth status`` subprocess
     may run as the Claude Keychain fallback (see :func:`_claude_login_detected`).
 

@@ -1018,7 +1018,7 @@ describe("Sidebar session list", () => {
     expect(inbox).not.toHaveClass("h-8");
     expect(newChat.querySelector("svg")).toHaveClass("text-[var(--sidebar-active-foreground)]");
     expect(inbox.querySelector("svg")).toHaveClass("text-muted-foreground");
-    expect(within(inbox).getByText("Inbox")).toBeInTheDocument();
+    expect(within(inbox).getByText("Notifications")).toBeInTheDocument();
     expect(within(primaryNav).queryByTestId("toggle-selection-mode")).toBeNull();
   });
 
@@ -1031,7 +1031,7 @@ describe("Sidebar session list", () => {
 
     const inbox = screen.getByTestId("inbox-button");
     expect(inbox).not.toHaveClass("bg-[var(--sidebar-active)]");
-    const badge = within(inbox).getByLabelText("2 inbox items waiting");
+    const badge = within(inbox).getByLabelText("2 notifications waiting");
     expect(badge).toHaveClass(
       "bg-[var(--sidebar-active)]",
       "text-[var(--sidebar-active-foreground)]",
@@ -1051,7 +1051,7 @@ describe("Sidebar session list", () => {
       "bg-[var(--sidebar-active)]",
       "text-[var(--sidebar-active-foreground)]",
     );
-    const badge = within(inbox).getByLabelText("2 inbox items waiting");
+    const badge = within(inbox).getByLabelText("2 notifications waiting");
     expect(badge).toHaveClass("bg-transparent", "text-[var(--sidebar-active-foreground)]");
     expect(badge).not.toHaveClass("bg-[var(--sidebar-active)]");
   });
@@ -1082,7 +1082,7 @@ describe("Sidebar session list", () => {
     expect(screen.queryByTestId("canvas-nav")).toBeNull();
   });
 
-  it("renders and highlights the Canvas nav row without lighting New session", () => {
+  it("renders and highlights the Canvas nav row without lighting New Job", () => {
     mockConversations(THREE_TYPE_CONVERSATIONS);
     renderSidebar(true, "/canvas", undefined, {
       ...FALLBACK_SERVER_INFO,
@@ -1118,13 +1118,13 @@ describe("Sidebar session list", () => {
     expect(sessionsSection).not.toBeNull();
 
     const newSession = within(sessionsSection!).getByRole("link", {
-      name: "New session",
+      name: "New Job",
     });
     expect(newSession).toHaveAttribute("data-testid", "sessions-new-session");
     expect(newSession).toHaveAttribute("href", "/");
     expect(newSession).toHaveAttribute("data-size", "icon-xs");
     expect(newSession).toHaveClass("text-muted-foreground", "hover:text-foreground");
-    expect(newSession).not.toHaveTextContent("New session");
+    expect(newSession).not.toHaveTextContent("New Job");
 
     const selectSessions = within(sessionsSection!).getByRole("button", {
       name: "Select sessions",
@@ -1158,24 +1158,24 @@ describe("Sidebar session list", () => {
     fireEvent.click(selectSessions);
     expect(screen.getByRole("button", { name: "Exit selection mode" })).toBeInTheDocument();
     expect(within(sessionsSection!).queryByRole("button", { name: "Select sessions" })).toBeNull();
-    expect(within(sessionsSection!).queryByRole("link", { name: "New session" })).toBeNull();
+    expect(within(sessionsSection!).queryByRole("link", { name: "New Job" })).toBeNull();
   });
 
-  it("renders the 'Automations' nav row directly under 'New session' and routes to /tasks", () => {
+  it("renders the 'Automations' nav row directly under 'New Job' and routes to /tasks", () => {
     mockConversations(THREE_TYPE_CONVERSATIONS);
     renderSidebar();
 
     const scheduled = screen.getByTestId("scheduled-tasks-nav");
-    // Full-width nav ROW (a link), labeled "Automations", pointing at /tasks —
+    // Full-width nav ROW (a link), labeled "Scheduler", pointing at /tasks —
     // not the old top-right icon button.
     expect(scheduled).toHaveAttribute("href", "/tasks");
-    expect(scheduled).toHaveTextContent("Automations");
+    expect(scheduled).toHaveTextContent("Scheduler");
     // The removed icon-button version must be gone.
     expect(screen.queryByTestId("scheduled-tasks-button")).toBeNull();
 
-    // It sits in the primary nav group right after "New session" and before
-    // the "Inbox" row. Compare document order. (The search box now renders
-    // above this nav group upstream, so we anchor to New session + Inbox — the
+    // It sits in the primary nav group right after "New Job" and before
+    // the "Notifications" row. Compare document order. (The search box now renders
+    // above this nav group upstream, so we anchor to New Job + Inbox — the
     // two items actually adjacent to Scheduled — rather than the search box.)
     const newSession = screen.getByTestId("new-chat-button");
     const inbox = screen.getByTestId("inbox-button");
@@ -1214,7 +1214,7 @@ describe("Sidebar session list", () => {
     renderSidebar(true, "/tasks");
 
     // Active/selected state uses the SAME shared active-highlight as the sibling
-    // nav rows (New session / Inbox) — the `--sidebar-active` pill, not an
+    // nav rows (New Job / Inbox) — the `--sidebar-active` pill, not an
     // ad-hoc bg-muted.
     expect(screen.getByTestId("scheduled-tasks-nav")).toHaveClass(
       "bg-[var(--sidebar-active)]",
@@ -1869,7 +1869,7 @@ describe("Sidebar sections", () => {
 // The sidebar splits sessions across two tabs: "My sessions" (owned, with the
 // full Pinned / Projects / Chats structure) and "Shared with me" (a flat list).
 describe("Sidebar tabs", () => {
-  it("keeps New session visible on both tabs and snaps back to My sessions when used", () => {
+  it("keeps New Job visible on both tabs and snaps back to My sessions when used", () => {
     mockConversations([
       conv("conv_mine", "Claude Code"),
       conv("conv_shared", "Claude Code", { owner: "other@example.com" }),
@@ -1877,7 +1877,7 @@ describe("Sidebar tabs", () => {
     renderSidebar();
     expect(screen.getByTestId("new-chat-button")).toBeInTheDocument();
 
-    // New session always creates a session the viewer owns, so it stays
+    // New Job always creates a session the viewer owns, so it stays
     // reachable on the Shared tab too (not hidden).
     showSharedTab();
     expect(screen.getByTestId("new-chat-button")).toBeInTheDocument();
@@ -2293,7 +2293,7 @@ describe("Sidebar project sections", () => {
     expect(within(recentSection).queryByText("conv_moved")).toBeNull();
   });
 
-  it("closes the mobile overlay when New session is selected from the project menu", async () => {
+  it("closes the mobile overlay when New Job is selected from the project menu", async () => {
     projectsMock.push("Customer X");
     mockConversations([
       conv("conv_filed", "Claude Code", { labels: { omni_project: "Customer X" } }),
@@ -2552,14 +2552,14 @@ describe("Sidebar project sections", () => {
     );
   });
 
-  it("offers a desktop New session shortcut while keeping the touch menu accessible", async () => {
+  it("offers a desktop New Job shortcut while keeping the touch menu accessible", async () => {
     projectsMock.push("Customer X");
     mockConversations([
       conv("conv_filed", "Claude Code", { labels: { omni_project: "Customer X" } }),
     ]);
     renderSidebar();
 
-    const shortcut = screen.getByRole("link", { name: "New session in Customer X" });
+    const shortcut = screen.getByRole("link", { name: "New Job in Customer X" });
     expect(shortcut).toHaveAttribute("href", "/?project=Customer%20X");
     expect(shortcut).toHaveClass("hidden", "[@media((hover:hover)_and_(pointer:fine))]:flex");
     const menuButton = screen.getByTestId("project-actions");
@@ -2575,7 +2575,7 @@ describe("Sidebar project sections", () => {
     expect(menuItem.closest("a")).toHaveAttribute("href", "/?project=Customer%20X");
   });
 
-  it("reveals project actions on hover only on wide fine-pointer layouts", () => {
+  it("keeps project actions visible without hover on every layout", () => {
     projectsMock.push("Customer X");
     mockConversations([
       conv("conv_running", "Claude Code", {
@@ -2587,14 +2587,16 @@ describe("Sidebar project sections", () => {
 
     const kebab = screen.getByTestId("project-actions");
     const revealWrapper = kebab.closest("div[class*=transition-opacity]")!;
-    expect(revealWrapper).toHaveClass(
+    expect(revealWrapper).not.toHaveClass(
       "[@media((hover:hover)_and_(pointer:fine))]:md:opacity-0",
-      "[@media((hover:hover)_and_(pointer:fine))]:md:group-hover/header:opacity-100",
     );
     const outerBox = kebab.closest("div[class*=absolute]")!;
-    expect(outerBox).toHaveClass(
+    expect(outerBox).not.toHaveClass(
       "[@media((hover:hover)_and_(pointer:fine))]:md:pointer-events-none",
-      "[@media((hover:hover)_and_(pointer:fine))]:md:group-hover/header:pointer-events-auto",
+    );
+    const create = screen.getByTestId("new-project");
+    expect(create.closest("div[data-header-controls]")).not.toHaveClass(
+      "[@media((hover:hover)_and_(pointer:fine))]:md:opacity-0",
     );
   });
 });
@@ -2789,9 +2791,9 @@ describe("Sidebar collapsed project marker", () => {
     expect(slot).toHaveClass(
       "mr-7",
       "[@media((hover:hover)_and_(pointer:fine))]:mr-14",
-      "[@media((hover:hover)_and_(pointer:fine))]:md:-mr-1",
+      "[@media((hover:hover)_and_(pointer:fine))]:md:mr-14",
     );
-    expect(slot).toHaveClass(
+    expect(slot).not.toHaveClass(
       "[@media((hover:hover)_and_(pointer:fine))]:md:group-hover/section:opacity-0",
       "[@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-state=open]]/header:opacity-0",
       "[@media((hover:hover)_and_(pointer:fine))]:md:group-has-[[data-header-controls]:focus-within]/header:opacity-0",
@@ -2878,7 +2880,7 @@ describe("Sidebar auto-expand Pinned on pin", () => {
       "false",
     );
 
-    // A new session becomes pinned server-side (as if the toggle landed and the
+    // A new job becomes pinned server-side (as if the toggle landed and the
     // pinned query refetched); re-render the same tree so the effect sees the
     // transition and auto-expands.
     seedPins(["conv_pinned", "conv_plain"]);
@@ -3268,7 +3270,7 @@ describe("Sidebar view options", () => {
     const titles = grouping === "status" ? ["Working", "Done"] : ["Updated today", "Earlier"];
     expect(groupHeaders()).toEqual(titles);
     expect(within(groupSection(titles[1])).getByText("conv_shared")).toBeInTheDocument();
-    // The first group carries every list control: filter, Select and New session.
+    // The first group carries every list control: filter, Select and New Job.
     const firstGroup = groupSection(titles[0]);
     expect(within(firstGroup).getByTestId("session-filter")).toBeTruthy();
     expect(within(firstGroup).getByTestId("toggle-selection-mode")).toBeTruthy();
@@ -3790,7 +3792,7 @@ describe("sidebar_grouping_ui release flag", () => {
     },
   );
 
-  it("puts the filter and Select on the Projects header, leaving New session on Sessions", () => {
+  it("puts the filter and Select on the Projects header, leaving New Job on Sessions", () => {
     mockConversations(THREE_TYPE_CONVERSATIONS);
     renderGroupingSidebar();
 
@@ -3820,7 +3822,7 @@ describe("sidebar_grouping_ui release flag", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Alpha/ }));
 
     const action = screen
-      .getAllByRole("link", { name: "new session" })
+      .getAllByRole("link", { name: "new job" })
       .find((link) => link.getAttribute("href") === "/?project=Alpha")!;
     const empty = action.closest(".sidebar-row")!;
     expect(empty).toHaveClass(
@@ -3938,7 +3940,7 @@ describe("sidebar_grouping_ui release flag", () => {
     renderGroupingSidebar();
     showSharedTab();
 
-    // Shared carries New session when Sessions isn't shown; Select stays on Projects.
+    // Shared carries New Job when Sessions isn't shown; Select stays on Projects.
     const shared = screen.getByRole("button", { name: "Shared" }).closest("section")!;
     expect(within(shared).getByTestId("sessions-new-session")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Select sessions" }));

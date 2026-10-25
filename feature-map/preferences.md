@@ -8,6 +8,14 @@ and shared/machine scope controls are not available through the CLI or UI yet.
 
 ## Sub-features
 
+- `browser-default-harness`: Settings → General → Sessions or Settings → Harnesses
+  → Default chat harness saves a browser-local default for new chat sessions.
+  Project defaults and an explicit session pick take precedence; a one-off pick
+  does not rewrite the default. Automatic clears it and restores recency-based
+  selection. A settings detour applies a changed default while preserving text
+  and attachments. A missing/unconfigured default needs a user choice or setup;
+  it does not silently switch harnesses. Harness² stays a benchmark workflow.
+
 - `user-defaults`: set, list, and remove defaults on this machine; cover empty
   config, invalid keys, legacy scalar harness settings, and custom config homes.
 - `project-defaults`: project YAML overrides user YAML for the model and the
@@ -174,3 +182,16 @@ observed results, any mocked services, and remaining entry-point gaps.
   also separate from the future preference-import flow.
 - Resolver tests and feature-map contract checks do not prove browser behavior,
   native policy enforcement, remote provisioning, or sync convergence.
+
+## Default color template
+
+GitHub is the default palette for new users, invalid or missing saved palettes,
+and Appearance → Reset to defaults. Light/dark/system remains an independent
+setting. Explicitly saved palettes and custom colors remain selectable. The same
+palette applies to chat, workspace, Settings, Preview, Quality Lab, Load Testing
+and embedded theme roots. A custom theme starts from GitHub by default.
+
+Verify fresh desktop/mobile browser contexts in both light and dark mode: open
+Settings → Appearance and confirm GitHub is selected; switch to Xwav or another
+palette, reload, then reset and confirm GitHub returns. Open the standalone job
+dashboards and verify their surfaces use the same palette.

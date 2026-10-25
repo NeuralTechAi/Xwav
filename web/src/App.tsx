@@ -48,6 +48,32 @@ const ApprovePage = withPageView(
   "approve",
   lazy(() => import("@/pages/ApprovePage").then((m) => ({ default: m.ApprovePage }))),
 );
+const PreviewPage = withPageView(
+  "preview",
+  lazy(() => import("@/pages/PreviewPage").then((m) => ({ default: m.PreviewPage }))),
+);
+const LoadTestingPage = withPageView(
+  "loadtesting",
+  lazy(() => import("@/pages/LoadTestingPage").then((m) => ({ default: m.LoadTestingPage }))),
+);
+const PreproductionPage = withPageView(
+  "preproduction",
+  lazy(() => import("@/pages/PreproductionPage").then((m) => ({ default: m.PreproductionPage }))),
+);
+const DeploymentsPage = withPageView(
+  "deployments",
+  lazy(() =>
+    import("@/pages/ReleasePage").then((m) => ({ default: () => <m.ReleasePage mode="deploy" /> })),
+  ),
+);
+const InstallablesPage = withPageView(
+  "installables",
+  lazy(() =>
+    import("@/pages/ReleasePage").then((m) => ({
+      default: () => <m.ReleasePage mode="download" />,
+    })),
+  ),
+);
 const InboxPage = withPageView(
   "inbox",
   lazy(() => import("@/pages/InboxPage").then((m) => ({ default: m.InboxPage }))),
@@ -177,6 +203,11 @@ function AppRoutes({ basename }: AppProps) {
               </FeatureGatedPage>
             }
           />
+          <Route path={`${prefix}/preview`} element={<PreviewPage />} />
+          <Route path={`${prefix}/preproduction`} element={<PreproductionPage />} />
+          <Route path={`${prefix}/loadtesting`} element={<LoadTestingPage />} />
+          <Route path={`${prefix}/deployments`} element={<DeploymentsPage />} />
+          <Route path={`${prefix}/installables`} element={<InstallablesPage />} />
           <Route path={`${prefix}/inbox`} element={<InboxPage />} />
           <Route
             path={`${prefix}/canvas`}

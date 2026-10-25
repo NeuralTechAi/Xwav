@@ -944,3 +944,35 @@ async def test_pr_label_edit_requires_a_json_body(
 
     assert resp.status_code == 415, resp.text
     assert runner_client.posts == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "user", ["viewer@example.com", "owner@example.com", "manager@example.com"]
+)
+async def test_file_revert_is_owner_only(client, runner_client, user):
+    response = await client.post(
+        "/v1/sessions/conv_share/revert",
+        json={"action": "plan", "item_id": "message"},
+        headers={"X-Forwarded-Email": user},
+    )
+    assert response.status_code in {401, 403}
+    assert runner_client.posts == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "user", ["viewer@example.com", "owner@example.com", "manager@example.com"]
+)
+@pytest.mark.parametrize("method", ["GET", "POST"])
+async def test_preproduction_reports_and_execution_are_owner_only(
+    client, runner_client, user, method
+):
+    response = await client.request(
+        method,
+        "/v1/sessions/conv_share/preproduction",
+        headers={"X-Forwarded-Email": user},
+        **({"json": {"action": "ensure"}} if method == "POST" else {}),
+    )
+    assert response.status_code in {401, 403}
+    assert runner_client.posts == []

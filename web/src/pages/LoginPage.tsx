@@ -70,7 +70,7 @@ export function LoginPage() {
   // "already authenticated → bounce back" shortcut below — otherwise the
   // stale session would auto-return to consent, which would just bounce here
   // again (a loop). The user must re-enter their password; a successful submit
-  // mints a new session whose iat clears the consent page's freshness check.
+  // mints a new job whose iat clears the consent page's freshness check.
   const forceReauth = params.get("reauth") === "1";
 
   const [username, setUsername] = useState(readLastUsername);
@@ -128,7 +128,7 @@ export function LoginPage() {
     if (result.ok) {
       rememberUsername(username);
       // Hard-navigate so identity.ts re-runs and every cached
-      // query is rebuilt against the new session.
+      // query is rebuilt against the new job.
       window.location.href = returnTo;
       return;
     }

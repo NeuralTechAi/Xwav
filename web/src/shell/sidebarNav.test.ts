@@ -445,7 +445,7 @@ describe("getConversationIconKind", () => {
 });
 
 describe("conversationDisplayLabel", () => {
-  it("uses the title when present and a 'New session' fallback otherwise", () => {
+  it("uses the title when present and a 'New Job' fallback otherwise", () => {
     expect(
       conversationDisplayLabel(
         conversation("conv_abcdefghijklmnopqrstuvwxyz", "Named chat", new Date(2026, 4, 14, 9)),
@@ -455,7 +455,7 @@ describe("conversationDisplayLabel", () => {
       conversationDisplayLabel(
         conversation("conv_abcdefghijklmnopqrstuvwxyz", null, new Date(2026, 4, 14, 9)),
       ),
-    ).toBe("New session");
+    ).toBe("New Job");
   });
 
   it("falls back to 'Claude Code' for claude-native sessions with no title", () => {

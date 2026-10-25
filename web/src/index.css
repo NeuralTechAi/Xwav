@@ -4,6 +4,7 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist-mono";
 @import "./themePalettes.generated.css";
+@import "./workbench.css";
 
 /* Streamdown ships utility classes pre-compiled in its dist; this @source
  * pragma tells Tailwind v4 to scan those files so the classes survive the
@@ -1156,35 +1157,55 @@ html[data-electron-mac] .breadcrumb-folder {
   }
 }
 
-/* Share button — glassy teal effect (both modes). The vertical
+/* Share button — palette-colored glassy effect (both modes). The vertical
  * gradient alone does the embossed work (lighter top = light catch,
  * darker bottom = shadow, simulating a convex surface lit from above);
  * no border or inset shine. Light mode: gentler gradient, no shadow —
  * the full emboss + dark depth shadow reads too heavy on the light
  * canvas. Dark mode: stronger emboss plus the grounding shadow. */
 .share-button-glassy {
-  background: linear-gradient(to bottom, #138a7b 0%, #087f70 40%, #06685c 100%);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--primary) 90%, white) 0%,
+    var(--primary) 40%,
+    color-mix(in srgb, var(--primary) 85%, black) 100%
+  );
   border: none;
   box-shadow: none;
-  color: #ffffff;
+  color: var(--primary-foreground);
 }
 
 .share-button-glassy:hover {
   /* Darken the gradient slightly on hover */
-  background: linear-gradient(to bottom, #10796b 0%, #076f62 40%, #05594f 100%);
+  background: linear-gradient(
+    to bottom,
+    var(--primary) 0%,
+    color-mix(in srgb, var(--primary) 90%, black) 40%,
+    color-mix(in srgb, var(--primary) 75%, black) 100%
+  );
 }
 
 .dark .share-button-glassy {
-  background: linear-gradient(150deg, #138a7b 0%, #087f70 40%, #05594f 100%);
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--primary) 90%, white) 0%,
+    var(--primary) 40%,
+    color-mix(in srgb, var(--primary) 80%, black) 100%
+  );
   border: none;
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.5),
     0 1px 3px rgba(0, 0, 0, 0.4);
-  color: #ffffff;
+  color: var(--primary-foreground);
 }
 
 .dark .share-button-glassy:hover {
-  background: linear-gradient(150deg, #10796b 0%, #076f62 40%, #044c43 100%);
+  background: linear-gradient(
+    150deg,
+    var(--primary) 0%,
+    color-mix(in srgb, var(--primary) 85%, black) 40%,
+    color-mix(in srgb, var(--primary) 70%, black) 100%
+  );
 }
 
 @layer base {

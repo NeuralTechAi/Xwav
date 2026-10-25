@@ -172,7 +172,7 @@ export function SidebarServerPicker() {
           <Button
             type="button"
             variant="ghost"
-            // Same shared row construct as New session / Inbox / Settings, so
+            // Same shared row construct as New Job / Inbox / Settings, so
             // the icon lands on the sidebar's icon column and the label on its
             // label column.
             className={cn(

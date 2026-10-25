@@ -898,6 +898,9 @@ class SkillSpec:
         orchestration skills (frontmatter ``user-invocable: false``);
         such skills are excluded from the composer's ``/`` menu.
         Defaults to ``True`` (absent frontmatter field = invocable).
+    :param allow_implicit_invocation: Whether the model may automatically select
+        this skill. False keeps explicit invocation available while hiding it
+        from automatic-selection catalogs.
     :param display_name: Human-facing label from the frontmatter
         ``name``, e.g. ``"Simplified Technical English (ASD-STE100)"``.
         May contain spaces. ``None`` when it equals :attr:`name` or the
@@ -910,6 +913,7 @@ class SkillSpec:
     skill_dir: Path | None = None
     user_invocable: bool = True
     display_name: str | None = None
+    allow_implicit_invocation: bool = True
 
 
 @dataclass

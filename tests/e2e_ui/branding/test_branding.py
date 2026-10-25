@@ -71,7 +71,7 @@ def test_custom_branding_reshapes_the_landing(page: Page, live_server: str) -> N
 
     # Custom hero heading replaces the built-in default.
     expect(page.get_by_role("heading", name="Acme Corp")).to_be_visible()
-    expect(page.get_by_text("What should we build?")).to_have_count(0)
+    expect(page.get_by_text("Start your next task.")).to_have_count(0)
 
     # Custom logo renders as an <img> (alt = app name); the favicon points at
     # the branding route.
@@ -95,7 +95,7 @@ def test_empty_heading_hides_the_hero_line(page: Page, live_server: str) -> None
     _open_landing(page, base_url)
 
     # Neither the custom nor the built-in default heading appears.
-    expect(page.get_by_text("What should we build?")).to_have_count(0)
+    expect(page.get_by_text("Start your next task.")).to_have_count(0)
     # The landing did load branded (credit present), so this is a real hide.
     expect(page.get_by_test_id("powered-by-omnigent")).to_be_visible()
 
@@ -120,9 +120,9 @@ def test_unbranded_keeps_defaults_and_hides_credit(page: Page, live_server: str)
     _stub_info(page, None)
     _open_landing(page, base_url)
 
-    expect(page.get_by_role("heading", name="What should we build?")).to_be_visible()
+    expect(page.get_by_role("heading", name="Start your next task.")).to_be_visible()
     expect(page).to_have_title("Xwav")
-    expect(page.get_by_role("link", name="Xwav")).to_be_visible()
+    expect(page.get_by_role("link", name="Xwav", exact=True)).to_be_visible()
     expect(page.get_by_test_id("sidebar-wordmark")).to_have_text("Xwav")
     expect(page.get_by_test_id("sidebar-wordmark").locator("svg")).to_have_count(1)
     expect(page.get_by_test_id("powered-by-omnigent")).to_have_count(0)

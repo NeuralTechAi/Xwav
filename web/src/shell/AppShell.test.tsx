@@ -1031,7 +1031,7 @@ describe("AppShell header", () => {
   });
 
   it("treats an unhydrated session row as startup so a fresh session never looks stopped", () => {
-    // Before the sidebar list or snapshot hydrates, a brand-new session is
+    // Before the sidebar list or snapshot hydrates, a brand-new job is
     // indistinguishable from a stopped one; the spinner must cover that
     // gap or the Terminal view flashes Resume during startup.
     useConvMock.mockReturnValue({
@@ -3068,7 +3068,7 @@ describe("Right workspace card visibility", () => {
   });
 
   it("starts collapsed for a fresh session (no stored open-state)", () => {
-    // A brand-new session has no persisted open-state, so the Appearance
+    // A brand-new job has no persisted open-state, so the Appearance
     // Workspace panel product default applies.
     writeWorkspacePanelDefault("collapsed");
     useEnvironmentMock.mockReturnValue({
@@ -5632,7 +5632,7 @@ describe("new-session browser shortcut", () => {
         client,
         "/c/conv_abc",
         <>
-          <Route index element={<p>New session route</p>} />
+          <Route index element={<p>New Job route</p>} />
           <Route path="c/:conversationId" element={<textarea aria-label="Message" />} />
         </>,
         app,
@@ -5642,9 +5642,9 @@ describe("new-session browser shortcut", () => {
     const composer = screen.getByRole("textbox", { name: "Message" });
     composer.focus();
     fireEvent.keyDown(composer, { code: "KeyN", ctrlKey: true, altKey: true });
-    expect(screen.queryByText("New session route")).toBeNull();
+    expect(screen.queryByText("New Job route")).toBeNull();
     fireEvent.keyDown(composer, { key: "O", code: "KeyO", ctrlKey: true, shiftKey: true });
-    expect(screen.getByText("New session route")).toBeInTheDocument();
+    expect(screen.getByText("New Job route")).toBeInTheDocument();
     setEmbedRoot(null);
   });
 });

@@ -2,7 +2,7 @@
  * "Set up <agent> on <host>" dialog for the New Chat landing screen.
  *
  * Renders the harness's setup requirements as a checklist, mirroring what
- * ``omni setup`` walks a user through. The step descriptors are authored by
+ * ``xwav setup`` walks a user through. The step descriptors are authored by
  * the server (``/v1/harnesses`` → ``setup_steps``); this component marks each
  * done/todo from the host's readiness and offers the right control per step:
  *   - a one-click Install for a server-installable harness,
@@ -153,10 +153,10 @@ export function HarnessSetupDialog({
           // No step the UI can perform (curl-install / own-login harness, or no
           // published steps) and not yet done. One clear signpost — never a
           // dead-end. When everything IS done we fall through to the checklist
-          // (all green ticks) rather than showing a "run omni setup"
+          // (all green ticks) rather than showing a "run xwav setup"
           // signpost that would contradict the "is ready" description.
           <p className="py-1 text-ui text-muted-foreground" data-testid="harness-setup-empty">
-            Run <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">omni setup</code>{" "}
+            Run <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">xwav setup</code>{" "}
             on {host?.name} to finish setting up {name}.
           </p>
         ) : hasSteps ? (

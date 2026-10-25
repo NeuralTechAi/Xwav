@@ -9,6 +9,7 @@ const PROJECT_NAME = "Sprint 42";
 const PROJECT_ID = "p_sprint42";
 
 const mocks = vi.hoisted(() => ({
+  downloadProject: vi.fn().mockResolvedValue(undefined),
   renameProject: {
     mutateAsync: vi.fn(() => Promise.resolve(PROJECT_ID)),
     isPending: false,
@@ -21,6 +22,10 @@ const mocks = vi.hoisted(() => ({
     isError: false,
     error: null,
   },
+}));
+
+vi.mock("@/lib/workspaceDownload", () => ({
+  downloadLatestProjectWorkspace: mocks.downloadProject,
 }));
 
 vi.mock("@/hooks/useHosts", () => ({
@@ -117,6 +122,7 @@ function dispatchTouchPointer(
 function expectProjectMenuActions() {
   expect(screen.getByTestId("project-new-session-menu")).toBeInTheDocument();
   expect(screen.getByTestId("rename-project")).toBeInTheDocument();
+  expect(screen.getByTestId("download-project")).toBeInTheDocument();
   expect(screen.getByTestId("project-settings")).toBeInTheDocument();
   expect(screen.getByTestId("delete-project")).toBeInTheDocument();
 }
@@ -223,7 +229,7 @@ describe("project folder header context menu", () => {
     );
   });
 
-  it("keeps New session reachable when a touch opens the menu on hover-capable hardware", () => {
+  it("keeps New Job reachable when a touch opens the menu on hover-capable hardware", () => {
     renderSidebar();
 
     fireEvent.contextMenu(folderHeader());
@@ -410,4 +416,11 @@ describe("project folder header context menu", () => {
 
     expect(selectionHeader).toHaveAttribute("aria-expanded", before === "true" ? "false" : "true");
   });
+});
+
+it("downloads the latest project job from the context menu", async () => {
+  renderSidebar();
+  fireEvent.contextMenu(folderHeader());
+  fireEvent.click(screen.getByTestId("download-project"));
+  await waitFor(() => expect(mocks.downloadProject).toHaveBeenCalledWith(PROJECT_NAME));
 });

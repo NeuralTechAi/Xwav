@@ -971,6 +971,18 @@ def register_core_routes(
             # message survives in each entry's `msg`.
             raise HTTPException(status_code=422, detail=exc.errors(include_context=False)) from exc
 
+        from omnigent.server.routes._session_create_validation import (
+            resolve_project_session_create,
+        )
+
+        project_resolution = await resolve_project_session_create(
+            body=body,
+            user_id=user_id,
+            project_store=project_store,
+            sandbox_isolation=getattr(request.app.state, "project_sandbox_isolation", False),
+        )
+        body = project_resolution.body
+
         # Checked before the session exists so a rejected create leaves nothing
         # behind.
         await _check_initial_input(request, body.initial_input)
@@ -1204,6 +1216,7 @@ def register_core_routes(
             body=parsed_metadata,
             user_id=user_id,
             project_store=project_store,
+            sandbox_isolation=getattr(request.app.state, "project_sandbox_isolation", False),
         )
         parsed_metadata = project_resolution.body
         await _check_initial_input(request, parsed_metadata.initial_input)
@@ -3553,6 +3566,13 @@ def register_core_routes(
                 "Source session has no agent binding — cannot fork.",
                 code=ErrorCode.INVALID_INPUT,
             )
+
+        if (
+            source.project_id is not None
+            and not body.side_chat
+            and getattr(request.app.state, "project_sandbox_isolation", False)
+        ):
+            body = body.model_copy(update={"host_type": "managed", "host_id": None})
 
         from omnigent.server.routes.sandbox_inference import (
             actual_harness,

@@ -1963,8 +1963,8 @@ export function ForkSessionDialog({
   // for screen readers). Coding sources also start on a picked host/directory.
   const cloneDescription = `${
     truncated
-      ? "Copies this session's history up to the selected response into a new session you own — messages after it aren't carried over"
-      : "Copies this session's history into a new session you own"
+      ? "Copies this session's history up to the selected response into a new job you own — messages after it aren't carried over"
+      : "Copies this session's history into a new job you own"
   }${
     sourceWorkspace ? ", then starts it on the host and directory you pick" : ""
   }. Comments aren't copied, and changes in the clone won't affect the original.`;
@@ -2003,7 +2003,7 @@ export function ForkSessionDialog({
           </DialogTitle>
           <DialogDescription className={workspaceRecovery ? undefined : "sr-only"}>
             {workspaceRecovery
-              ? "Choose an existing directory to continue this conversation in a new session. Files from the missing workspace won’t be restored."
+              ? "Choose an existing directory to continue this conversation in a new job. Files from the missing workspace won’t be restored."
               : cloneDescription}
           </DialogDescription>
         </DialogHeader>

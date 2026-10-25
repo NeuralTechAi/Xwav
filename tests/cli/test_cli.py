@@ -7093,10 +7093,10 @@ def _fake_provider_for(*configured: str):
     return _fn
 
 
-def test_pick_first_run_prefers_claude_with_polly(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pick_first_run_falls_back_to_claude_with_polly(monkeypatch: pytest.MonkeyPatch) -> None:
     """Claude configured → claude-sdk + the bundled polly agent.
 
-    Claude wins the priority order and is the only family that gets a default
+    With no Pi provider, Claude is the only family that gets a default
     *example* agent (polly). A regression that dropped polly or picked the
     wrong harness fails here.
     """
@@ -7110,8 +7110,19 @@ def test_pick_first_run_prefers_claude_with_polly(monkeypatch: pytest.MonkeyPatc
     assert plan.agent is not None and plan.agent.endswith("polly")
 
 
-def test_pick_first_run_harness_codex_then_pi_no_agent(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No Claude → Codex (then Pi) with NO default example agent (bare REPL)."""
+def test_pick_first_run_prefers_pi_when_all_providers_are_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "omnigent.onboarding.provider_config.default_provider_for_harness",
+        _fake_provider_for("pi", "claude-sdk", "codex"),
+    )
+    plan = _pick_first_run_harness()
+    assert plan is not None and plan.harness == "pi" and plan.agent is None
+
+
+def test_pick_first_run_harness_codex_or_pi_no_agent(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A single configured Codex or Pi provider starts its bare REPL."""
     monkeypatch.setattr(
         "omnigent.onboarding.provider_config.default_provider_for_harness",
         _fake_provider_for("codex"),
