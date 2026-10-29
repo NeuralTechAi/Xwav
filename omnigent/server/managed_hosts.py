@@ -3707,6 +3707,14 @@ def build_owner_launcher(
     :returns: A ready launcher.
     """
     launcher = entry.launcher_factory()
+    if launcher.provider == "docker":
+        from omnigent.billing.jobs import is_gateway_job_config
+        from omnigent.onboarding.sandboxes.docker import DockerSandboxLauncher
+
+        if isinstance(launcher, DockerSandboxLauncher) and is_gateway_job_config(
+            entry.host_config
+        ):
+            launcher.config = launcher.config.model_copy(update={"inherit_codex_login": False})
     # getattr: embedding deployments may inject duck-typed launchers.
     needed = getattr(launcher, "owner_credential_provider", None)
     if needed is not None and deployment is not None:
@@ -4106,6 +4114,11 @@ async def _register_and_start_host(
         # token was armed against it above, so start_host starts the host with
         # a token that already resolves. The exec-model default execs in; the
         # entrypoint model (k8s) creates the Pod that boots the host.
+        from omnigent.billing.jobs import install_job_token
+
+        await asyncio.to_thread(
+            install_job_token, launcher, sandbox_id, host_id, token, config.host_config
+        )
         workspace = await _start_sandbox_host(
             launcher,
             sandbox_id,

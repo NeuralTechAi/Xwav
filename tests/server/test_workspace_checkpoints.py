@@ -245,3 +245,58 @@ def test_input_cannot_choose_another_messages_checkpoint():
         ),
     )
     assert external.data.workspace_checkpoint_id is None
+
+
+def test_changes_compare_request_boundaries_and_never_restore_files(workspace):
+    (workspace / "app.py").write_text("old\n")
+    (workspace / "deleted").write_text("gone\n")
+    request("capture")
+    (workspace / "app.py").write_text("new\nextra\n")
+    (workspace / "deleted").unlink()
+    (workspace / "new").write_text("added\n")
+    request("capture", "next-request")
+    (workspace / "app.py").write_text("a later turn\n")
+    summary = request("changes", end_anchor="next-request")
+    assert summary["count"] == 3
+    assert summary["files"] == [
+        {"path": "app.py", "status": "modified", "additions": 2, "deletions": 1},
+        {"path": "deleted", "status": "deleted", "additions": 0, "deletions": 1},
+        {"path": "new", "status": "added", "additions": 1, "deletions": 0},
+    ]
+    detail = request("changes", end_anchor="next-request", path="app.py")["files"][0]
+    assert "+extra" in detail["diff"] and "a later turn" not in detail["diff"]
+    assert (workspace / "app.py").read_text() == "a later turn\n"
+    assert "+a later turn" in request("changes", path="app.py")["files"][0]["diff"]
+    assert request("changes", path="../../outside")["state"] == "unavailable"
+    assert request("changes", end_anchor="missing")["state"] == "unavailable"
+
+
+def test_changes_handle_binary_links_modes_limits_and_empty_workspace(workspace, tmp_path):
+    (workspace / "binary").write_bytes(b"\x00old")
+    (workspace / "mode").write_text("same\n")
+    request("capture")
+    assert request("changes")["count"] == 0
+    (workspace / "binary").write_bytes(b"\x00new")
+    (workspace / "mode").chmod(0o755)
+    (workspace / "link").symlink_to(tmp_path / "outside")
+    (workspace / "large").write_bytes(b"x" * (256 * 1024 + 1))
+    rows = {row["path"]: row for row in request("changes")["files"]}
+    assert rows["binary"]["additions"] is None
+    assert rows["large"]["additions"] is None
+    assert rows["mode"]["additions"] == 0
+    assert "metadata" in request("changes", path="mode")["files"][0]["note"]
+    assert "Symlink" in request("changes", path="link")["files"][0]["diff"]
+    for index in range(205):
+        (workspace / f"file{index:03}").write_text("new\n")
+    summary = request("changes")
+    assert summary["count"] == 209 and len(summary["files"]) == 200
+    assert request("changes", path="mode")["files"][0]["path"] == "mode"
+
+
+def test_changes_report_newline_only_edits(workspace):
+    (workspace / "app").write_text("same")
+    request("capture")
+    (workspace / "app").write_text("same\n")
+    detail = request("changes", path="app")["files"][0]
+    assert detail["additions"] == detail["deletions"] == 1
+    assert "No newline at end of file" in detail["diff"]

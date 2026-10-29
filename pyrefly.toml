@@ -4,7 +4,8 @@ project-includes = [
     "sdks/python-client/**/*.py",
 ]
 
-project-excludes = []
+# Bundled upstream examples are read-on-demand resources, not Xwav runtime modules.
+project-excludes = ["omnigent/native_skills/skills/google-skills/library/**"]
 
 # Editable workspace packages are project sources, not third-party site packages.
 disable-project-excludes-heuristics = true

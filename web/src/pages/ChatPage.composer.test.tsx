@@ -1,3 +1,7 @@
+// Approval policy transport is covered by ComposerApprovalPicker.test.tsx.
+vi.mock("@/components/composer/ComposerApprovalPicker", () => ({
+  ComposerApprovalPicker: () => <span data-testid="generic-approval-picker">Approval mode</span>,
+}));
 import { create } from "zustand";
 import type { SkillSummary, SkillsStatus } from "@/lib/types";
 
@@ -282,6 +286,11 @@ describe("Composer Escape interrupt", () => {
     clearSessionDrafts();
   });
 
+  it("keeps an approval selector for jobs without native permission controls", () => {
+    render(<Composer {...composerProps()} />);
+    expect(screen.getByTestId("generic-approval-picker")).toBeInTheDocument();
+  });
+
   it.each(["idle", "streaming"] as const)(
     "interrupts a working session with local status %s without losing the draft",
     (status) => {
@@ -491,7 +500,7 @@ describe("Composer growth layout", () => {
     render(<Composer {...composerProps()} />);
 
     const card = textarea().closest("[data-composer-card]");
-    const workspace = screen.getByTestId("composer-workspace-controls").parentElement;
+    const workspace = screen.getByTestId("composer-trays");
     for (const element of [card, workspace]) {
       expect(element).toHaveClass("w-full", ...CHAT_COLUMN_WIDTH.split(" "));
       expect(element).not.toHaveClass("max-w-[720px]");
@@ -2476,7 +2485,7 @@ describe("Composer shared visible controls", () => {
         })}
       />,
     );
-    const workspace = screen.getByTestId("composer-workspace-controls");
+    const workspace = screen.getByTestId("composer-session-status");
     const card = textarea().closest("[data-composer-card]");
     const actions = screen.getByTestId("composer-action-row");
     expect(textarea().parentElement?.parentElement).toBe(card);
@@ -2488,7 +2497,8 @@ describe("Composer shared visible controls", () => {
     expect(screen.queryByTestId("composer-settings")).toBeNull();
     expect(trailing.firstElementChild).toContainElement(harnessPicker);
     expect(actions.children).toHaveLength(3);
-    expect(workspace).toHaveClass("mx-3", "h-7", "md:h-[37px]", "rounded-t-2xl");
+    expect(workspace).not.toHaveClass("h-7", "md:h-[37px]", "rounded-t-2xl");
+    expect(screen.queryByTestId("composer-workspace-controls")).toBeNull();
     expect(textarea().closest("form")).toHaveClass(
       "px-6",
       "pb-[max(20px,env(safe-area-inset-bottom))]",
@@ -2614,7 +2624,7 @@ describe("Composer shared visible controls", () => {
       </MemoryRouter>,
     );
 
-    const workspace = screen.getByTestId("composer-workspace-controls");
+    const workspace = screen.getByTestId("composer-session-status");
     const taskIndicators = within(workspace).getByTestId("composer-task-indicators");
     const context = within(workspace).getByTestId("composer-context-ring");
     const background = within(workspace).getByTestId("background-task-pill");
@@ -2681,9 +2691,7 @@ describe("Composer shared visible controls", () => {
         creationBranch: "feature-x",
       }),
     );
-    expect(screen.getByTestId("composer-workspace-dir")).toHaveAccessibleName(
-      "Working directory: /home/alice/worktrees/feature-x",
-    );
+    expect(screen.queryByTestId("composer-workspace-dir")).toBeNull();
     expect(screen.getByTestId("composer-git-branch")).toHaveTextContent("feature-x");
   });
 
@@ -2703,9 +2711,7 @@ describe("Composer shared visible controls", () => {
     expect(composerGitStatusArgsSpy).toHaveBeenCalledWith(
       expect.objectContaining({ workspace: "/home/alice/legacy-repo" }),
     );
-    expect(screen.getByTestId("composer-workspace-dir")).toHaveAccessibleName(
-      "Working directory: /home/alice/legacy-repo",
-    );
+    expect(screen.queryByTestId("composer-workspace-dir")).toBeNull();
   });
 
   it("dispatches the shared permission picker to the session setter", async () => {
@@ -2803,7 +2809,7 @@ describe("Composer background tasks", () => {
     });
     renderWithTooltips(<Composer {...composerProps()} />);
 
-    const workspace = screen.getByTestId("composer-workspace-controls");
+    const workspace = screen.getByTestId("composer-session-status");
     const trigger = within(workspace).getByRole("button", {
       name: "1 background task still running",
     });
@@ -4866,39 +4872,26 @@ describe("Composer sub-agent tray", () => {
     // that some tray exists.
     expect(screen.getByText("check-account-eligibility")).toBeTruthy();
     expect(screen.getByText(/Chatting with sub-agent/)).toBeTruthy();
-    expect(screen.getByTestId("composer-workspace-controls")).not.toHaveClass("rounded-t-none");
+    expect(screen.getByTestId("composer-session-status")).not.toHaveClass("rounded-t-none");
   });
 
-  // The sub-agent tray sits directly above the workspace bar, sharing its
-  // column wrapper and inset so their edges line up.
-  it("sits directly above the workspace bar, sharing its column", () => {
+  it("keeps the sub-agent tray with the tools above the input", () => {
     render(<Composer {...composerProps({ subAgentLabel: "check-account-eligibility" })} />);
-    const bar = document.querySelector('[data-testid="composer-workspace-controls"]');
-    expect(bar).not.toBeNull();
-    expect(tray()?.nextElementSibling).toBe(bar);
-    expect(tray()?.parentElement).toBe(bar?.parentElement);
+    const column = screen.getByTestId("composer-trays");
+    expect(tray()?.parentElement).toBe(column);
+    expect(column).toContainElement(screen.getByTestId("composer-preview-link"));
+    expect(column).not.toContainElement(screen.getByTestId("composer-session-status"));
   });
 
-  it("keeps the workspace bar's rounded top on a top-level session (no tray)", () => {
-    render(<Composer {...composerProps()} />);
-    const bar = document.querySelector('[data-testid="composer-workspace-controls"]');
-    expect(bar?.className).not.toContain("rounded-t-none");
-  });
-
-  it("removes the workspace bar's inner arc when the queue tray is docked above it", () => {
+  it("does not show a workspace strip when a message is queued", () => {
     setComposerState({
       conversationId: "conv_test",
       skills: [],
       queuedMessages: [{ queueId: "q_1", text: "held follow-up", conversationId: "conv_test" }],
     });
     renderWithTooltips(<Composer {...composerProps()} />);
-    expect(screen.getByTestId("composer-workspace-controls")).toHaveClass(
-      "rounded-t-none",
-      "border-t-0",
-      "border-border/50",
-      "before:inset-x-4",
-      "before:h-px",
-    );
+    expect(screen.getByTestId("composer-queued-strip")).toBeInTheDocument();
+    expect(screen.queryByTestId("composer-workspace-controls")).toBeNull();
   });
 });
 
@@ -4918,9 +4911,7 @@ describe("Composer trays dock onto the workspace bar", () => {
 
   /** The column wrapper holding the workspace bar. */
   function workspaceBarParent(): Element | null {
-    return (
-      document.querySelector('[data-testid="composer-workspace-controls"]')?.parentElement ?? null
-    );
+    return screen.queryByTestId("composer-trays");
   }
 
   it("renders the queued strip inside the workspace bar's column wrapper", () => {
@@ -6250,3 +6241,8 @@ describe("saved sandbox inference policy", () => {
     },
   );
 });
+
+// Job tools have their own routing tests; composer layout needs only their slot.
+vi.mock("@/components/composer/ComposerPreviewLink", () => ({
+  ComposerPreviewLink: () => <div data-testid="composer-preview-link" />,
+}));

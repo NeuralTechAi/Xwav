@@ -55,10 +55,25 @@ def launch_command(root: Path, port: int) -> tuple[list[str], str] | None:
         command = config.get("command")
         if isinstance(command, list) and command and all(isinstance(arg, str) for arg in command):
             return [arg.replace("{port}", str(port)) for arg in command], "reload"
+    manifest = root / "package.json"
+    package = json.loads(manifest.read_text()) if manifest.is_file() else {}
+    scripts = package.get("scripts", {})
+    script = "dev" if scripts.get("dev") else "start" if scripts.get("start") else None
+    definition = str(scripts[script]) if script else ""
+    desktop = any(
+        Path(word).name in {"electron", "electron-forge", "electronmon"}
+        for word in definition.split()
+    )
     static_directory = next(
         (
             root / name
-            for name in (".", "dist", "build", "public")
+            for name in (
+                ".",
+                "dist",
+                "build",
+                "public",
+                *(("src", "renderer", "app", "www") if desktop else ()),
+            )
             if (root / name / "index.html").is_file()
         ),
         None,
@@ -77,12 +92,8 @@ def launch_command(root: Path, port: int) -> tuple[list[str], str] | None:
         if static_directory is not None
         else None
     )
-    manifest = root / "package.json"
     if manifest.is_file():
-        package = json.loads(manifest.read_text())
-        scripts = package.get("scripts", {})
-        script = "dev" if scripts.get("dev") else "start" if scripts.get("start") else None
-        if script is None:
+        if script is None or desktop:
             return (static_command, "reload") if static_command is not None else None
         manager = next(
             (
@@ -97,7 +108,6 @@ def launch_command(root: Path, port: int) -> tuple[list[str], str] | None:
             "npm",
         )
         command = [manager, "run", script]
-        definition = str(scripts[script])
         args: list[str] = []
         if "next" in definition:
             args = ["--hostname", "127.0.0.1", "--port", str(port)]

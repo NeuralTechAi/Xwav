@@ -7,6 +7,7 @@ import { authenticatedFetch } from "@/lib/identity";
 import { apiErrorFromResponse } from "@/lib/sessionsApi";
 import { PageScroll } from "@/components/PageScroll";
 import "./preproduction.css";
+import { FixDashboardIssues } from "@/components/chat/FixDashboardIssues";
 
 export interface TestCheck {
   id: string;
@@ -163,6 +164,13 @@ export function PreproductionPage() {
             <p>Evidence from this job’s workspace. Real results, visible coverage gaps.</p>
           </div>
           <div className="preproduction-actions">
+            <FixDashboardIssues
+              key={`${sessionId}:${report?.id}`}
+              sessionId={sessionId}
+              kind="preproduction"
+              runId={report?.id}
+              disabled={!report || report.state === "running"}
+            />
             {sessionId && <Link to={`/c/${encodeURIComponent(sessionId)}`}>Back to job</Link>}
             <button
               type="button"

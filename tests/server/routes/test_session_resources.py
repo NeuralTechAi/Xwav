@@ -4079,11 +4079,13 @@ async def test_filesystem_write_proxies_to_runner(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("fail_first_wake", [False, True])
+@pytest.mark.parametrize("resource", ["save", "preview"])
 async def test_filesystem_save_reconnects_runner_on_live_host(
     client: httpx.AsyncClient,
     app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
     fail_first_wake: bool,
+    resource: str,
 ) -> None:
     """Save (or Retry after a failed wake) reconnects before forwarding the edit."""
     from dataclasses import replace
@@ -4106,7 +4108,13 @@ async def test_filesystem_save_reconnects_runner_on_live_host(
         HostHelloFrame(version="0.1.0-test", frame_protocol_version=1, name="save-host"),
         owner=None,
     )
-    fake_runner = _FakeRunnerClient(payload=_fs_write_payload())
+    fake_runner = _FakeRunnerClient(
+        payload=(
+            {"stdout": json.dumps({"state": "ready", "port": 41881}), "exit_code": 0}
+            if resource == "preview"
+            else _fs_write_payload()
+        )
+    )
     connected = False
 
     class _SleepingRouter(_FakeRunnerRouter):
@@ -4149,23 +4157,33 @@ async def test_filesystem_save_reconnects_runner_on_live_host(
     monkeypatch.setattr(orchestration, "_wait_for_runner_client", _wait)
     url = f"/v1/sessions/{session_id}/resources/environments/default/filesystem/new.txt"
     body = {"content": "edited without a chat message", "encoding": "utf-8"}
+    method = "PUT"
+    if resource == "preview":
+        url, body, method = f"/v1/sessions/{session_id}/preview", {}, "POST"
 
     if fail_first_wake:
-        failed = await client.put(url, json=body)
+        failed = await client.request(method, url, json=body)
         assert failed.status_code == 503
         assert fake_runner.calls == []
 
-    response = await client.put(url, json=body)
+    response = await client.request(method, url, json=body)
     assert response.status_code == 200
-    assert fake_runner.calls == [("PUT", url)]
+    forwarded = (
+        f"/v1/sessions/{session_id}/resources/environments/default/shell"
+        if resource == "preview"
+        else url
+    )
+    assert fake_runner.calls == [(method, forwarded)]
     assert attempts == (2 if fail_first_wake else 1)
     assert store.appended_items == []
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("preview", [False, True])
 async def test_filesystem_save_authorizes_before_reconnecting(
     client: httpx.AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
+    preview: bool,
 ) -> None:
     """An invalid session must not trigger runner recovery."""
     from unittest.mock import AsyncMock
@@ -4174,8 +4192,11 @@ async def test_filesystem_save_authorizes_before_reconnecting(
 
     wake = AsyncMock()
     monkeypatch.setattr(routes_resources, "ensure_runner_connected", wake)
-    response = await client.put(
-        "/v1/sessions/missing/resources/environments/default/filesystem/new.txt",
+    response = await client.request(
+        "POST" if preview else "PUT",
+        "/v1/sessions/missing/preview"
+        if preview
+        else "/v1/sessions/missing/resources/environments/default/filesystem/new.txt",
         json={"content": "hello", "encoding": "utf-8"},
     )
     assert response.status_code == 404
@@ -10335,6 +10356,48 @@ async def test_project_preview_rejects_malformed_runtime_output(client: httpx.As
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "text,attached",
+    [
+        ("Fix Pre-Production Tests failures", True),
+        ("Fix the load testing failures", True),
+        ("Fix Strix penetration findings", True),
+        ("Fix the build and deployment issues", True),
+        ("Change the heading color", False),
+    ],
+)
+async def test_dashboard_evidence_is_forwarded_to_native_chat(file_client, text, attached):
+    session_id = "64a784c3aa907d1774f44313546947c6"
+    evidence = {
+        "session_id": session_id,
+        "reports": [
+            {
+                "kind": "preproduction",
+                "state": "complete",
+                "checks": [
+                    {"name": "Calculator", "status": "failed", "output": "Expected 5, got 4"}
+                ],
+            }
+        ],
+    }
+    runner = _FakeRunnerClient(payload={"stdout": json.dumps(evidence), "exit_code": 0})
+    set_runner_router(_FakeRunnerRouter(runner))  # type: ignore[arg-type]
+    set_runner_client(runner)  # type: ignore[arg-type]
+    response = await file_client.post(
+        f"/v1/sessions/{session_id}/events",
+        json={
+            "type": "message",
+            "data": {"role": "user", "content": [{"type": "input_text", "text": text}]},
+        },
+    )
+    assert response.status_code == 202, response.text
+    forwarded = next(body for path, body in runner.post_json_calls if path.endswith("/events"))
+    assert forwarded["content"][0]["text"] == text
+    assert ("Expected 5, got 4" in json.dumps(forwarded["content"])) is attached
+    assert any(path.endswith("/shell") for path, _ in runner.post_json_calls) is attached
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("status", ["idle", "running", "waiting", None])
 async def test_chat_revert_requires_idle_and_uses_owner_shell(client, app, status):
     from types import SimpleNamespace
@@ -10687,7 +10750,8 @@ async def test_release_download_only_exposes_completed_listed_artifacts(
 @pytest.mark.parametrize(
     "level,expected", [(0, 404), (LEVEL_READ, 403), (LEVEL_EDIT, 403), (LEVEL_OWNER, 200)]
 )
-async def test_release_actions_require_job_ownership(level, expected):
+@pytest.mark.parametrize("diagnostics", [False, True])
+async def test_release_actions_require_job_ownership(level, expected, diagnostics):
     sid = "79b22ebd2309e48fdeb450c65611d51b"
     permissions = _StubPermissionStore()
     if level:
@@ -10707,18 +10771,241 @@ async def test_release_actions_require_job_ownership(level, expected):
         ),
         prefix="/v1",
     )
-    runner = _FakeRunnerClient(
-        payload={"stdout": json.dumps({"state": "empty", "checks": []}), "exit_code": 0}
+    payload = (
+        {"session_id": sid, "reports": []} if diagnostics else {"state": "empty", "checks": []}
     )
+    runner = _FakeRunnerClient(payload={"stdout": json.dumps(payload), "exit_code": 0})
     set_runner_router(_FakeRunnerRouter(runner))
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=application), base_url="http://server"
     ) as api:
-        response = await api.post(
-            f"/v1/sessions/{sid}/releases",
-            json={"action": "start"},
+        response = await api.request(
+            "GET" if diagnostics else "POST",
+            f"/v1/sessions/{sid}/diagnostics?kind=preproduction"
+            if diagnostics
+            else f"/v1/sessions/{sid}/releases",
+            **({} if diagnostics else {"json": {"action": "start"}}),
             headers={"x-forwarded-email": "alice@example.com"},
         )
     assert response.status_code == expected, response.text
     if expected != 200:
         assert not runner.calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("following", [False, True, "missing-checkpoint"])
+async def test_chat_changes_resolves_response_and_next_request(
+    client, app, monkeypatch, following
+):
+    from types import SimpleNamespace
+
+    session_id = "79b22ebd2309e48fdeb450c65611d51b"
+    store = app.state.test_conversation_store
+    before = SimpleNamespace(
+        id="user-one",
+        type="message",
+        data=SimpleNamespace(role="user", workspace_checkpoint_id="before-one"),
+    )
+    answer = SimpleNamespace(id="answer", type="message", data=SimpleNamespace(role="assistant"))
+    next_user = SimpleNamespace(
+        id="user-two",
+        type="message",
+        data=SimpleNamespace(
+            role="user",
+            workspace_checkpoint_id=None if following == "missing-checkpoint" else "before-two",
+        ),
+    )
+    store.appended_items.extend([before, answer, *([next_user] if following else [])])
+
+    def list_items(sid, *, after, order, **kwargs):
+        assert sid == session_id
+        rows = store.appended_items
+        position = next(index for index, row in enumerate(rows) if row.id == after)
+        items = rows[position + 1 :] if order == "asc" else list(reversed(rows[:position]))
+        return SimpleNamespace(data=items, last_id=items[-1].id if items else None, has_more=False)
+
+    monkeypatch.setattr(store, "list_items", list_items)
+    runner = _FakeRunnerClient(
+        responses={f"/v1/sessions/{session_id}": (200, {"status": "idle"})},
+        payload={
+            "stdout": json.dumps({"state": "ready", "count": 1, "files": [{"path": "app.py"}]})
+        },
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.get(
+        f"/v1/sessions/{session_id}/changes", params={"item_id": "answer", "path": "app.py"}
+    )
+    if following == "missing-checkpoint":
+        assert response.status_code == 409
+        assert runner.post_json_calls == []
+    else:
+        assert response.status_code == 200, response.text
+        assert response.json()["scope"] == ("next_request" if following else "current_workspace")
+        command = runner.post_json_calls[-1][1]["command"]
+        assert '"anchor": "before-one"' in command
+        assert '"action": "changes"' in command
+        assert '"path": "app.py"' in command
+        assert ('"end_anchor": "before-two"' in command) == bool(following)
+
+
+@pytest.mark.asyncio
+async def test_chat_changes_refuses_running_missing_and_foreign_messages(client, app):
+    from types import SimpleNamespace
+
+    session_id = "79b22ebd2309e48fdeb450c65611d51b"
+    store = app.state.test_conversation_store
+    store.appended_items.append(
+        SimpleNamespace(
+            id="user-one",
+            type="message",
+            data=SimpleNamespace(role="user", workspace_checkpoint_id="checkpoint"),
+        )
+    )
+    runner = _FakeRunnerClient(
+        responses={f"/v1/sessions/{session_id}": (200, {"status": "running"})}
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.get(
+        f"/v1/sessions/{session_id}/changes", params={"item_id": "user-one"}
+    )
+    assert response.status_code == 409
+    response = await client.get(
+        f"/v1/sessions/{session_id}/changes", params={"item_id": "foreign-message"}
+    )
+    assert response.status_code == 404
+    assert runner.post_json_calls == []
+
+
+@pytest.mark.asyncio
+async def test_strix_report_reader_uses_owner_workspace_without_starting_scan(client):
+    runner = _FakeRunnerClient(
+        payload={"stdout": json.dumps({"state": "empty", "runs": [], "findings": []})}
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.get("/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/penetration")
+    assert response.status_code == 200 and response.json()["state"] == "empty"
+    command = runner.post_json_calls[-1][1]["command"]
+    assert "inspect_reports" in command and "subprocess.Popen" not in command
+    before = len(runner.post_json_calls)
+    response = await client.get(
+        "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/penetration?run=../other"
+    )
+    assert response.status_code == 400 and len(runner.post_json_calls) == before
+
+
+@pytest.mark.asyncio
+async def test_strix_cancel_does_not_require_connected_project_runner(
+    client, monkeypatch, tmp_path
+):
+    from omnigent.server.routes import sessions
+
+    monkeypatch.setenv("XWAV_STRIX_RUNTIME_ROOT", str(tmp_path / "strix"))
+
+    async def disconnected(*args, **kwargs):
+        raise AssertionError("Cancellation must not contact a project runner")
+
+    monkeypatch.setattr(sessions, "_get_runner_client_for_resource_access", disconnected)
+    response = await client.post(
+        "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/penetration",
+        json={"action": "cancel"},
+    )
+    assert response.status_code == 200
+    assert response.json()["state"] == "empty"
+
+
+@pytest.mark.asyncio
+async def test_strix_scan_actions_require_json_and_known_action(client):
+    endpoint = "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/penetration"
+    response = await client.post(
+        endpoint, content='{"action":"start"}', headers={"Content-Type": "text/plain"}
+    )
+    assert response.status_code == 415
+    response = await client.post(endpoint, json={"action": "execute arbitrary command"})
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["status", "init", "stage", "commit"])
+@pytest.mark.parametrize("status", ["idle", "running", None])
+async def test_chat_git_actions_require_idle_and_proxy_reviewed_operations(client, action, status):
+    session_id = "79b22ebd2309e48fdeb450c65611d51b"
+    runner = _FakeRunnerClient(
+        responses={f"/v1/sessions/{session_id}": (200, {"status": status})},
+        payload={"stdout": json.dumps({"state": "ready", "files": []})},
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.post(
+        f"/v1/sessions/{session_id}/git-actions",
+        json={"action": action, "message": "Reviewed", "token": "review"},
+    )
+    assert response.status_code == (200 if status == "idle" else 409), response.text
+    if status == "idle":
+        command = runner.post_json_calls[-1][1]["command"]
+        assert "git_request" in command
+        assert f'"action": "{action}"' in command
+    else:
+        assert runner.post_json_calls == []
+
+
+@pytest.mark.asyncio
+async def test_chat_git_actions_return_git_failure_without_false_success(client):
+    session_id = "79b22ebd2309e48fdeb450c65611d51b"
+    runner = _FakeRunnerClient(
+        responses={f"/v1/sessions/{session_id}": (200, {"status": "idle"})},
+        payload={"stdout": json.dumps({"state": "unavailable", "message": "Identity missing"})},
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.post(
+        f"/v1/sessions/{session_id}/git-actions", json={"action": "commit"}
+    )
+    assert response.status_code == 409
+    assert "Identity missing" in response.text
+
+
+@pytest.mark.asyncio
+async def test_chat_git_actions_reconnect_before_probing_runner(client, monkeypatch):
+    session_id = "79b22ebd2309e48fdeb450c65611d51b"
+    observed = []
+
+    async def reconnect(**kwargs):
+        observed.append(kwargs["session_id"])
+        return None, kwargs["conv"]
+
+    monkeypatch.setattr(
+        "omnigent.server.routes.sessions.routes_resources.ensure_runner_connected", reconnect
+    )
+    runner = _FakeRunnerClient(
+        responses={f"/v1/sessions/{session_id}": (200, {"status": "idle"})},
+        payload={"stdout": json.dumps({"state": "ready", "files": []})},
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.post(
+        f"/v1/sessions/{session_id}/git-actions", json={"action": "status"}
+    )
+    assert response.status_code == 200, response.text
+    assert observed == [session_id]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("runner_status, expected", [(404, 200), (503, 409)])
+async def test_chat_git_actions_on_woken_idle_job_without_agent_process(
+    client, app, runner_status, expected
+):
+    from dataclasses import replace
+
+    session_id = "79b22ebd2309e48fdeb450c65611d51b"
+    store = app.state.test_conversation_store
+    store._conversations[session_id] = replace(
+        store._conversations[session_id], live_status="idle"
+    )
+    runner = _FakeRunnerClient(
+        responses={f"/v1/sessions/{session_id}": (runner_status, {"error": "not_found"})},
+        payload={"stdout": json.dumps({"state": "ready", "files": []})},
+    )
+    set_runner_router(_FakeRunnerRouter(runner))
+    response = await client.post(
+        f"/v1/sessions/{session_id}/git-actions", json={"action": "status"}
+    )
+    assert response.status_code == expected, response.text
+    if expected != 200:
+        assert runner.post_json_calls == []

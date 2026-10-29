@@ -3990,6 +3990,11 @@ class HostProcess:
 
     async def _probe_gateway_inference(self, *, startup: bool) -> dict[str, bool] | None:
         """Collect gateway metadata without letting a probe break the channel."""
+        from omnigent.billing.jobs import is_gateway_job_config
+        from omnigent.config import load_global_config
+
+        if is_gateway_job_config(load_global_config()):
+            return {}
         try:
             return await asyncio.to_thread(gateway_inference_map)
         except Exception as exc:

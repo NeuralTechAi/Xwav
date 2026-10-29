@@ -6454,6 +6454,8 @@ async def _wait_for_managed_runner_tunnel(
     runner_id: str,
     tunnel_registry: TunnelRegistry,
     tracker: ManagedLaunchTracker,
+    *,
+    conversation_store: ConversationStore | None = None,
 ) -> bool:
     """
     Wait for a launched managed runner to connect, failing the launch on timeout.
@@ -6462,6 +6464,7 @@ async def _wait_for_managed_runner_tunnel(
     :param runner_id: Runner id returned by the host launch frame.
     :param tunnel_registry: Runner tunnel registry to wait on.
     :param tracker: Managed launch tracker to settle on failure.
+    :param conversation_store: Check a replacement binding before failing a stale launch.
     :returns: ``True`` when the runner connected; ``False`` after publishing
         and retaining a failed launch status.
     """
@@ -6473,6 +6476,17 @@ async def _wait_for_managed_runner_tunnel(
     )
     if runner is not None:
         return True
+    if conversation_store is not None:
+        current = await asyncio.to_thread(conversation_store.get_conversation, session_id)
+        if (
+            current is not None
+            and current.runner_id is not None
+            and current.runner_id != runner_id
+            and tunnel_registry.get(current.runner_id) is not None
+        ):
+            # A concurrent recovery replaced the original launch binding.
+            # Its stale timer must not tear down the now-healthy sandbox.
+            return True
     _logger.error(
         "Managed runner connection timed out",
         extra=debug_event(

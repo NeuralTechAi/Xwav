@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import fcntl
 import hashlib
 import json
@@ -150,6 +151,74 @@ def _restore(root: Path, saved: dict[str, Any], current: dict[str, Any], blobs: 
             (root / name).chmod(saved[name]["mode"])
 
 
+def _describe_changes(
+    saved: dict[str, Any], current: dict[str, Any], blobs: Path, selected: str | None
+) -> dict[str, Any]:
+    """Bound text diff work and output; compare blobs rather than following workspace links."""
+    paths = [
+        name
+        for name in sorted(set(saved) | set(current))
+        if saved.get(name) != current.get(name)
+        and not all(
+            entry is None or entry["type"] == "directory"
+            for entry in (saved.get(name), current.get(name))
+        )
+    ]
+    if selected is not None and selected not in paths:
+        raise ValueError("This path has no changes in the selected comparison")
+    files = []
+    remaining_bytes = 2 * 1024 * 1024
+    for name in [selected] if selected is not None else paths[:200]:
+        before, after = saved.get(name), current.get(name)
+        row: dict[str, Any] = {
+            "path": name,
+            "status": "added" if before is None else "deleted" if after is None else "modified",
+            "additions": None,
+            "deletions": None,
+        }
+        contents = []
+        for entry in (before, after):
+            if entry is None or entry["type"] == "directory":
+                content = b""
+            elif entry["type"] == "link":
+                content = ("Symlink → " + entry["target"] + "\n").encode()
+            else:
+                content = (blobs / entry["blob"]).read_bytes()
+            contents.append(content)
+        try:
+            remaining_bytes -= sum(map(len, contents))
+            if remaining_bytes < 0:
+                raise ValueError("Summary diff budget reached; select this file to inspect it")
+            if any(len(content) > 256 * 1024 or b"\x00" in content for content in contents):
+                raise ValueError("Binary or large file; inline diff unavailable")
+            texts = [content.decode("utf-8").splitlines(keepends=True) for content in contents]
+            if any(len(lines) > 5000 for lines in texts):
+                raise ValueError("Large file; inline diff unavailable")
+            lines = list(difflib.unified_diff(*texts, fromfile="a/" + name, tofile="b/" + name))
+            row.update(
+                additions=sum(line.startswith("+") for line in lines[2:]),
+                deletions=sum(line.startswith("-") for line in lines[2:]),
+            )
+            if selected is not None:
+                patch = "\n".join(
+                    line.rstrip("\r\n")
+                    + (
+                        "\n\\ No newline at end of file"
+                        if index >= 2 and line[:1] in {" ", "+", "-"} and not line.endswith("\n")
+                        else ""
+                    )
+                    for index, line in enumerate(lines)
+                )
+                row["diff"] = patch[: 256 * 1024]
+                row["truncated"] = len(patch) > 256 * 1024
+                if not lines:
+                    row["note"] = "Only file permissions or metadata changed."
+        except (UnicodeError, ValueError) as error:
+            row["note"] = str(error)
+        files.append(row)
+    return {"state": "ready", "count": len(paths), "files": files}
+
+
 def checkpoint_request(request: dict[str, Any]) -> dict[str, Any]:
     """Capture, review or restore files; callers authorize the session and require idle work."""
     root = Path(request.get("workspace") or Path.cwd()).expanduser().resolve()
@@ -171,6 +240,11 @@ def checkpoint_request(request: dict[str, Any]) -> dict[str, Any]:
                 return {"state": "ready"}
             saved = _load(storage, anchor)["files"]
             _validate(root, saved, blobs)
+            if request["action"] == "changes":
+                end_anchor = request.get("end_anchor")
+                current = _load(storage, end_anchor)["files"] if end_anchor else _scan(root, blobs)
+                _validate(root, current, blobs)
+                return _describe_changes(saved, current, blobs, request.get("path"))
             current = _scan(root, blobs)
             changes = [
                 {"path": name, "action": "restore" if name in saved else "remove"}

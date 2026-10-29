@@ -1,6 +1,6 @@
 # Xwav native skills
 
-Xwav ships 37 offline skill resources. The normal skill discovery and loading paths expose them as defaults, after agent, project, and user skills. Native defaults are suppressed when their canonical name, plugin alias, or normalized instruction content already exists. Existing user and project skills are preserved. `skills: none` disables defaults; an explicit skill list selects only those defaults. No global agent configuration is rewritten.
+Xwav ships 39 offline skill resources. The normal skill discovery and loading paths expose them as defaults, after agent, project, and user skills. Native defaults are suppressed when their canonical name, plugin alias, or normalized instruction content already exists. Existing user and project skills are preserved. `skills: none` disables defaults; an explicit skill list selects only those defaults. No global agent configuration is rewritten.
 
 Inspect the installed catalog without network access or external tools:
 
@@ -16,6 +16,7 @@ In a supported session, type `/` in the composer to discover skills, or invoke a
 
 | Source | Included | Runtime setup |
 | --- | --- | --- |
+| [Google skills](https://github.com/google/skills) | `google-skills`: 177 staged upstream skills | Offline topic indexes and supporting resources; optional Google credentials/SDKs only when an operation needs them |
 | [Addy Osmani agent-skills](https://github.com/addyosmani/agent-skills) | 25 engineering skills | Offline instructions and supporting resources |
 | [Andrej Karpathy skills](https://github.com/multica-ai/andrej-karpathy-skills) | `karpathy-guidelines` | Offline coding guidelines; no plugin or tool installation |
 | [Michael Shimeles skills](https://github.com/michaelshimeles/skills) | `greploop`, `greploop-apps`, `unslop` | Review workflows need their documented review tools |
@@ -125,3 +126,43 @@ For an existing local Docker image, deploy this runtime update with
 `docker build -f deploy/docker/Dockerfile.skill-selection -t xwav-host:local .`.
 Start a new job to pick up the updated runtime. Running sandboxes retain the
 Python modules loaded by their existing runner processes.
+
+## SoL-Pi across harnesses
+
+The portable `/sol-pi` skill exposes a shared optional worker to any parent
+harness with shell access or Xwav sub-agent tools. `xwav sol-pi status --json`
+checks its pinned resources offline. No additional MCP process or runtime starts
+during skill discovery. See [SoL-Pi](SOL_PI.md) for scoped runs, reusable child
+agents, prerequisites and the observation-only default profile.
+
+## Google product collection
+
+`google-skills` provides all 177 skills in the pinned Google repository's
+`skills/` collection, with 1,235 upstream instruction/supporting files (about
+8.8 MB, uncompressed). One native catalog entry and 21 topic indexes keep discovery
+small. Full Google instructions enter context only after the relevant topic and
+skill are selected. See [on-demand activation](ON_DEMAND_SKILLS.md).
+
+The source revision, individual skill paths and file checksums are recorded in
+`omnigent/native_skills/skills/google-skills/catalog.json`. Contents are unchanged;
+upstream `SKILL.md` entry filenames become `INSTRUCTIONS.md` to prevent nested
+vendor discovery. Apache-2.0 attribution is bundled. Separate Google Cloud plugin
+submodules, MCP servers, hooks and installers are excluded; the collection's
+references to them still require their documented setup when used.
+
+To verify manually, start a new job with a supported harness and ask
+“Help configure Cloud Run deployment for my Google Cloud project.” Inspect the
+skill/read events: only `google-skills`, the relevant topic, selected instructions
+and needed references should appear. A generic unrelated question should not
+activate Google guidance. You can also run `xwav skills show google-skills`.
+
+Google integration validation: 131 catalog, deduplication, CLI, prompt, loader,
+reference-reader and harness tests passed; the expanded 15-test Pi suite also
+passed, including a real offline Pi process with only `google-skills` selected.
+All 1,235 bundled upstream files were compared byte for byte with the pinned
+checkout. These checks validate discovery and loading, not live authenticated
+Google Cloud operations.
+The local `xwav-host:plans-ready` image also passed a network-disabled, read-only
+container smoke check for 39 native entries, the 177-skill staged collection,
+bounded entry loading and selected Gemini guidance. New sandbox jobs use this
+image; existing running jobs retain their current resources.

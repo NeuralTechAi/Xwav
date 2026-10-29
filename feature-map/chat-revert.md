@@ -56,3 +56,32 @@ rollback.
 - Checkpoints live privately on the job's host. Replacing/deleting its sandbox
   removes that local history. Existing Linux runners receive the runtime through
   the authenticated shell resource; unsupported runtimes fail explicitly.
+
+## Chat change summaries
+
+Completed main-chat responses also show a **files changed** card. Expand it to
+see added, modified and deleted paths and line counts; select a path to open its
+read-only, color-coded code diff. Refresh checks the comparison again. It works
+without Git, using the same private file checkpoints as Revert.
+
+The comparison starts before the preceding user request and ends at the next
+user request's checkpoint, or at the current idle workspace for the latest
+request. The card labels that scope and includes manual edits. It does not claim
+that every change was authored by the assistant. Missing checkpoints (including
+queued messages), disconnected jobs and older external-terminal messages report
+unavailability rather than borrowing another turn's changes. Active jobs wait
+until idle. Side chats use the main project's review flow.
+
+Workspace-file sharing permissions apply, including the owner's explicit opt-in
+for read-only collaborators. Historical blobs are never executed or followed as
+symlinks. Comparisons preserve files and Git history. Existing checkpoint limits
+apply; summaries show up to 200 paths and bounded text stats, with partial totals
+labeled. Binary files, large text files and metadata-only changes have explicit
+notes. Diffs load only when a file is selected; cards query only near the viewport.
+
+Verification: the desktop/mobile Revert journey above now opens the changed-file
+card and its code diff before restoring/undoing. Component coverage lives in
+`web/src/components/chat/ChatChangeSummary.test.tsx`; checkpoint, request-boundary
+and sharing coverage lives in `tests/server/test_workspace_checkpoints.py`,
+`tests/server/routes/test_session_resources.py` and
+`tests/server/routes/test_shell_permission_gate.py`.

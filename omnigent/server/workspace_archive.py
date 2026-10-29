@@ -39,7 +39,11 @@ def _archive_path(path: object) -> str:
 
 
 async def build_workspace_archive(
-    client: Any, session_id: str, *, workspace: str | None = None
+    client: Any,
+    session_id: str,
+    *,
+    workspace: str | None = None,
+    excluded_directories: frozenset[str] = frozenset(),
 ) -> BinaryIO:
     """Export saved working files, including uncommitted and untracked files.
 
@@ -112,7 +116,8 @@ async def build_workspace_archive(
                         kind = entry.get("type")
                         if kind == "directory":
                             if (
-                                PurePosixPath(path).name not in EXCLUDED_DIRECTORIES
+                                PurePosixPath(path).name
+                                not in EXCLUDED_DIRECTORIES | excluded_directories
                                 and path != ".xwav/releases"
                             ):
                                 directories.append(path)

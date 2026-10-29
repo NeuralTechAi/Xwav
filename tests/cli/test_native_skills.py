@@ -20,6 +20,8 @@ def test_native_skill_inventory_and_content() -> None:
         "github-ops",
         "preproduction-tests",
         "karpathy-guidelines",
+        "sol-pi",
+        "google-skills",
         "context7-mcp",
         "reverse-engineer-anything",
         "graphify",

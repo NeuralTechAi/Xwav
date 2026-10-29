@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const RING_CIRCUMFERENCE = 2 * Math.PI * 5.5;
 
 /**
- * Compact context-usage ring for the composer workspace bar.
+ * Compact context-usage ring, with optional counts for the job status footer.
  *
  * Grayscale by design — a near-full context window is a neutral fact, not an
  * error, so the ring never escalates to warning/destructive colors. Self-nulls
@@ -21,10 +21,12 @@ export function ComposerContextRing({
   contextWindow,
   tokensUsed,
   className,
+  showTokenCount = false,
 }: {
   contextWindow: number | null;
   tokensUsed: number | null;
   className?: string;
+  showTokenCount?: boolean;
 }) {
   if (contextWindow == null || contextWindow <= 0 || tokensUsed == null) return null;
 
@@ -41,7 +43,7 @@ export function ComposerContextRing({
           type="button"
           data-testid="composer-context-ring"
           className={cn(
-            "flex shrink-0 items-center rounded-full bg-transparent p-0 text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "flex shrink-0 items-center gap-1.5 rounded-full bg-transparent p-0 text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             className,
           )}
           aria-label={`${usedPct}% of context used`}
@@ -64,6 +66,11 @@ export function ComposerContextRing({
               />
             )}
           </svg>
+          {showTokenCount && (
+            <span className="text-xs tabular-nums">
+              {formatTokenCount(tokensUsed)} / {formatTokenCount(contextWindow)} tokens
+            </span>
+          )}
         </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="flex-col items-start gap-0 px-3 py-2 text-left text-sm">

@@ -1,4 +1,5 @@
 import { ComposerPreviewLink } from "@/components/composer/ComposerPreviewLink";
+import { ComposerApprovalPicker } from "@/components/composer/ComposerApprovalPicker";
 import { SelectionPopup } from "@/components/chat/SelectionPopup";
 import { useLoadedConversations } from "@/hooks/useSidebarData";
 import { useConversationRedirect } from "@/hooks/useConversationRedirect";
@@ -46,7 +47,6 @@ import { BackgroundTaskIndicator } from "@/components/composer/BackgroundTaskInd
 import { SubagentTaskIndicator } from "@/components/composer/SubagentTaskIndicator";
 import { ReplyDraftBlocks } from "@/components/composer/ReplyDraftBlocks";
 import {
-  ComposerWorkspaceBar,
   ComposerPermissionPicker,
   ComposerConfigTooltipRows,
 } from "@/components/composer/ComposerControls";
@@ -230,8 +230,8 @@ import { nativeModelLabel } from "@/components/HarnessConfigControls";
 import { ComposerConfigSections } from "@/components/composer/ComposerConfigSections";
 import { buildFusionSections } from "@/components/composer/fusionSections";
 import { fusionOption, isFusionModelUid } from "@/lib/devinFusion";
-import { ComposerWorkspaceStatus } from "@/components/composer/ComposerWorkspaceStatus";
 import { ComposerPrLink } from "@/components/composer/ComposerPrLink";
+import { ComposerWorkspaceStatus } from "@/components/composer/ComposerWorkspaceStatus";
 import { ComposerContextRing } from "@/components/composer/ComposerContextRing";
 import { useComposerGitStatus } from "@/hooks/useComposerGitStatus";
 import { composerContextFromLabels } from "@/lib/composerContextAdapters";
@@ -2118,8 +2118,7 @@ function ComposerStatusLine() {
   const conversationId = useChatStore((s) => s.conversationId);
   const codexPlanMode = useChatStore((s) => s.codexPlanMode);
 
-  // The PR link, context ring, and goal indicator live in the workspace bar;
-  // this line carries only the plan-mode marker.
+  // Job details and token usage live in the footer; this line marks plan mode.
   const showPlanMode = !!conversationId && codexPlanMode;
   if (!showPlanMode) return null;
 
@@ -2486,7 +2485,6 @@ function ComposerImpl(
   const composerQueuedMessages = queuedMessages.filter(
     (message) => message.conversationId === conversationId,
   );
-  const hasQueuedComposerMessages = composerQueuedMessages.length > 0;
   const composerContextWindow = useChatStore((s) => s.contextWindow);
   const composerTokensUsed = useChatStore((s) => s.tokensUsed);
   const openComposerGithubTab = useOpenGithubTab();
@@ -3537,14 +3535,9 @@ function ComposerImpl(
       />
       {/* Drop cue, spanning the chat column this composer belongs to. */}
       {isDragActive && dropTarget ? <FileDropOverlay container={dropTarget} /> : null}
-      {/* The composer stack above the card: trays dock onto the inset
-          workspace bar, so they share its column wrapper and its mx-3
-          inset — a tray's negative-margin tuck only hides its square
-          bottom corners when the surface below is at least as wide,
-          otherwise page background shows and the tray floats detached. */}
-      <div className={cn("mx-auto", COMPOSER_COLUMN_WIDTH)}>
-        {/* Queued messages — peeks above the workspace bar like the
-            sub-agent tray. Lists follow-ups held while the agent is busy;
+      {/* Queued messages, sub-agent context and tools share the input column. */}
+      <div data-testid="composer-trays" className={cn("mx-auto", COMPOSER_COLUMN_WIDTH)}>
+        {/* Lists follow-ups held while the agent is busy;
             drains FIFO on idle. Scope to this conversation so a queue held
             elsewhere never leaks in. */}
         <QueuedMessagesStrip
@@ -3570,50 +3563,9 @@ function ComposerImpl(
           onReorder={reorderQueuedMessage}
           widthClassName="mx-3 w-auto"
         />
-        {/* Sub-agent context tray — peeks above the workspace bar; reserves
-            its own layout slot so the bar sits below it (see
-            SubagentComposerTray). Truthy (not just non-null) so an empty
-            label never peeks a nameless tray. */}
+        {/* Empty labels must not show a nameless sub-agent tray. */}
         {subAgentLabel ? <SubagentComposerTray label={subAgentLabel} /> : null}
         <ComposerPreviewLink sessionId={conversationId} />
-        <ComposerWorkspaceBar
-          data-testid="composer-workspace-controls"
-          className={cn(
-            hasQueuedComposerMessages &&
-              "rounded-t-none border-t-0 border-border/50 before:pointer-events-none before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-border/50 before:content-['']",
-          )}
-        >
-          <ComposerWorkspaceStatus
-            workspacePath={composerWorkspace ?? null}
-            worktreePath={composerGit.worktreePath}
-            isWorktree={composerGit.isWorktree}
-            branch={composerGit.branch}
-            branchState={composerGit.branchState}
-            creationBranch={composerGit.creationBranch}
-            showWorktree={composerGit.isWorktree === true}
-          />
-          <ComposerPrLink
-            state={composerGit.githubState}
-            prCount={composerGit.prCount}
-            prNumber={composerGit.prNumber}
-            prNumberPrefix={composerGit.prNumberPrefix}
-            onOpen={openComposerGithubTab}
-          />
-          <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1">
-            <div
-              data-testid="composer-task-indicators"
-              className="flex items-center gap-0 empty:hidden"
-            >
-              <BackgroundTaskIndicator />
-              <SubagentTaskIndicator conversationId={conversationId} />
-              {goal && <GoalStatusPill goal={goal} onOpen={() => setGoalDialogOpen(true)} />}
-            </div>
-            <ComposerContextRing
-              contextWindow={composerContextWindow}
-              tokensUsed={composerTokensUsed}
-            />
-          </div>
-        </ComposerWorkspaceBar>
       </div>
       <ChatComposer
         keyboard={{ submitWithModEnter, preventsKeyboardSubmit }}
@@ -3860,9 +3812,9 @@ function ComposerImpl(
                   onReconnect={onShowReconnectHelp}
                 />
               )}
-              {(showClaudePermissionMode || showCodexApprovalMode) && (
+              {showClaudePermissionMode || showCodexApprovalMode ? (
                 <ComposerPermissionPicker
-                  label="Permission mode"
+                  label="Approval mode"
                   value={permissionLabel || "Permission mode"}
                   harness={sessionHarness}
                   selectedValue={
@@ -3879,7 +3831,20 @@ function ComposerImpl(
                   }
                   onSelect={(mode) => void changePermission(mode)}
                 />
-              )}
+              ) : composerSessionId && !subAgentLabel ? (
+                <ComposerApprovalPicker
+                  key={composerSessionId}
+                  sessionId={composerSessionId}
+                  disabled={
+                    isReadOnly || unreachable || configBusy || !isOwnerLevel(permissionLevel)
+                  }
+                  disabledReason={
+                    isOwnerLevel(permissionLevel)
+                      ? undefined
+                      : "Only the job owner can change the approval mode"
+                  }
+                />
+              ) : null}
             </>
           ),
           trailing: (
@@ -3991,6 +3956,44 @@ function ComposerImpl(
           />
         )
       )}
+      <div
+        data-testid="composer-session-status"
+        aria-label="Job status and token usage"
+        className={cn("mx-auto mt-2 flex min-w-0 items-center gap-2 px-1", COMPOSER_COLUMN_WIDTH)}
+      >
+        <ComposerWorkspaceStatus
+          showWorkspace={false}
+          workspacePath={composerWorkspace ?? null}
+          worktreePath={composerGit.worktreePath}
+          isWorktree={composerGit.isWorktree}
+          branch={composerGit.branch}
+          branchState={composerGit.branchState}
+          creationBranch={composerGit.creationBranch}
+          showWorktree={composerGit.isWorktree === true}
+        />
+        <ComposerPrLink
+          state={composerGit.githubState}
+          prCount={composerGit.prCount}
+          prNumber={composerGit.prNumber}
+          prNumberPrefix={composerGit.prNumberPrefix}
+          onOpen={openComposerGithubTab}
+        />
+        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1">
+          <div
+            data-testid="composer-task-indicators"
+            className="flex items-center gap-0 empty:hidden"
+          >
+            <BackgroundTaskIndicator />
+            <SubagentTaskIndicator conversationId={conversationId} />
+            {goal && <GoalStatusPill goal={goal} onOpen={() => setGoalDialogOpen(true)} />}
+          </div>
+          <ComposerContextRing
+            contextWindow={composerContextWindow}
+            tokensUsed={composerTokensUsed}
+            showTokenCount
+          />
+        </div>
+      </div>
       <ComposerStatusLine />
     </form>
   );
@@ -4450,15 +4453,12 @@ export function shouldShowCodexPlanModeControl(
  * Claude-native sessions only: the switch drives Claude Code's own
  * shift+tab cycle, which no other harness has.
  *
- * :param conv: Session-like object carrying `labels`; a missing session
- *     or missing labels fails closed.
+ * :param conv: Session labels identifying the native wrapper.
  * :returns: True only for sessions running the claude-native wrapper.
  */
 export function shouldShowPermissionModeControl(
   conv: { labels?: Record<string, string | null> | null } | null | undefined,
 ): boolean {
-  // Devin cycles its own rungs with Shift+Tab, which the runner drives, so it
-  // gets the same control — with its own vocabulary (see `permissionOptions`).
   return isClaudeNativeSession(conv) || modelPickerKindForConv(conv) === "devin";
 }
 
@@ -4468,8 +4468,7 @@ export function shouldShowPermissionModeControl(
  * Codex-native sessions only: the switch drives Codex's own approval/sandbox
  * presets (the ``/permissions`` popup), which no other harness has.
  *
- * :param conv: Session-like object carrying `labels`; a missing session or
- *     missing labels fails closed.
+ * :param conv: Session labels identifying the native wrapper.
  * :returns: True only for sessions running the codex-native wrapper.
  */
 export function shouldShowCodexApprovalModeControl(

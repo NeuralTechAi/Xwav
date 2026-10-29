@@ -51,18 +51,20 @@ it("places the test dashboard icon after Preview and preserves new-page job cont
   expect(links[1]).toHaveAttribute("title", expect.stringContaining("accessibility"));
 });
 
-it("places deployment and installer icons after Load Testing in separate job tabs", () => {
+it("places penetration, deployment and installer icons after Load Testing in separate job tabs", () => {
   render(
     <MemoryRouter>
       <ComposerPreviewLink sessionId="job-a" />
     </MemoryRouter>,
   );
   const links = screen.getAllByRole("link");
-  expect(links[3]).toHaveAccessibleName("Deployments");
-  expect(links[4]).toHaveAccessibleName("Installable downloads");
+  expect(links[3]).toHaveAccessibleName("Penetration Test");
+  expect(links[4]).toHaveAccessibleName("Deployments");
+  expect(links[5]).toHaveAccessibleName("Installable downloads");
   for (const [index, path] of [
-    [3, "deployments"],
-    [4, "installables"],
+    [3, "penetration"],
+    [4, "deployments"],
+    [5, "installables"],
   ] as const) {
     expect(links[index]).toHaveAttribute("href", `/${path}?session=job-a`);
     expect(links[index]).toHaveAttribute("target", "_blank");

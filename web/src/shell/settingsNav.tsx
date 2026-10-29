@@ -9,6 +9,7 @@
 import { useEffect } from "react";
 import {
   ArchiveIcon,
+  CreditCardIcon,
   ArrowLeftIcon,
   BlocksIcon,
   BotIcon,
@@ -35,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { SIDEBAR_ROW } from "./sidebarStyles";
 
 export type SettingsSectionId =
+  | "billing"
   | "extensions"
   | "appearance"
   | "harnesses"
@@ -54,6 +56,7 @@ export type SettingsSectionId =
   | "updates";
 
 const SECTION_IDS: readonly SettingsSectionId[] = [
+  "billing",
   "extensions",
   "appearance",
   "harnesses",
@@ -133,6 +136,7 @@ export function settingsNavGroups(
     // on a deploy with sign-in.
     general.unshift({ id: "account", label: "Account", icon: UserCogIcon });
   }
+  general.push({ id: "billing", label: "Plans & models", icon: CreditCardIcon });
   general.push({ id: "extensions", label: "Skills, tools & plugins", icon: BlocksIcon });
   const groups: SettingsNavGroup[] = [{ title: "General", items: general }];
   if (customAgentsEnabled) {

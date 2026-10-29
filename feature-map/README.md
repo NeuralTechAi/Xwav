@@ -11,6 +11,9 @@ run. It deliberately omits implementation details such as selectors, test IDs,
 CSS classes, and source paths. Discover those at run time from the code and
 the referenced tests; they change faster than the user journey.
 
+For shared text styles, fonts and hover descriptions across pages, see
+[Interface typography and icon help](interface.md).
+
 ## Skills
 
 Read the relevant skill file directly when its capability is needed:
@@ -115,6 +118,7 @@ user-visible behavior. It then uses exactly these four H2 sections in order:
 
 - [Pre-Production Tests](./preproduction.md) covers job tests and downloadable reports.
 - [Load Testing](./loadtesting.md) covers bounded load, stress, spike and endurance runs.
+- [Penetration Test](./penetration.md) covers Strix scan history, findings and downloads.
 
 - [Live project app preview](./preview.md) covers automatic app discovery,
   device panels and live updates.

@@ -13,6 +13,15 @@ References and scripts are used only when required for the current step.
 Automatic semantic relevance remains a model decision, rather than a fixed
 keyword rule or a guarantee that every model will select perfectly.
 
+Optional worker skills follow the same selection rules. The agent evaluates
+whether the request or observed tool traffic benefits from a bounded delegation,
+loads the relevant skill first and follows its readiness and budget checks.
+The `sol-pi` skill describes repeated large-observation work as a candidate and
+keeps short or single-read tasks local. No separate routing process or model
+call is added. Automatic selection respects explicit opt-outs, skill allowlists,
+manual-only settings and the worker's policy boundary. Missing prerequisites
+leave the current harness in charge; they do not trigger installation or login.
+
 The built-in automatic catalog excludes skills marked with either:
 
 ```yaml
@@ -56,3 +65,23 @@ Inspect skill/read tool events: the first request should not activate skills;
 the matching task should load only the relevant skill and any needed references.
 Follow up within the same task and confirm it reuses instructions already in
 context. Explicitly invoke a manual-only skill to verify it still loads.
+
+## Google product skills
+
+The `google-skills` native entry adds one short description to the discovery
+catalog. Its 177 pinned Google skill documents are staged behind 21 topic indexes.
+A Google-specific request selects the entry, reads one relevant topic, then reads
+only the matching upstream instructions and references. Generic requests do not
+need this entry. Selection remains a model decision under the existing policies.
+
+Upstream entry files retain their original bytes but are named `INSTRUCTIONS.md`
+inside `library/` so recursive vendor scanners cannot advertise 177 additional
+skills. Supporting files retain their relative layout. The normal loader lists
+only the small topic indexes; it does not enumerate the entire library. A native
+harness uses its file reader; the shared SDK uses `read_skill_file`.
+
+The native entry follows existing name, plugin-alias and normalized-content
+suppression rules. Its instructions also require an already-installed matching
+user/project Google skill to take precedence rather than reading another copy.
+No Google plugin processes, SDK installs, sign-ins or cloud operations occur when
+discovering or reading skills.

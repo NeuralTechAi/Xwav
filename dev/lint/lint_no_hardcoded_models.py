@@ -39,6 +39,9 @@ MODEL_ID_RE = re.compile(
 TEXT_EXTENSIONS = {".json", ".toml", ".yaml", ".yml", ".sh"}
 SOURCE_EXTENSIONS = {".py", *TEXT_EXTENSIONS}
 GENERATED_PATHS = {Path("openapi.json")}
+# Pinned Google guidance and its generated catalog are reference resources,
+# not model selections made by Xwav. Keep upstream examples unchanged.
+VENDORED_SKILL_ROOT = Path("omnigent/native_skills/skills/google-skills")
 SKIP_PARTS = {
     ".git",
     ".mypy_cache",
@@ -214,6 +217,7 @@ def scan(path: Path) -> list[Hit]:
         not path.is_file()
         or path.suffix not in SOURCE_EXTENSIONS
         or Path(_repo_relative(path)) in GENERATED_PATHS
+        or Path(_repo_relative(path)).is_relative_to(VENDORED_SKILL_ROOT)
         or any(part in SKIP_PARTS for part in path.parts)
     ):
         return []
@@ -233,6 +237,7 @@ def _iter_scannable_paths() -> list[Path]:
         if raw_path
         if (path := Path(raw_path)).suffix in SOURCE_EXTENSIONS
         if path not in GENERATED_PATHS
+        if not path.is_relative_to(VENDORED_SKILL_ROOT)
         if not any(part in SKIP_PARTS for part in path.parts)
     ]
 

@@ -842,6 +842,33 @@
         "title": "CancelledEvent",
         "type": "object"
       },
+      "CheckoutInput": {
+        "properties": {
+          "annual": {
+            "default": false,
+            "title": "Annual",
+            "type": "boolean"
+          },
+          "plan": {
+            "maxLength": 32,
+            "title": "Plan",
+            "type": "string"
+          },
+          "seats": {
+            "default": 1,
+            "format": "int64",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Seats",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan"
+        ],
+        "title": "CheckoutInput",
+        "type": "object"
+      },
       "ChildSessionList": {
         "description": "Paginated list of child sessions; `data` is a page of `ChildSessionSummary`.",
         "properties": {
@@ -3513,6 +3540,21 @@
         "title": "IncompleteEvent",
         "type": "object"
       },
+      "KeyInput": {
+        "properties": {
+          "key": {
+            "format": "password",
+            "title": "Key",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "KeyInput",
+        "type": "object"
+      },
       "LaunchRunnerRequest": {
         "description": "Request body for `POST /v1/hosts/{host_id}/runners`.",
         "properties": {
@@ -4063,6 +4105,21 @@
         "title": "McpToolsResponse",
         "type": "object"
       },
+      "MemberInput": {
+        "properties": {
+          "member": {
+            "maxLength": 254,
+            "minLength": 1,
+            "title": "Member",
+            "type": "string"
+          }
+        },
+        "required": [
+          "member"
+        ],
+        "title": "MemberInput",
+        "type": "object"
+      },
       "MessageData": {
         "description": "Data for a message item (user or assistant).\n\n**Parameters**\n\n- `agent` \u2014 Agent name (required for assistant messages, absent for user). Serialized as `\"model\"` in JSON.",
         "properties": {
@@ -4146,6 +4203,17 @@
             "description": "Confirmed or conservatively preserved user input; prevents legacy content cleanup from hiding literal agent markup.",
             "title": "User Authored",
             "type": "boolean"
+          },
+          "workspace_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Checkpoint Id"
           }
         },
         "required": [
@@ -5696,6 +5764,30 @@
           "stage"
         ],
         "title": "SandboxStatus",
+        "type": "object"
+      },
+      "Selection": {
+        "properties": {
+          "mode": {
+            "enum": [
+              "free",
+              "managed",
+              "byok"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "model": {
+            "maxLength": 250,
+            "title": "Model",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "model"
+        ],
+        "title": "Selection",
         "type": "object"
       },
       "SendCommentsRequest": {
@@ -10697,6 +10789,452 @@
         ]
       }
     },
+    "/v1/billing": {
+      "get": {
+        "operationId": "status_v1_billing_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Status V1 Billing Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/agent": {
+      "get": {
+        "operationId": "agent_v1_billing_agent_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Agent",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/checkout": {
+      "post": {
+        "operationId": "checkout_v1_billing_checkout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Checkout V1 Billing Checkout Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Checkout",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/keys/{provider}": {
+      "delete": {
+        "operationId": "delete_key_v1_billing_keys__provider__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Delete Key V1 Billing Keys  Provider  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Key",
+        "tags": [
+          "billing"
+        ]
+      },
+      "put": {
+        "operationId": "save_key_v1_billing_keys__provider__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Save Key V1 Billing Keys  Provider  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Key",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/members": {
+      "post": {
+        "operationId": "invite_v1_billing_members_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Invite V1 Billing Members Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Invite",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/members/accept": {
+      "post": {
+        "operationId": "accept_v1_billing_members_accept_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Accept V1 Billing Members Accept Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Accept",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/members/{member}": {
+      "delete": {
+        "operationId": "remove_member_v1_billing_members__member__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "member",
+            "required": true,
+            "schema": {
+              "title": "Member",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Remove Member V1 Billing Members  Member  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Member",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/portal": {
+      "post": {
+        "operationId": "portal_v1_billing_portal_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Portal V1 Billing Portal Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Portal",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/selection": {
+      "put": {
+        "operationId": "select_v1_billing_selection_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Selection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Select V1 Billing Selection Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Select",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/token": {
+      "delete": {
+        "operationId": "revoke_token_v1_billing_token_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Revoke Token V1 Billing Token Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Revoke Token",
+        "tags": [
+          "billing"
+        ]
+      },
+      "post": {
+        "operationId": "token_v1_billing_token_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Token V1 Billing Token Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Token",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/webhook": {
+      "post": {
+        "operationId": "webhook_v1_billing_webhook_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Webhook V1 Billing Webhook Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Webhook",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/v1/branding/logo/{variant}": {
       "get": {
         "description": "Serve a validated public branding asset, or 404 when unset.",
@@ -10944,6 +11482,29 @@
           }
         },
         "summary": "List Harnesses",
+        "tags": [
+          "harnesses"
+        ]
+      }
+    },
+    "/v1/harnesses/harness2/status": {
+      "get": {
+        "operationId": "harness2_status_v1_harnesses_harness2_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Harness2 Status V1 Harnesses Harness2 Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Harness2 Status",
         "tags": [
           "harnesses"
         ]
@@ -12113,6 +12674,101 @@
         "summary": "Import Local Sessions Stream",
         "tags": [
           "imports"
+        ]
+      }
+    },
+    "/v1/inference/{mode}/models": {
+      "get": {
+        "operationId": "models_v1_inference__mode__models_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mode",
+            "required": true,
+            "schema": {
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Models V1 Inference  Mode  Models Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Models",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/inference/{mode}/{protocol}": {
+      "post": {
+        "operationId": "inference_v1_inference__mode___protocol__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mode",
+            "required": true,
+            "schema": {
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "protocol",
+            "required": true,
+            "schema": {
+              "title": "Protocol",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Inference V1 Inference  Mode   Protocol  Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Inference",
+        "tags": [
+          "billing"
         ]
       }
     },
@@ -13857,6 +14513,76 @@
         ]
       }
     },
+    "/v1/sessions/{session_id}/changes": {
+      "get": {
+        "description": "Compare pre-request files with the next request or the idle workspace.",
+        "operationId": "chat_file_changes_v1_sessions__session_id__changes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Chat File Changes V1 Sessions  Session Id  Changes Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chat File Changes",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
     "/v1/sessions/{session_id}/child_sessions": {
       "get": {
         "description": "List sub-agent (child) sessions under a parent session.\n\nReturns a page of `ChildSessionSummary` objects\nderived from child conversations (`kind=\"sub_agent\"`,\n`parent_conversation_id=session_id`) plus each child's\nlatest task. Powers the web / REPL debug surfaces' \"child\nsessions\" panel without parsing parent\n`function_call_output` JSON handles. Pagination contract\nmatches `list_session_items` so existing client code\ncan reuse the same cursor logic.\n\n**Returns:** A `PaginatedList` of `ChildSessionSummary` objects.\n\n**Raises**\n\n- `OmnigentError` \u2014 403 if the caller lacks READ on `session_id`; 404 if no session exists there.",
@@ -14492,6 +15218,145 @@
         ]
       }
     },
+    "/v1/sessions/{session_id}/diagnostics": {
+      "get": {
+        "operationId": "job_diagnostics_v1_sessions__session_id__diagnostics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Job Diagnostics V1 Sessions  Session Id  Diagnostics Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Job Diagnostics",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/v1/sessions/{session_id}/download": {
+      "get": {
+        "operationId": "download_job_workspace_v1_sessions__session_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Job Workspace",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/v1/sessions/{session_id}/git-actions": {
+      "post": {
+        "description": "Review, stage, or commit the owner's idle job repository; never push.",
+        "operationId": "chat_git_action_v1_sessions__session_id__git_actions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Chat Git Action V1 Sessions  Session Id  Git Actions Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chat Git Action",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
     "/v1/sessions/{session_id}/items": {
       "get": {
         "description": "List items in a session with cursor-based pagination.\n\nDelegates to the conversation items store \u2014 session_id is\nthe conversation_id. Same pagination contract as\n`GET /v1/conversations/{id}/items`.\n\n**Returns:** A `PaginatedList` of conversation items.\n\n**Raises**\n\n- `OmnigentError` \u2014 404 if no session exists.",
@@ -14649,6 +15514,94 @@
         ]
       }
     },
+    "/v1/sessions/{session_id}/loadtesting": {
+      "get": {
+        "description": "Run/retrieve persistent owner-authorized workspace test reports.",
+        "operationId": "project_preproduction_v1_sessions__session_id__loadtesting_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Project Preproduction V1 Sessions  Session Id  Loadtesting Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Preproduction",
+        "tags": [
+          "sessions"
+        ]
+      },
+      "post": {
+        "description": "Run/retrieve persistent owner-authorized workspace test reports.",
+        "operationId": "project_preproduction_v1_sessions__session_id__loadtesting_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Project Preproduction V1 Sessions  Session Id  Loadtesting Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Preproduction",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
     "/v1/sessions/{session_id}/model-override/reset": {
       "post": {
         "description": "Retire a rejected pick after fallback without replacing a newer selection.",
@@ -14739,6 +15692,126 @@
           }
         },
         "summary": "Get Session Owner",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/v1/sessions/{session_id}/penetration": {
+      "get": {
+        "description": "Start/retrieve a full-project scan, with explicit POST actions and owner access.",
+        "operationId": "penetration_report_v1_sessions__session_id__penetration_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "run",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Penetration Report V1 Sessions  Session Id  Penetration Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Penetration Report",
+        "tags": [
+          "sessions"
+        ]
+      },
+      "post": {
+        "description": "Start/retrieve a full-project scan, with explicit POST actions and owner access.",
+        "operationId": "penetration_report_v1_sessions__session_id__penetration_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "run",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Penetration Report V1 Sessions  Session Id  Penetration Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Penetration Report",
         "tags": [
           "sessions"
         ]
@@ -15232,6 +16305,139 @@
         ]
       }
     },
+    "/v1/sessions/{session_id}/preproduction": {
+      "get": {
+        "description": "Run/retrieve persistent owner-authorized workspace test reports.",
+        "operationId": "project_preproduction_v1_sessions__session_id__preproduction_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Project Preproduction V1 Sessions  Session Id  Preproduction Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Preproduction",
+        "tags": [
+          "sessions"
+        ]
+      },
+      "post": {
+        "description": "Run/retrieve persistent owner-authorized workspace test reports.",
+        "operationId": "project_preproduction_v1_sessions__session_id__preproduction_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Project Preproduction V1 Sessions  Session Id  Preproduction Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Preproduction",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/v1/sessions/{session_id}/preview": {
+      "post": {
+        "description": "Discover/start the owner's workspace app through its existing runner.",
+        "operationId": "project_preview_v1_sessions__session_id__preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Project Preview V1 Sessions  Session Id  Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Preview",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
     "/v1/sessions/{session_id}/read-state": {
       "put": {
         "description": "Set the calling user's read-state for one session.\n\nRequires `LEVEL_READ` on the session in multi-user mode \u2014 you can\nonly track read-state for sessions you can see. Stores the values\nverbatim (the client enforces the baseline's monotonicity and the\nunread semantics); the server does not interpret them against\nsession status. Returns `204` \u2014 the client already has the\noptimistic state and re-reads the authoritative value on the next\n`GET /v1/sessions` poll.\n\n**Parameters**\n\n- `body` \u2014 The validated `ReadStatePutRequest`.\n\n**Returns:** An empty `204 No Content` response.\n\n**Raises**\n\n- `OmnigentError` \u2014 403 if the caller lacks read access.",
@@ -15274,6 +16480,152 @@
           }
         },
         "summary": "Put Read State",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/v1/sessions/{session_id}/releases": {
+      "get": {
+        "description": "Plan, build or publish only after an owner explicitly starts a release.",
+        "operationId": "project_releases_v1_sessions__session_id__releases_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Project Releases V1 Sessions  Session Id  Releases Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Releases",
+        "tags": [
+          "sessions"
+        ]
+      },
+      "post": {
+        "description": "Plan, build or publish only after an owner explicitly starts a release.",
+        "operationId": "project_releases_v1_sessions__session_id__releases_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Project Releases V1 Sessions  Session Id  Releases Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Releases",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/v1/sessions/{session_id}/releases/{run_id}/{filename}": {
+      "get": {
+        "operationId": "download_release_artifact_v1_sessions__session_id__releases__run_id___filename__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "title": "Filename",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Release Artifact",
         "tags": [
           "sessions"
         ]
@@ -17195,6 +18547,51 @@
         "summary": "Get Session Resource",
         "tags": [
           "session_resources"
+        ]
+      }
+    },
+    "/v1/sessions/{session_id}/revert": {
+      "post": {
+        "description": "Review or restore pre-message files while retaining the conversation.",
+        "operationId": "revert_chat_files_v1_sessions__session_id__revert_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Revert Chat Files V1 Sessions  Session Id  Revert Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revert Chat Files",
+        "tags": [
+          "sessions"
         ]
       }
     },

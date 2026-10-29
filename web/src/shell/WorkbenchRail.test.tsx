@@ -18,6 +18,7 @@ function renderRail(path = "/") {
       <WorkbenchRail onSearch={onSearch} />
       <Routes>
         <Route path="/settings/git" element={<p>Git configuration</p>} />
+        <Route path="/settings/billing" element={<p>Subscription plans and models</p>} />
         <Route path="*" element={null} />
       </Routes>
     </MemoryRouter>,
@@ -38,6 +39,18 @@ describe("Xwav workbench navigation", () => {
       "aria-current",
       "page",
     );
+    expect(screen.getByRole("link", { name: "Workspace home" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+  it("places Plans & Models immediately before Search and opens billing settings", () => {
+    renderRail();
+    const plans = screen.getByRole("link", { name: "Plans & Models" });
+    expect(plans).toHaveAttribute("title", "Plans & Models");
+    expect(plans.nextElementSibling).toBe(screen.getByRole("button", { name: "Search workspace" }));
+    fireEvent.click(plans);
+    expect(screen.getByText("Subscription plans and models")).toBeInTheDocument();
+    expect(plans).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Workspace home" })).not.toHaveAttribute(
       "aria-current",
     );

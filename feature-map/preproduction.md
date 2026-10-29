@@ -11,6 +11,9 @@ Opening the page starts or resumes the latest report. A jobless page waits.
 - `lifecycle`: keep running after closing the page, resume, stop and run again.
 - `download`: export complete report data as JSON, HTML or CSV.
 - `authorization`: only the workspace owner can execute checks or retrieve reports.
+- `repair`: Fix issues sends the report's run reference to this job; ordinary chat
+  requests mentioning dashboard failures also receive bounded, redacted report
+  evidence automatically. Progress and file changes appear in the main chat.
 
 ## How to get to it (user POV)
 
@@ -53,3 +56,17 @@ Identical commands run once per report and expose reused results. Tests have bou
 time/output; the overall run is bounded to 30 minutes. Logs in downloads contain
 up to the last 16000 bytes per command. Source changes during a run are flagged.
 Passing checks do not certify production readiness or security.
+
+Reports are not project test files. The owner-only `GET /sessions/{id}/diagnostics`
+API reads existing Pre-Production, Load Testing, Strix and release reports without
+starting a run. The agent receives failed check output/commands, metrics, findings,
+build logs, run identity and source freshness only when requested. Missing reports
+and infrastructure problems stay explicit. Saved coordinators supply verification
+commands for test reruns; load verification is capped at 1000 requests. Publishing,
+licence acceptance and credential setup keep their existing authorization rules.
+
+Verification: `test_preproduction_dashboard` now drives a real failed suite through
+Fix issues, confirms evidence reaches the model, observes a file repair in chat,
+then reruns the coordinator and verifies the original failing check passes on
+desktop and mobile. Native event forwarding is also tested for all four report
+kinds in `test_dashboard_evidence_is_forwarded_to_native_chat`.

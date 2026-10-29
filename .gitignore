@@ -99,5 +99,6 @@ web/storybook-static/
 # DAB local state directory (created by `databricks bundle deploy`).
 deploy/databricks/.databricks/
 web/package-lock.json
+web/.build.lock
 # Generated demo recordings belong in PR evidence or artifacts, not Git.
 recordings/

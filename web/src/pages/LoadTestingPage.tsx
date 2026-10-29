@@ -9,6 +9,7 @@ import { PageScroll } from "@/components/PageScroll";
 import { reportDownload, type TestReport, type TestCheck } from "./PreproductionPage";
 import "./preproduction.css";
 import "./loadtesting.css";
+import { FixDashboardIssues } from "@/components/chat/FixDashboardIssues";
 
 interface Metrics {
   requests: number;
@@ -174,6 +175,13 @@ export function LoadTestingPage() {
         </div>
         <div className="preproduction-actions">
           {session && <Link to={`/c/${encodeURIComponent(session)}`}>Back to job</Link>}
+          <FixDashboardIssues
+            key={`${session}:${report?.id}`}
+            sessionId={session}
+            kind="loadtesting"
+            runId={report?.id}
+            disabled={!report || report.state === "running"}
+          />
           {running ? (
             <button type="button" disabled={busy} onClick={() => action("cancel")}>
               <SquareIcon size={15} /> Stop run

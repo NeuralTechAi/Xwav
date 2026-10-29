@@ -1,5 +1,6 @@
 import {
   BotIcon,
+  CreditCardIcon,
   GitBranchIcon,
   HouseIcon,
   MoonIcon,
@@ -17,32 +18,53 @@ export function WorkbenchRail({ onSearch }: { onSearch: () => void }) {
   const { resolvedTheme, setTheme } = useTheme();
   const dark = resolvedTheme === "dark";
   const destinations = [
-    { to: "/", label: "Workspace home", icon: HouseIcon, active: pathname === "/" },
+    {
+      to: "/",
+      label: "Workspace home",
+      help: "Open your workspace and start a new job.",
+      icon: HouseIcon,
+      active: pathname === "/",
+    },
     {
       to: "/settings/harnesses",
       label: "Harness settings",
+      help: "Choose an AI harness and set the default for new jobs.",
       icon: BotIcon,
       active: pathname.startsWith("/settings/harnesses"),
     },
     {
       to: "/settings/git",
       label: "Git connections",
+      help: "Connect GitHub and manage your project repositories.",
       icon: GitBranchIcon,
       active: pathname.startsWith("/settings/git"),
+    },
+    {
+      to: "/settings/billing",
+      label: "Plans & Models",
+      help: "Manage your plan, model choices, usage and provider keys.",
+      icon: CreditCardIcon,
+      active: pathname.startsWith("/settings/billing"),
     },
   ];
   return (
     <nav aria-label="Xwav workbench" className="xwav-rail">
-      <Link to="/" aria-label="Xwav home" className="xwav-rail-brand">
+      <Link
+        to="/"
+        aria-label="Xwav home"
+        title="Return to your Xwav workspace"
+        className="xwav-rail-brand"
+      >
         <XwavIcon className="size-7" />
       </Link>
       <div className="xwav-rail-links">
-        {destinations.map(({ to, label, icon: Icon, active }) => (
+        {destinations.map(({ to, label, help, icon: Icon, active }) => (
           <Link
             key={to}
             to={to}
             aria-label={label}
             title={label}
+            data-icon-help={help}
             aria-current={active ? "page" : undefined}
             className="xwav-rail-action"
           >
@@ -54,6 +76,7 @@ export function WorkbenchRail({ onSearch }: { onSearch: () => void }) {
           onClick={onSearch}
           aria-label="Search workspace"
           title="Search workspace"
+          data-icon-help="Find projects, jobs and messages in your workspace."
           className="xwav-rail-action"
         >
           <SearchIcon className="size-5" />
@@ -73,6 +96,7 @@ export function WorkbenchRail({ onSearch }: { onSearch: () => void }) {
           to="/settings/appearance"
           aria-label="Workbench appearance"
           title="Workbench appearance"
+          data-icon-help="Customize the theme, interface font and text size."
           className="xwav-rail-action"
         >
           <Settings2Icon className="size-5" />

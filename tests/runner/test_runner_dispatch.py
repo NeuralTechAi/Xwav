@@ -2668,6 +2668,58 @@ async def test_runner_os_env_tools_use_agent_spec_cwd() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("per_session", [False, True])
+async def test_runner_file_edits_use_the_preview_resource_workspace(
+    tmp_path: Path, per_session: bool
+) -> None:
+    from omnigent.entities import DEFAULT_ENVIRONMENT_ID
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.runner.resource_registry import SessionResourceRegistry
+    from omnigent.runner.tool_dispatch import _execute_os_env_tool
+    from omnigent.spec.types import AgentSpec
+
+    workspace = tmp_path / "project"
+    workspace.mkdir()
+    spec = AgentSpec(
+        spec_version=1,
+        os_env=OSEnvSpec(type="caller_process", cwd=".", sandbox=OSEnvSandboxSpec(type="none")),
+    )
+    registry = SessionResourceRegistry(
+        runner_workspace=workspace, per_session_workspace=per_session
+    )
+    try:
+        preview_env = registry.resolve_environment("preview_job", DEFAULT_ENVIRONMENT_ID, spec)
+        root = Path(preview_env.cwd)
+        (root / "index.html").write_text("Before selection")
+        result = await _execute_os_env_tool(
+            "sys_os_write",
+            {"path": "index.html", "content": "Updated from preview"},
+            agent_spec=spec,
+            conversation_id="preview_job",
+            resource_registry=registry,
+        )
+        assert Path(json.loads(result)["path"]) == root / "index.html"
+        assert (root / "index.html").read_text() == "Updated from preview"
+        assert spec.os_env is not None and spec.os_env.cwd == "."
+        if per_session:
+            await _execute_os_env_tool(
+                "sys_os_write",
+                {"path": "other.txt", "content": "Other project"},
+                agent_spec=spec,
+                conversation_id="other_job",
+                resource_registry=registry,
+            )
+            other = registry.resolve_environment("other_job", DEFAULT_ENVIRONMENT_ID, spec)
+            assert other.cwd != preview_env.cwd
+            assert not (Path(other.cwd) / "index.html").exists()
+            assert (Path(other.cwd) / "other.txt").read_text() == "Other project"
+            assert not (root / "other.txt").exists()
+    finally:
+        await registry.cleanup_session("preview_job")
+        await registry.cleanup_session("other_job")
+
+
+@pytest.mark.asyncio
 async def test_runner_os_env_cleanup_is_off_loop_and_cancellation_safe(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -45,3 +45,26 @@ skills stay out of automatic catalogs, explicit loading remains available, and
 reference contents are read only through a separate requested file read. These
 checks verify framework behavior; semantic relevance remains the model's
 selection decision, guided by the task rather than keyword triggers.
+
+## Shared SoL-Pi worker
+
+`/sol-pi` provides portable guidance for any caller harness. Inspect it with
+`xwav sol-pi status --json`, then export a reusable worker with
+`xwav sol-pi export-agent <new-directory> --project <workspace>`. Attach that child
+to a parent's `tools.agents` list, or import its archive through the existing
+agent form. A caller with shell tools can use `xwav sol-pi run --task-file <file>`.
+Opening the skill/status must not start Pi, install dependencies, copy credentials
+or change the caller's harness. A run is explicit and uses the job's Pi account.
+
+Automatic selection needs no `/sol-pi` command: a repeated large-log investigation
+can select its skill, assess readiness and dispatch a configured, scoped worker.
+Short tasks and single reads stay local. User opt-outs, manual-only skills and
+disabled catalogs must suppress automatic selection. Missing prerequisites must
+not launch setup or login. Agent relevance decisions remain model-dependent.
+
+The worker enables local ObservationPack only. Verify packed large observations
+remain recallable and original history remains intact. Existing edit/shell tools
+retain their normal behavior. No reducer call or automatic continuation starts.
+`tests/cli/test_sol_pi.py` covers adapter/export lifecycle and an offline real-Pi
+probe. Existing native skill tests cover Claude/Codex overlays, precedence and
+duplicate suppression; no extra MCP server or vendor prompt hook is required.

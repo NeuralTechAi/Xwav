@@ -34,6 +34,7 @@ export function ComposerWorkspaceStatus({
   branchState,
   creationBranch,
   showWorktree,
+  showWorkspace = true,
 }: {
   workspacePath: string | null;
   worktreePath: string | null;
@@ -42,6 +43,7 @@ export function ComposerWorkspaceStatus({
   branchState: ComposerBranchState;
   creationBranch: string | null;
   showWorktree: boolean;
+  showWorkspace?: boolean;
 }) {
   const branchText = branchLabel(branchState, branch);
   const branchTitle =
@@ -51,15 +53,21 @@ export function ComposerWorkspaceStatus({
 
   return (
     <>
-      <WorkspaceStatusItem
-        icon={FolderIcon}
-        label={workspacePath ? pathTail(workspacePath) : "No workspace"}
-        title={workspacePath ? `Working directory: ${workspacePath}` : "No working directory bound"}
-        ariaLabel={
-          workspacePath ? `Working directory: ${workspacePath}` : "Working directory: Not selected"
-        }
-        testId="composer-workspace-dir"
-      />
+      {showWorkspace && (
+        <WorkspaceStatusItem
+          icon={FolderIcon}
+          label={workspacePath ? pathTail(workspacePath) : "No workspace"}
+          title={
+            workspacePath ? `Working directory: ${workspacePath}` : "No working directory bound"
+          }
+          ariaLabel={
+            workspacePath
+              ? `Working directory: ${workspacePath}`
+              : "Working directory: Not selected"
+          }
+          testId="composer-workspace-dir"
+        />
+      )}
       {showWorktree ? (
         <WorkspaceStatusItem
           icon={GitForkIcon}

@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import "./preproduction.css";
 import "./release.css";
+import { FixDashboardIssues } from "@/components/chat/FixDashboardIssues";
 
 type Target = "web" | "android" | "ios" | "windows";
 interface Plan {
@@ -295,9 +296,18 @@ export function ReleasePage({ mode }: { mode: "deploy" | "download" }) {
               : "Build a real app package for your chosen platform, then download it."}
           </p>
         </div>
-        <Link className="release-back" to={session ? `/c/${session}` : "/"}>
-          <ArrowLeftIcon size={15} /> Back to job
-        </Link>
+        <div className="preproduction-actions">
+          <FixDashboardIssues
+            key={`${session}:${report?.id}`}
+            sessionId={session}
+            kind="releases"
+            runId={report?.id}
+            disabled={!report || report.state === "running"}
+          />
+          <Link className="release-back" to={session ? `/c/${session}` : "/"}>
+            <ArrowLeftIcon size={15} /> Back to job
+          </Link>
+        </div>
       </header>
       <Dialog open={setupOpen} onOpenChange={setSetupOpen}>
         <DialogContent className="release-setup-dialog sm:max-w-lg">

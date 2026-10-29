@@ -20,6 +20,24 @@ def test_manifest_command_preserves_manager_and_framework_flags(tmp_path, monkey
     assert "--hostname" in command and "--host" not in command
 
 
+@pytest.mark.parametrize("script", ["electron .", "npx electron-forge start", "electronmon ."])
+def test_desktop_launch_uses_browser_renderer_instead_of_native_window(tmp_path, script):
+    renderer = tmp_path / "src"
+    renderer.mkdir()
+    (renderer / "index.html").write_text("<h1>Renderer</h1>")
+    manifest = tmp_path / "package.json"
+    manifest.write_text(json.dumps({"scripts": {"start": script}}))
+    command, mode = runtime.launch_command(tmp_path, 41234)
+    assert command[-2:] == ["--directory", str(renderer)]
+    assert "http.server" in command and mode == "reload"
+    # A dedicated browser development script still takes precedence.
+    manifest.write_text(json.dumps({"scripts": {"start": script, "dev": "vite"}}))
+    assert runtime.launch_command(tmp_path, 41234)[0][:3] == ["npm", "run", "dev"]
+    manifest.write_text(json.dumps({"scripts": {"start": script}}))
+    (renderer / "index.html").unlink()
+    assert runtime.launch_command(tmp_path, 41234) is None
+
+
 def test_source_version_ignores_generated_dependencies_and_links(tmp_path):
     (tmp_path / "index.html").write_text("first")
     before = runtime.source_version(tmp_path)

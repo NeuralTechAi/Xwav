@@ -268,6 +268,7 @@ import {
 } from "@/lib/backgroundSessionTitlesPreferences";
 import { DefaultHarnessControl } from "@/components/DefaultHarnessControl";
 import { SettingsHarnessesSection } from "./settings/SettingsHarnessesSection";
+import { SettingsBillingSection } from "./settings/SettingsBillingSection";
 import { SettingsExtensionsSection } from "./settings/SettingsExtensionsSection";
 import { SettingsCustomAgentsSection } from "./settings/SettingsCustomAgentsSection";
 
@@ -342,6 +343,7 @@ export function SettingsPage() {
       className="[scrollbar-gutter:stable]"
       {...pageWrapperSettings}
     >
+      {section === "billing" && <SettingsBillingSection />}
       {section === "extensions" && <SettingsExtensionsSection />}
       {section === "appearance" && <AppearanceSection />}
       {section === "general" && <GeneralSection />}
@@ -2045,7 +2047,7 @@ function UiFontFamilyControl() {
       <SettingsLabel
         label="Font family"
         className="flex-1"
-        description="Use any font installed on this device. Leave blank for the system default."
+        description="Use any font installed on this device. Leave blank for Inter, Xwav’s default."
       />
       {/* Reset sits left of the input so the input is the rightmost element and
           its right edge lines up flush with the font-size stepper above.
@@ -2067,7 +2069,7 @@ function UiFontFamilyControl() {
           type="text"
           aria-label="UI font family"
           data-testid="ui-font-family-input"
-          placeholder="System default"
+          placeholder="Inter (Xwav default)"
           spellCheck={false}
           autoCapitalize="off"
           autoCorrect="off"

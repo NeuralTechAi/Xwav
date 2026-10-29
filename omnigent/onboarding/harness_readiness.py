@@ -1035,6 +1035,23 @@ def configured_harness_map() -> dict[str, HarnessAvailability]:
         ``{"claude-native": False, "codex-native": "needs-auth",
         "claude-sdk": "needs-auth", "pi": True, "qwen": True}``.
     """
+    from omnigent.billing.jobs import is_gateway_job_config
+    from omnigent.inference_config import parse_inference_config
+
+    config = load_config()
+    if is_gateway_job_config(config):
+        # A single-job sandbox has one authoritative provider binding. Probing
+        # every unrelated vendor CLI/login delays its first registration.
+        bindings = parse_inference_config(config)
+        ready: dict[str, HarnessAvailability] = {}
+        for harness in bindings:
+            from omnigent.onboarding.harness_install import missing_harness_cli
+
+            ready[harness] = HARNESS_BINARY_MISSING if missing_harness_cli(harness) else True
+        for alias, canonical in HARNESS_ALIASES.items():
+            if canonical in ready:
+                ready[alias] = ready[canonical]
+        return ready
     spellings: set[str] = set(_HARNESS_FAMILY)
     spellings.update(valid_harnesses())
     spellings.update(harness_install_keys())

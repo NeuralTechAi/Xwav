@@ -51,6 +51,7 @@ from omnigent.server.auth import (
     LEVEL_EDIT,
     LEVEL_OWNER,
     LEVEL_READ,
+    RESERVED_USER_LOCAL,
     AuthProvider,
 )
 from omnigent.server.feature_flags import Feature, FeatureFlags
@@ -3144,6 +3145,15 @@ def register_resources_routes(
 
         from omnigent import preview_runtime
 
+        conv = await _validate_session(session_id, request, LEVEL_OWNER)
+        await ensure_runner_connected(
+            session_id=session_id,
+            conv=conv,
+            app_state=request.app.state,
+            conversation_store=conversation_store,
+            runner_router=runner_router or get_server_runner_router(),
+            raise_host_refusal=True,
+        )
         source = Path(preview_runtime.__file__).read_text()
         result = await _proxy_fs_response(
             session_id,
@@ -3173,6 +3183,84 @@ def register_resources_routes(
             raise HTTPException(
                 status_code=502, detail="The job runtime could not inspect its app preview"
             ) from exc
+
+    @router.post(
+        "/sessions/{session_id}/penetration", dependencies=[Depends(require_json_content_type)]
+    )
+    @router.get("/sessions/{session_id}/penetration")
+    async def penetration_report(
+        session_id: str, request: Request, run: str | None = None
+    ) -> dict[str, Any]:
+        """Start/retrieve a full-project scan, with explicit POST actions and owner access."""
+        import json
+
+        from omnigent.server.penetration import penetration_command
+        from omnigent.server.strix_jobs import action as scan_action
+        from omnigent.server.strix_jobs import report as scan_report
+
+        conv = await _validate_session(session_id, request, LEVEL_OWNER)
+        if request.method == "POST":
+            from omnigent.server.workspace_archive import build_workspace_archive
+
+            body = await request.json()
+            if not isinstance(body, dict) or body.get("action") not in {
+                "start",
+                "ensure",
+                "cancel",
+            }:
+                raise HTTPException(400, "Choose start, ensure or cancel")
+
+            async def snapshot():
+                runner = await _get_runner_client_for_resource_access(
+                    session_id, conversation=conv
+                )
+                if runner is None:
+                    raise HTTPException(409, "Resume this job before starting a scan")
+                return await build_workspace_archive(
+                    runner,
+                    session_id,
+                    workspace=conv.workspace,
+                    excluded_directories=frozenset({".omnigent", "strix_runs", ".xwav"}),
+                )
+
+            return await scan_action(
+                session_id,
+                _get_user_id(request, auth_provider) or RESERVED_USER_LOCAL,
+                body["action"],
+                getattr(request.app.state, "billing_service", None),
+                snapshot,
+            )
+        if run is not None and (
+            not run
+            or len(run) > 200
+            or run in {".", ".."}
+            or any(character in run for character in "/\\\x00")
+        ):
+            raise HTTPException(400, "Invalid Strix run identifier")
+        managed = await asyncio.to_thread(scan_report, session_id, run)
+        if managed is not None:
+            return managed
+        result = await _proxy_fs_response(
+            session_id,
+            "POST",
+            f"/v1/sessions/{session_id}/resources/environments/default/shell",
+            {"command": penetration_command(conv.workspace, run), "timeout": 15},
+            request=request,
+            required_level=LEVEL_OWNER,
+            publish_invalidation=False,
+        )
+        try:
+            payload = json.loads(result["stdout"].strip().splitlines()[-1])
+            if (
+                not isinstance(payload, dict)
+                or payload.get("state")
+                not in {"empty", "running", "complete", "stopped", "unknown", "error"}
+                or not isinstance(payload.get("findings"), list)
+            ):
+                raise ValueError("Invalid Strix report")
+            return payload
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise HTTPException(502, "The job runtime could not return its Strix report") from exc
 
     @router.get("/sessions/{session_id}/loadtesting")
     @router.post(
@@ -3244,6 +3332,32 @@ def register_resources_routes(
             return payload
         except (KeyError, IndexError, TypeError, ValueError) as exc:
             raise HTTPException(502, "The job runtime could not return its test report") from exc
+
+    @router.get("/sessions/{session_id}/diagnostics")
+    async def job_diagnostics(session_id: str, request: Request, kind: str = "all") -> dict:
+        from omnigent.diagnostics_runtime import KINDS
+        from omnigent.server.diagnostics import collect_diagnostics
+
+        if kind != "all" and kind not in KINDS:
+            raise HTTPException(400, "Choose a supported dashboard")
+        conv = await _validate_session(session_id, request, LEVEL_OWNER)
+        _, conv = await ensure_runner_connected(
+            session_id=session_id,
+            conv=conv,
+            app_state=request.app.state,
+            conversation_store=conversation_store,
+            runner_router=runner_router or get_server_runner_router(),
+            raise_host_refusal=True,
+        )
+        runner = await _get_runner_client_for_resource_access(session_id, conversation=conv)
+        if runner is None:
+            raise HTTPException(503, "The job runtime is unavailable")
+        try:
+            return await collect_diagnostics(
+                runner, session_id, conv.workspace, list(KINDS) if kind == "all" else [kind]
+            )
+        except (httpx.HTTPError, ValueError, KeyError, IndexError) as exc:
+            raise HTTPException(502, "Could not read this job's dashboard evidence") from exc
 
     @router.get("/sessions/{session_id}/releases")
     @router.post(
@@ -3391,6 +3505,97 @@ def register_resources_routes(
         response.headers["ETag"] = '"' + artifact["sha256"] + '"'
         return response
 
+    @router.get("/sessions/{session_id}/changes")
+    async def chat_file_changes(
+        session_id: str, request: Request, item_id: str, path: str | None = None
+    ) -> dict[str, Any]:
+        """Compare pre-request files with the next request or the idle workspace."""
+        import json
+
+        from omnigent.server.workspace_history import checkpoint_command, history_lock
+
+        conv = await _authorize_browse_read(session_id, request)
+        if conv.parent_conversation_id is not None:
+            raise HTTPException(409, "Review file changes from the main project chat")
+        item = await asyncio.to_thread(conversation_store.get_item, session_id, item_id)
+        if item is None:
+            raise HTTPException(404, "Message not found in this chat")
+
+        async def adjacent_user(cursor: str, order: str) -> Any:
+            for _ in range(100):
+                page = await asyncio.to_thread(
+                    conversation_store.list_items,
+                    session_id,
+                    limit=100,
+                    after=cursor,
+                    order=order,
+                    type="message",
+                )
+                for row in page.data:
+                    if row.id != cursor and getattr(row.data, "role", None) == "user":
+                        return row
+                if not page.has_more or not page.last_id or page.last_id == cursor:
+                    return None
+                cursor = page.last_id
+            raise HTTPException(409, "Too many messages between file checkpoints")
+
+        if getattr(item.data, "role", None) != "user":
+            item = await adjacent_user(item.id, "desc")
+        if item is None:
+            raise HTTPException(409, "No file checkpoint for this response")
+        anchor = getattr(item.data, "workspace_checkpoint_id", None)
+        if not anchor:
+            raise HTTPException(409, "No file checkpoint was saved for this request")
+        following = await adjacent_user(item.id, "asc")
+        end_anchor = (
+            getattr(following.data, "workspace_checkpoint_id", None) if following else None
+        )
+        if following and not end_anchor:
+            raise HTTPException(
+                409, "The next request has no checkpoint; this turn cannot be isolated"
+            )
+        async with history_lock(conv.root_conversation_id or session_id):
+            client = await _get_runner_client_for_resource_access(session_id)
+            if client is None:
+                raise HTTPException(409, "Reconnect this job to review changes")
+            if not end_anchor:
+                try:
+                    response = await client.get(f"/v1/sessions/{session_id}", timeout=5)
+                    status = response.json() if response.status_code == 200 else {}
+                except (httpx.HTTPError, ValueError) as exc:
+                    raise HTTPException(409, "Reconnect this job to review changes") from exc
+                if not isinstance(status, dict) or status.get("status") not in {"idle", "failed"}:
+                    raise HTTPException(409, "Finish or stop this job to review changes")
+            result = await _proxy_fs_response(
+                session_id,
+                "POST",
+                f"/v1/sessions/{session_id}/resources/environments/default/shell",
+                {
+                    "command": checkpoint_command(
+                        session_id,
+                        anchor,
+                        "changes",
+                        workspace=conv.workspace,
+                        end_anchor=end_anchor,
+                        path=path,
+                    ),
+                    "timeout": 25,
+                },
+                request=request,
+                required_level=LEVEL_READ,
+                publish_invalidation=False,
+            )
+        try:
+            payload = json.loads(result["stdout"].strip().splitlines()[-1])
+            if not isinstance(payload, dict):
+                raise ValueError("Invalid comparison")
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise HTTPException(502, "Could not read the workspace comparison") from exc
+        if payload.get("state") != "ready":
+            raise HTTPException(409, payload.get("message", "File comparison unavailable"))
+        payload["scope"] = "next_request" if end_anchor else "current_workspace"
+        return payload
+
     @router.post(
         "/sessions/{session_id}/revert",
         dependencies=[Depends(require_json_content_type)],
@@ -3487,6 +3692,94 @@ def register_resources_routes(
             raise HTTPException(502, "The workspace could not restore this checkpoint") from exc
         if payload.get("state") not in {"ready", "restored"}:
             raise HTTPException(409, payload.get("message", "Checkpoint unavailable"))
+        return payload
+
+    @router.post(
+        "/sessions/{session_id}/git-actions",
+        dependencies=[Depends(require_json_content_type)],
+    )
+    async def chat_git_action(session_id: str, request: Request) -> dict[str, Any]:
+        """Review, stage, or commit the owner's idle job repository; never push."""
+        import json
+
+        from omnigent.server.routes._sessions.orchestration import _session_is_starting
+        from omnigent.server.workspace_history import history_lock
+        from omnigent.workspace_git import git_command
+
+        conv = await _validate_session(session_id, request, LEVEL_OWNER)
+        if conv.parent_conversation_id is not None:
+            raise HTTPException(409, "Stage and commit from the main project chat")
+        body = await request.json()
+        if not isinstance(body, dict) or body.get("action") not in (
+            "status",
+            "init",
+            "stage",
+            "commit",
+        ):
+            raise HTTPException(400, "Choose status, init, stage or commit")
+        async with history_lock(conv.root_conversation_id or session_id):
+            if _session_is_starting(session_id):
+                raise HTTPException(409, "Finish or stop this job before using Git actions")
+            _, conv = await ensure_runner_connected(
+                session_id=session_id,
+                conv=conv,
+                app_state=request.app.state,
+                conversation_store=conversation_store,
+                runner_router=runner_router or get_server_runner_router(),
+                raise_host_refusal=True,
+            )
+            client = await _get_runner_client_for_resource_access(session_id, conversation=conv)
+            if client is None:
+                raise HTTPException(409, "Reconnect this job to use Git actions")
+            try:
+                response = await client.get(f"/v1/sessions/{session_id}", timeout=5)
+                live = response.json() if response.status_code == 200 else {}
+                # Waking a runner does not start an agent turn. An explicit
+                # 404 means this runner has no process for the idle saved job.
+                if response.status_code == 404 and conv.live_status in {"idle", "failed"}:
+                    live = {"status": "idle"}
+                elif response.status_code != 200:
+                    raise HTTPException(
+                        409,
+                        f"Job runner status unavailable (HTTP {response.status_code}). Reconnect this job.",
+                    )
+            except (httpx.HTTPError, ValueError) as exc:
+                raise HTTPException(409, "Reconnect this job to use Git actions") from exc
+            if (
+                _session_is_starting(session_id)
+                or not isinstance(live, dict)
+                or live.get("status") not in {"idle", "failed"}
+            ):
+                raise HTTPException(409, "Finish or stop this job before using Git actions")
+            children = await asyncio.to_thread(
+                conversation_store.list_conversations,
+                root_conversation_id=conv.root_conversation_id or session_id,
+                limit=1000,
+            )
+            if any(
+                row.id != session_id and row.live_status in {"running", "waiting"}
+                for row in children.data
+            ):
+                raise HTTPException(409, "Stop active subagents before using Git actions")
+            result = await _proxy_fs_response(
+                session_id,
+                "POST",
+                f"/v1/sessions/{session_id}/resources/environments/default/shell",
+                {"command": git_command(conv.workspace, body), "timeout": 70},
+                request=request,
+                required_level=LEVEL_OWNER,
+                publish_invalidation=body["action"] != "status",
+            )
+        try:
+            payload = json.loads(result["stdout"].strip().splitlines()[-1])
+            if not isinstance(payload, dict):
+                raise ValueError("Invalid Git result")
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise HTTPException(
+                502, "Git returned an unreadable result; refresh before retrying"
+            ) from exc
+        if payload.get("state") not in {"ready", "staged", "committed", "not_git"}:
+            raise HTTPException(409, payload.get("message", "Git action unavailable"))
         return payload
 
     # ── GitHub integration (read-only) ───────────────────────────

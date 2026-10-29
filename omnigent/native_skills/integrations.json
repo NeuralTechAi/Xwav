@@ -101,6 +101,28 @@
       "upstream_skill_sha256": "6e22cc54cb02a5e98ae42d06d9d7292db0c1b43894831b32879beb0166b2aea7",
       "license_evidence": ".claude-plugin/plugin.json, skills/karpathy-guidelines/SKILL.md and README.md declare MIT; upstream has no standalone LICENSE at this revision. Original plugin manifest is preserved as LICENSE.upstream.json.",
       "adaptation": "Unmodified canonical skill only; no duplicate CLAUDE.md, Cursor rules, plugin installer or global instructions. Existing name, plugin-alias and normalized-content precedence applies."
+    },
+    {
+      "repository": "https://github.com/NVlabs/SoL-Pi",
+      "revision": "219568034fa54ed121ede80961655e33dfb9d0e3",
+      "version": "0.1.1",
+      "license": "MIT",
+      "skills": [
+        "sol-pi"
+      ],
+      "integration": "optional-shared-worker",
+      "adaptation": "Unmodified pinned Pi extension source, loaded only by an explicitly invoked shared Xwav worker. Native portable guidance serves all caller harnesses. ObservationPack enabled; other mechanisms disabled. No hooks, transcript export, credential copying or new runtime dependencies."
+    },
+    {
+      "repository": "https://github.com/google/skills",
+      "revision": "c1578116ec34d574e5df618bb02849ecc717d329",
+      "license": "Apache-2.0",
+      "skills": [
+        "google-skills"
+      ],
+      "integration": "native-offline-skill",
+      "upstream_skill_count": 177,
+      "adaptation": "Single staged native entry; 177 unchanged upstream skills and supporting files loaded through topic indexes on demand. Plugin submodules, hooks and installers excluded."
     }
   ]
 }

@@ -42,7 +42,15 @@ session runner shell API. There is no URL input. The runtime searches for web
 listeners whose process working directories belong to this workspace. Otherwise
 it starts the project's dev/start script using its lockfile's available package
 manager, with Vite/Astro/Nuxt, Next and Expo web flags where appropriate. Static
-`index.html` projects use a lightweight Python HTTP server. A single runnable
+`index.html` projects use a lightweight Python HTTP server. An
+Electron app with a static renderer uses that HTML directly (including `src`,
+`renderer`, `app` or `www` entry directories), rather than launching a desktop
+window in a headless sandbox. A dedicated web `dev` script takes precedence.
+Electron preload/IPC APIs still require a browser implementation in the project;
+this preview does not emulate native desktop APIs.
+Opening Preview reconnects a sleeping job runner through the same owner-authorized
+recovery used by terminal creation, without sending a chat message.
+A single runnable
 app can live in a workspace subfolder. Static exports in `dist`, `build` or
 `public` can run without a dev/start script and refresh when those files change.
 Ambiguous multiple apps require a root `.xwav/preview.json` command. Discovery
@@ -137,3 +145,21 @@ Enter confirms. Tests cover fractional scales, reverse/tiny drags, bounds,
 cancellation, multiple pointers, scroll invalidation and frame coalescing; the
 live desktop/mobile journey checks live highlight alignment to one display
 pixel and sent coordinates to one CSS pixel on all three devices.
+
+Automatic source refreshes hold the selected panel's iframe steady while a region
+is being chosen, edited, or submitted. Other panels continue refreshing. Sending
+successfully or clearing the region releases that panel and applies the newest
+source revision. Late iframe load events cannot discard the editor, and source
+polling cannot reset a pending send or its acknowledgement. Hot-reload frameworks
+continue managing their own in-frame updates. The browser journey exercises source
+changes during editing and a mock-driven agent file write after each device's
+request, then verifies the resulting app in all three frames.
+The main job chat stays open throughout: each request appears exactly once,
+the working indicator and file-write activity stream in live, and completion
+appears without navigating or refreshing the chat. A controlled model-response
+gate keeps the in-progress state observable on desktop and touch layouts.
+
+Runner-local file and shell tools resolve their workspace through the same
+session resource registry as Preview. This preserves per-job workspace isolation
+and the tool's own sandbox specification, rather than writing to a separate
+fallback directory that the preview cannot see.

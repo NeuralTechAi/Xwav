@@ -3,7 +3,8 @@
 #
 # A built web-UI bundle may be committed at this path (vendored, minified
 # JS/CSS) — never lint or "fix" it.
-exclude: ^omnigent/server/static/web-ui/
+# Preserve pinned upstream skill resources byte for byte; catalog tests verify hashes.
+exclude: ^(omnigent/server/static/web-ui/|omnigent/native_skills/skills/google-skills/)
 repos:
   - repo: local
     hooks:

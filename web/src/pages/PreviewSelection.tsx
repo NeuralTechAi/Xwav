@@ -27,7 +27,6 @@ export function usePreviewSelection(context: string) {
   const [region, setRegion] = useState<PreviewRegion | null>(null);
   useEffect(() => {
     setSelecting(false);
-    setSending(false);
     setRegion(null);
   }, [context]);
   return { selecting, setSelecting, region, setRegion, sending, setSending };
@@ -312,11 +311,24 @@ export function PreviewChangeRequest({
     }
   }, [selection.region, selection.selecting]);
   const region = selection.region;
+  if (sent && !region && !selection.selecting)
+    return (
+      <p className="preview-selection-help" role="status">
+        Request sent to the job for Web, Android, and iOS. All live previews update as the shared
+        app changes.
+      </p>
+    );
   if (selection.selecting)
     return (
       <p className="preview-selection-help" role="status">
         Drag over {device} to highlight an exact area, or click a point. Arrow keys move by one
         pixel; Shift+arrows resize. Enter confirms; Escape cancels.
+      </p>
+    );
+  if (busy && !region)
+    return (
+      <p className="preview-selection-help" role="status">
+        Sending your change request to the job…
       </p>
     );
   if (!region)
@@ -346,6 +358,7 @@ export function PreviewChangeRequest({
       if (current !== generation.current) return;
       setText("");
       setSent(true);
+      selection.setRegion(null);
       retry.current = null;
     } catch (failure) {
       if (current === generation.current)

@@ -9,6 +9,11 @@ the header menu), and each place is a separate entry point.
 
 ## Sub-features
 
+- `approval-mode`: active job composers retain native Claude/Codex/Devin mode
+  choices. Other jobs expose Harness defaults and Ask before file and command
+  tools, backed by a saved session policy. Returning to defaults removes only
+  the composer's approval policy; custom, agent, and administrator policies stay
+  in force. Changes apply to subsequent tools and require the job owner in UI.
 - `session-grid`: behind `grid_sessions_display_ui`, drag sidebar sessions into a
   conversation to split left/right or top/bottom with a hover preview. Up to four
   independent chats fit in two rows and two columns. Grids live at `/grid/<id>`
@@ -26,6 +31,10 @@ the header menu), and each place is a separate entry point.
   cleanup, archiving a session that has a git worktree first asks whether to
   also delete the worktree (the branch is kept); Remember my choice saves the
   answer, which Settings → Git can change later.
+- `managed-startup`: Sending a message or opening job resources while a managed
+  sandbox is connecting waits for its active launch. A healthy replacement runner
+  keeps the job ready even if an older launch timer expires. Genuine connection
+  failures still surface as failures and can be retried.
 - `stop`: Stop session on a hosted parent ends its runner, including side chats
   and sub-agents sharing that runner. Conversation histories are kept.
 - `side-chat-lifecycle`: generic side chats reuse their parent's live runner;

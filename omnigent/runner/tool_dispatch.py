@@ -7095,6 +7095,7 @@ def _effective_runner_os_env_spec(
     agent_spec: AgentSpec | None,
     conversation_id: str | None,
     runner_workspace: Path | None = None,
+    resource_registry: SessionResourceRegistry | None = None,
 ) -> OSEnvSpec:
     """
     Build the OSEnvSpec used by runner-local sys_os_* dispatch.
@@ -7122,11 +7123,25 @@ def _effective_runner_os_env_spec(
     :param runner_workspace: Authoritative runtime cwd for the
         runner, sourced from ``OMNIGENT_RUNNER_WORKSPACE``.
         Overrides the spec's cwd when set.
+    :param resource_registry: Authoritative session workspace resolver, shared
+        with the filesystem, preview, and terminal resource endpoints.
     :returns: An ``OSEnvSpec`` with a concrete cwd.
     """
     from omnigent.inner.datamodel import OSEnvSpec
 
     configured = getattr(agent_spec, "os_env", None) if agent_spec is not None else None
+    if resource_registry is not None and conversation_id is not None:
+        spec = (
+            _clone_os_env_spec(configured)
+            if configured is not None
+            else OSEnvSpec(type="caller_process")
+        )
+        # Share the workspace identity, not a cached environment that may have
+        # been created for a less restrictive filesystem read view.
+        spec = resource_registry.effective_primary_spec(conversation_id, spec)
+        assert spec.cwd is not None
+        Path(spec.cwd).mkdir(mode=0o700, parents=True, exist_ok=True)
+        return spec
     if configured is not None:
         spec = _clone_os_env_spec(configured)
         if runner_workspace is not None:
@@ -7212,7 +7227,7 @@ async def _execute_os_env_tool(
     owns_environment = True
     try:
         effective_spec = _effective_runner_os_env_spec(
-            agent_spec, conversation_id, runner_workspace
+            agent_spec, conversation_id, runner_workspace, resource_registry
         )
         needs_shared_environment = effective_spec.sandbox is not None and any(
             p.copy_on_write for p in effective_spec.sandbox.write_path_specs

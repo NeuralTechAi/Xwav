@@ -1465,6 +1465,7 @@ async def test_managed_wake_fails_when_runner_never_reconnects(
     session_id = "1a9de2e74d453be7cd665c5290b481b9"
     conv = SimpleNamespace(
         id=session_id,
+        runner_id="runner_never_connects",
         labels={},
         host_id="cae8b33eab0bd659c87b00dd29946ade",
         workspace="/root/workspace",
@@ -1535,7 +1536,7 @@ async def test_managed_launch_fails_when_runner_never_connects(
 
     session_id = "1a41e11887aca4570e42c0be40f24833"
     host_id = "3c8cdcdb61903904849174c864620a5c"
-    conv = SimpleNamespace(id=session_id)
+    conv = SimpleNamespace(id=session_id, runner_id="runner_never_connects")
     tracker = ManagedLaunchTracker()
     tracker.begin(session_id)
     stages: list[tuple[str, str | None]] = []
@@ -1585,6 +1586,7 @@ async def test_managed_launch_fails_when_runner_never_connects(
         tracker=tracker,
         conversation_store=SimpleNamespace(
             set_host_id=lambda _sid, _host_id, _workspace: conv,
+            get_conversation=lambda _sid: conv,
         ),
         host_store=_HostStore(),  # type: ignore[arg-type]
         host_registry=_HostRegistry(),  # type: ignore[arg-type]
@@ -1610,7 +1612,7 @@ async def test_managed_launch_fails_and_tears_down_when_harness_not_configured(
 
     session_id = "3f3aa440b7274531a889fa4c25f4bb1b"
     host_id = "b4e372ad19634c62966a2c56aab8cfab"
-    conv = SimpleNamespace(id=session_id)
+    conv = SimpleNamespace(id=session_id, runner_id="runner_never_connects")
     tracker = ManagedLaunchTracker()
     tracker.begin(session_id)
     stages: list[tuple[str, str | None]] = []
@@ -1660,6 +1662,7 @@ async def test_managed_launch_fails_and_tears_down_when_harness_not_configured(
         tracker=tracker,
         conversation_store=SimpleNamespace(
             set_host_id=lambda _sid, _host_id, _workspace: conv,
+            get_conversation=lambda _sid: conv,
         ),
         host_store=_HostStore(),  # type: ignore[arg-type]
         host_registry=_HostRegistry(),  # type: ignore[arg-type]
@@ -1687,7 +1690,7 @@ async def test_managed_relaunch_failure_leaves_the_host_identity_alone(
 
     session_id = "d3a6e13f0dbf4b6ea4b6e37f4a76f2a9"
     host_id = "9e6cf6f52ebb4a2c9c9a1a5f8e8f5f42"
-    conv = SimpleNamespace(id=session_id)
+    conv = SimpleNamespace(id=session_id, runner_id="runner_never_connects")
     tracker = ManagedLaunchTracker()
     tracker.begin(session_id)
     terminated: list[object] = []
@@ -1729,6 +1732,7 @@ async def test_managed_relaunch_failure_leaves_the_host_identity_alone(
         tracker=tracker,
         conversation_store=SimpleNamespace(
             set_host_id=lambda _sid, _host_id, _workspace: conv,
+            get_conversation=lambda _sid: conv,
         ),
         host_store=_HostStore(),  # type: ignore[arg-type]
         host_registry=_HostRegistry(),  # type: ignore[arg-type]

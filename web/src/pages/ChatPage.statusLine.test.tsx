@@ -1,3 +1,7 @@
+// Approval policy transport is covered by ComposerApprovalPicker.test.tsx.
+vi.mock("@/components/composer/ComposerApprovalPicker", () => ({
+  ComposerApprovalPicker: () => <span data-testid="generic-approval-picker">Approval mode</span>,
+}));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/useSkills", () => ({
@@ -232,7 +236,12 @@ describe("Composer status line (branch + context ring)", () => {
     renderComposer();
     // The ring moved to the workspace bar (ComposerContextRing); assert it
     // renders the used percentage wherever it now lives — 25k of 100k → 25%.
-    expect(screen.getByLabelText("25% of context used")).toBeInTheDocument();
+    const usage = screen.getByLabelText("25% of context used");
+    expect(usage).toBeInTheDocument();
+    expect(usage).toHaveTextContent("25K / 100K tokens");
+    expect(screen.getByTestId("composer-session-status")).toContainElement(usage);
+    expect(screen.queryByTestId("composer-workspace-controls")).toBeNull();
+    expect(screen.queryByTestId("composer-workspace-dir")).toBeNull();
   });
 
   it("no longer renders the harness label in the status tray (moved to the config gear)", () => {
@@ -352,7 +361,7 @@ describe("Composer status line (branch + context ring)", () => {
     const host = screen.getByTestId("composer-host-select");
     const branch = screen.getByTestId("composer-git-branch");
     expect(host).toHaveAccessibleName("Host mac-laptop, online");
-    expect(branch.compareDocumentPosition(host) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+    expect(host.compareDocumentPosition(branch) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
   });
@@ -505,3 +514,8 @@ describe("formatModelEffortStatusLabel", () => {
     expect(formatModelEffortStatusLabel(null, null)).toBeNull();
   });
 });
+
+// Job tools have their own routing tests; composer layout needs only their slot.
+vi.mock("@/components/composer/ComposerPreviewLink", () => ({
+  ComposerPreviewLink: () => <div data-testid="composer-preview-link" />,
+}));

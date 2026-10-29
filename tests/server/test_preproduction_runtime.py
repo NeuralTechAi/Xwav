@@ -133,9 +133,20 @@ def test_transport_starts_persistent_worker_and_preserves_workspace(tmp_path, mo
     monkeypatch.setenv("XWAV_TEST_REPORT_ROOT", str(tmp_path / "reports"))
     root = tmp_path / "project with spaces"
     root.mkdir()
+    (root / "value.txt").write_text("broken")
     configure(
         root,
-        [{"category": "unit", "command": [sys.executable, "-c", "print('transport succeeded')"]}],
+        [
+            {
+                "category": "unit",
+                "command": [
+                    sys.executable,
+                    "-c",
+                    "from pathlib import Path; "
+                    "assert Path('value.txt').read_text() == 'fixed', 'Expected fixed value'",
+                ],
+            }
+        ],
     )
     command = preproduction_command("job-one", str(root), "ensure")
     first = json.loads(
@@ -157,16 +168,34 @@ def test_transport_starts_persistent_worker_and_preserves_workspace(tmp_path, mo
     poll_until(completed, timeout_s=15, interval_s=0.1)
     result = completed()
     assert result["id"] == first["id"]
-    assert result["checks"][0]["status"] == "passed"
+    assert result["checks"][0]["status"] == "failed"
     again = json.loads(
         subprocess.run(command, shell=True, capture_output=True, text=True, check=True).stdout
     )
     assert again["id"] == first["id"]
+    from omnigent.diagnostics_runtime import collect
+    from omnigent.penetration_runtime import inspect_reports
+
+    evidence = collect(
+        "job-one",
+        str(root),
+        ["preproduction"],
+        runtime.report_directory,
+        inspect_reports,
+        runtime.fingerprint,
+    )["reports"][0]
+    assert "Expected fixed value" in evidence["checks"][0]["output"]
+    (root / "value.txt").write_text("fixed")
+    subprocess.run(evidence["rerun_command"], capture_output=True, text=True, check=True)
+    poll_until(completed, timeout_s=15, interval_s=0.1)
+    repaired = completed()
+    assert repaired["id"] != first["id"]
+    assert repaired["checks"][0]["status"] == "passed"
     (root / "changed.txt").write_text("Source changed after the run")
     stale = json.loads(
         subprocess.run(command, shell=True, capture_output=True, text=True, check=True).stdout
     )
-    assert stale["id"] == first["id"] and stale["source_changed"] is True
+    assert stale["id"] == repaired["id"] and stale["source_changed"] is True
 
 
 @pytest.mark.parametrize("platform", ["web", "android", "ios"])

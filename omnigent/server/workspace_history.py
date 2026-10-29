@@ -31,6 +31,8 @@ def checkpoint_command(
     token: str | None = None,
     *,
     workspace: str | None = None,
+    end_anchor: str | None = None,
+    path: str | None = None,
 ) -> str:
     source = Path(workspace_checkpoints.__file__).read_text()
     parameters = json.dumps(
@@ -40,6 +42,8 @@ def checkpoint_command(
             "action": action,
             "token": token,
             "workspace": workspace,
+            "end_anchor": end_anchor,
+            "path": path,
             "storage_root": os.environ.get("OMNIGENT_CHECKPOINT_ROOT"),
         }
     )

@@ -976,3 +976,54 @@ async def test_preproduction_reports_and_execution_are_owner_only(
     )
     assert response.status_code in {401, 403}
     assert runner_client.posts == []
+
+
+@pytest.mark.asyncio
+async def test_chat_change_summary_obeys_workspace_file_sharing(client, runner_client):
+    response = await client.get(
+        "/v1/sessions/conv_share/changes?item_id=answer",
+        headers={"X-Forwarded-Email": "viewer@example.com"},
+    )
+    assert response.status_code == 403
+    assert runner_client.posts == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "user", ["viewer@example.com", "owner@example.com", "manager@example.com"]
+)
+async def test_strix_reports_are_owner_only(client, runner_client, user):
+    response = await client.get(
+        "/v1/sessions/conv_share/penetration", headers={"X-Forwarded-Email": user}
+    )
+    assert response.status_code in {401, 403}
+    assert runner_client.posts == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "user", ["viewer@example.com", "owner@example.com", "manager@example.com"]
+)
+async def test_strix_execution_is_owner_only(client, runner_client, user):
+    for action in ("start", "cancel"):
+        response = await client.post(
+            "/v1/sessions/conv_share/penetration",
+            headers={"X-Forwarded-Email": user},
+            json={"action": action},
+        )
+        assert response.status_code in {401, 403}
+    assert runner_client.posts == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "user", ["viewer@example.com", "owner@example.com", "manager@example.com"]
+)
+async def test_chat_git_actions_are_session_owner_only(client, runner_client, user):
+    response = await client.post(
+        "/v1/sessions/conv_share/git-actions",
+        json={"action": "stage"},
+        headers={"X-Forwarded-Email": user},
+    )
+    assert response.status_code in {401, 403}
+    assert runner_client.posts == []

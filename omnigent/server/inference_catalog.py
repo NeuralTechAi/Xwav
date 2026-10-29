@@ -59,6 +59,7 @@ def _family(provider: ProviderEntry, harness: str, model: str | None = None) -> 
         "codex-native",
         "openai-agents",
         "qwen",
+        "qwen-native",
         "jcode",
         "opencode-native",
     }:
@@ -85,7 +86,7 @@ def _wire(provider: ProviderEntry, harness: str, model: str | None = None) -> Mo
     canonical = canonicalize_harness(normalize_inference_harness(harness))
     if canonical in {"codex", "codex-native"} and protocol == "chat":
         raise _invalid("Codex requires a Responses endpoint; configure wire_api: responses.")
-    if canonical in {"opencode-native", "jcode", "qwen"}:
+    if canonical in {"opencode-native", "jcode", "qwen", "qwen-native"}:
         if protocol == "responses":
             raise _invalid(
                 f"{harness} requires a Chat Completions gateway with wire_api: chat. "
@@ -202,7 +203,20 @@ class SandboxInferenceService:
             )
         raw: dict[str, Any] = copy.deepcopy(target.host_config or {})
         if not parse_inference_config(raw):
-            return None
+            if raw.get("providers"):
+                return None
+            from omnigent.billing.jobs import gateway_job_snapshot
+
+            try:
+                return gateway_job_snapshot(
+                    getattr(self._state, "billing_service", None),
+                    target,
+                    harness,
+                    user_id or RESERVED_USER_LOCAL,
+                    agent_auth,
+                )
+            except ValueError as exc:
+                raise _invalid(str(exc)) from None
         harness = normalize_inference_harness(harness)
         discovery = copy.deepcopy(getattr(target, "model_discovery", None) or {})
         try:
@@ -456,6 +470,8 @@ class SandboxInferenceService:
 
     async def catalog(self, snapshot: dict[str, Any]) -> dict[str, Any]:
         """Recheck saved owner/endpoint/model policy without reading the latest target."""
+        if snapshot.get("xwav_gateway_job"):
+            return copy.deepcopy(snapshot["catalog"])
         result: dict[str, Any] = {
             "models": [],
             "configured": True,

@@ -8,8 +8,9 @@ license: Apache-2.0
 
 Adapted from usestrix/strix at the revision in `integrations.json`. The reviewed
 CLI is `strix-agent==1.7.0`. Xwav supplies this one canonical skill for the Strix
-workflow; it does not install Docker, an LLM account, the CLI or a cloud account,
-and never starts scans when skills are discovered. Do not install another Strix
+workflow. Skill discovery never starts scans or installs software. The dashboard
+automatically scans the current project on opening, installs the isolated CLI
+on demand and reuses Xwav’s free model gateway. Docker must already be available. Do not install another Strix
 skill collection or change other agents' global configuration.
 
 ## Scope and prerequisites
@@ -47,6 +48,14 @@ strix -n --target /absolute/path/to/disposable-checkout --scan-mode quick --max-
 Use `strix --help` to confirm the installed release's options before invocation.
 Use `--instruction-file` for detailed scope instructions instead of embedding
 credentials in command arguments. Results are stored under `strix_runs/`.
+Run from the current Xwav job workspace so its Penetration Test dashboard can
+read `strix_runs/<run-name>/run.json` and `vulnerabilities.json` (or the legacy
+`scan_data.json`). Preserve Strix's real scan state and evidence; never invent
+findings or a completed result. Opening the dashboard starts a managed full-project
+scan on a disposable snapshot; Run again creates a fresh scan. Historical run
+links remain read-only. Scans are bounded to 20 turns and 30 minutes, with only
+zero-cost models eligible. Do not expand this project-local authorization to
+remote targets.
 The local dashboard can be opened with `strix view`; its tokened URL grants
 access to results and should be treated as private.
 

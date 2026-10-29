@@ -4244,6 +4244,7 @@ async def _auto_create_qwen_terminal(
         egress_rules, env_passthrough) is inherited by the terminal.
     :returns: Created terminal resource view.
     """
+    from omnigent.billing.jobs import gateway_terminal_environment
     from omnigent.harnesses.qwen_native.main import resolve_qwen_executable
     from omnigent.inner.datamodel import OSEnvSpec, TerminalEnvSpec
 
@@ -4399,6 +4400,7 @@ async def _auto_create_qwen_terminal(
                 sandbox=(agent_os_env.sandbox if agent_os_env is not None else None),
             ),
             command=qwen_command,
+            env=gateway_terminal_environment("qwen-native"),
             args=qwen_args,
             scrollback=100_000,
             tmux_allow_passthrough=True,

@@ -26,6 +26,17 @@ def test_scan_flags_python_model_assignment(tmp_path: Path) -> None:
     ]
 
 
+def test_pinned_google_examples_are_resources_not_runtime_model_choices(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    resource = Path("omnigent/native_skills/skills/google-skills/library/example.py")
+    resource.parent.mkdir(parents=True)
+    resource.write_text('MODEL = "gemini-3-pro"\n')
+    assert scan(resource) == []
+    runtime = Path("omnigent/native_skills/runtime.py")
+    runtime.write_text(resource.read_text())
+    assert len(scan(runtime)) == 1
+
+
 def test_scan_flags_python_positional_argument(tmp_path: Path) -> None:
     dirty = tmp_path / "dirty.py"
     dirty.write_text('resolve("databricks-claude-sonnet-4-6")\n')

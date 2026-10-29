@@ -1,0 +1,8 @@
+# Install optional Free-compatible clients once, rather than in each new job.
+ARG BASE_IMAGE=xwav-host:free-gateway
+FROM ${BASE_IMAGE}
+USER root
+COPY deploy/docker/install-harness-cli.sh /tmp/install-harness-cli.sh
+RUN bash /tmp/install-harness-cli.sh 'opencode@~1.18.0' 'qwen@0.18.1' \
+ && rm /tmp/install-harness-cli.sh
+USER sandbox

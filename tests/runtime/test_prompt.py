@@ -452,12 +452,54 @@ def test_automatic_skill_selection_without_a_slash_command(builder, skills_filte
     assert "smallest relevant set" in result
     assert "honor disabled skills and allowlists" in result
     assert "does not authorize installing tools" in result
+    assert "observed tool traffic" in result
+    assert "A user need not request the worker by name" in result
+    assert "follow its readiness and budget rules" in result
+    assert "honor any user opt-out" in result
 
 
 @pytest.mark.parametrize("skills_filter", ["none", []])
 def test_disabled_catalog_does_not_request_automatic_selection(skills_filter) -> None:
     spec = AgentSpec(spec_version=1, skills_filter=skills_filter)
     assert AUTOMATIC_SKILL_SELECTION_INSTRUCTION not in build_instructions(spec, None, [])
+
+
+@pytest.mark.parametrize("name", ["sol-pi", "google-skills"])
+@pytest.mark.parametrize("manual_override", [False, True])
+def test_native_automatic_catalog_is_lazy_and_respects_user_override(manual_override, name):
+    from dataclasses import replace
+
+    from omnigent.native_skills import discover_native_skills, merge_native_skills
+
+    native = discover_native_skills([name])[0]
+    assert native.allow_implicit_invocation is True
+    selected = (
+        merge_native_skills(
+            [
+                replace(
+                    native,
+                    allow_implicit_invocation=False,
+                    content="Manual project override",
+                    skill_dir=None,
+                )
+            ],
+            [name],
+        )
+        if manual_override
+        else [native]
+    )
+    spec = AgentSpec(spec_version=1, skills=selected, skills_filter="none")
+    prompt = build_instructions(
+        spec,
+        "Investigate recurring test failures across these large diagnostic logs "
+        "and quote the evidence.",
+        [{"type": "function", "function": {"name": "load_skill"}}],
+    )
+    assert (f"- {name}:" in prompt) is not manual_override
+    assert native.content not in prompt
+    assert "# Shared SoL-Pi worker" not in prompt
+    assert "runtime/extensions/observation-pack" not in prompt
+    assert "Manual project override" not in prompt
 
 
 def test_skill_loader_receives_automatic_guidance_without_bundled_skills() -> None:

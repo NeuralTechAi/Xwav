@@ -5,6 +5,7 @@
 @import "@fontsource-variable/geist-mono";
 @import "./themePalettes.generated.css";
 @import "./workbench.css";
+@import "./interface-polish.css";
 
 /* Streamdown ships utility classes pre-compiled in its dist; this @source
  * pragma tells Tailwind v4 to scan those files so the classes survive the
@@ -20,12 +21,10 @@
 
 @theme inline {
   --font-heading: var(--font-sans);
-  /* Native system UI font stack — defers to whatever the OS ships
-     * (San Francisco on Apple, Segoe UI on Windows, Roboto on Android),
-     * matching Tailwind's default sans so the app reads as native chrome. */
+  /* Local variable font; system faces remain available offline while it loads. */
   --font-sans:
-    ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-    "Noto Color Emoji";
+    "Inter Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: "Geist Mono Variable", "JetBrains Mono", ui-monospace, monospace;
   /* Hero/title step — overrides Tailwind's default text-3xl (30/36)
      * with a slightly larger 32px face on the same 36px line. */
@@ -147,7 +146,7 @@
   /* User-controlled UI font size (see Appearance settings /
    * lib/uiFontPreferences.ts). Stored as a discrete px value and overridden at
    * runtime on documentElement. It feeds typography tokens only. */
-  --desktop-ui-font-size: 13px;
+  --desktop-ui-font-size: 15px;
   --icon-size-default: 14px;
   --icon-container-default: 16px;
   --ui-shadow-neutral-rgb: 0 0 0;
@@ -1262,14 +1261,10 @@ html[data-electron-mac] .breadcrumb-folder {
  * the discrete Appearance value without affecting mobile. */
 @media (width >= 48rem) {
   :root {
-    /* The step factors below are Tailwind's rem ratios against a 16px base, so
-     * they need the preference on that scale. Multiplying the raw 13px shrinks
-     * the ramp ~19%, dragging every `font-size: 1em` <code> down with it. */
-    --ui-ramp-anchor: calc(var(--desktop-ui-font-size) * (16 / 13));
-    /* Body and caption tiers come off the raw preference, not the anchor: the
-     * anchor is the 16px-equivalent grid the title ratios need, and running the
-     * caption factor through it put text-sm at 14.4px against a 13px body —
-     * a caption step larger than the text it captions. */
+    /* Keep heading proportions on the 16px design grid while user choices
+     * adjust typography independently of control and spacing geometry. */
+    --ui-ramp-anchor: calc(var(--desktop-ui-font-size) * (16 / 15));
+    /* Captions track the body preference and always remain a smaller step. */
     --text-sm: calc(var(--desktop-ui-font-size) * 0.9);
     --text-ui: var(--desktop-ui-font-size);
     --text-base: var(--desktop-ui-font-size);
@@ -1287,10 +1282,10 @@ html[data-electron-mac] .breadcrumb-folder {
 /* Mobile typography and sidebar geometry. The root remains at the global 16px
  * so rem-based controls and spacing keep the same scale across viewports. */
 @media (width < 48rem) {
-  /* Mobile defaults to 14px when no preference is saved. An inline value from
+  /* Mobile defaults to 16px when no preference is saved. An inline value from
    * the Appearance setting overrides this directly, without rescaling. */
   :root {
-    --desktop-ui-font-size: 14px;
+    --desktop-ui-font-size: 16px;
     --mobile-ui-font-size: var(--desktop-ui-font-size);
     --ui-ramp-anchor: var(--mobile-ui-font-size);
     --text-sm: calc(var(--mobile-ui-font-size) * 0.9);

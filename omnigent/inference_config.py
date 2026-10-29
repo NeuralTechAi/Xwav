@@ -121,6 +121,7 @@ def parse_inference_config(config: dict[str, object]) -> dict[str, HarnessInfere
             "codex-native",
             "openai-agents",
             "qwen",
+            "qwen-native",
             "jcode",
             "opencode-native",
             "pi",
@@ -206,6 +207,7 @@ def resolve_bound_model(config: dict[str, object], harness: str, model: str | No
                         "codex-native",
                         "openai-agents",
                         "qwen",
+                        "qwen-native",
                         "jcode",
                         "opencode-native",
                     }

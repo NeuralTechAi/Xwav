@@ -29,13 +29,13 @@ afterEach(() => {
 describe("uiFontPreferences", () => {
   it("returns the default when nothing is stored", () => {
     expect(readUiFontSizePx()).toBe(UI_FONT_SIZE_DEFAULT);
-    expect(UI_FONT_SIZE_DEFAULT).toBe(13);
+    expect(UI_FONT_SIZE_DEFAULT).toBe(15);
   });
 
-  it("uses a 14px default on mobile without scaling explicit choices", () => {
+  it("uses a 16px default on mobile without scaling explicit choices", () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
     expect(readUiFontSizePx()).toBe(UI_FONT_SIZE_MOBILE_DEFAULT);
-    expect(UI_FONT_SIZE_MOBILE_DEFAULT).toBe(14);
+    expect(UI_FONT_SIZE_MOBILE_DEFAULT).toBe(16);
 
     writeUiFontSizePx(12);
     expect(readUiFontSizePx()).toBe(12);

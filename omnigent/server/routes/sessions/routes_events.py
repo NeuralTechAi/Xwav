@@ -2564,12 +2564,14 @@ def register_events_routes(
         # launch to settle: success leaves the session host-bound with
         # its runner tunnel already up (the background task awaits
         # it), failure surfaces the recorded reason.
-        if runner_client is None and conv.host_id is None:
+        if runner_client is None:
             _managed_tracker = getattr(request.app.state, "managed_launches", None)
             _managed_launch = (
                 _managed_tracker.get(session_id) if _managed_tracker is not None else None
             )
-            if _managed_launch is not None:
+            if _managed_launch is not None and (
+                conv.host_id is None or not _managed_launch.settled.is_set()
+            ):
                 await _await_settled_managed_launch(_managed_launch)
                 # The launch bound host_id / workspace / runner_id to
                 # the row after this handler's fetch — re-read so the
@@ -3237,6 +3239,41 @@ def register_events_routes(
             if pending_background_title is not None:
                 pending_background_title.schedule(expected_seed_title=conv.title)
             return {"queued": True, "item_id": item_id}
+        if body.type == "message" and body.data.get("role") == "user":
+            from omnigent.server.diagnostics import (
+                collect_diagnostics,
+                evidence_text,
+                requested_kinds,
+                requested_run,
+            )
+
+            content = body.data.get("content", [])
+            kinds = requested_kinds(content) if isinstance(content, list) else []
+            if kinds:
+                try:
+                    await _require_access_and_level(
+                        user_id, session_id, LEVEL_OWNER, permission_store, conversation_store
+                    )
+                except OmnigentError:
+                    pass  # Dashboard shell evidence is owner-only, even in shared chats.
+                else:
+                    try:
+                        evidence = evidence_text(
+                            await collect_diagnostics(
+                                runner_client,
+                                session_id,
+                                conv.workspace,
+                                kinds,
+                                requested_run(content, kinds),
+                            )
+                        )
+                    except (httpx.HTTPError, ValueError, KeyError, IndexError):
+                        evidence = (
+                            "Xwav could not retrieve this job's dashboard evidence. Do not infer "
+                            "that tests are absent from a missing tests folder. Explain this "
+                            "evidence-access failure; ask the user to refresh the relevant dashboard."
+                        )
+                    body.data["content"] = [*content, {"type": "input_text", "text": evidence}]
         dispatch = await _dispatch_session_event_to_runner(
             session_id,
             conv,

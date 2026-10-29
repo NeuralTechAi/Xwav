@@ -9,6 +9,7 @@ import { ChunkLoadErrorBoundary } from "@/components/ChunkLoadErrorBoundary";
 import { isFeatureEnabled, type FeatureKey } from "@/lib/capabilities";
 import { useServerInfo } from "@/lib/CapabilitiesContext";
 import { AppShell } from "@/shell/AppShell";
+import { IconHelp } from "@/components/IconHelp";
 import { ExtensionPageRoute } from "@/extensions/ExtensionPageRoute";
 
 // Bind a page component to its analytics page-view id. Declaring the id here,
@@ -55,6 +56,10 @@ const PreviewPage = withPageView(
 const LoadTestingPage = withPageView(
   "loadtesting",
   lazy(() => import("@/pages/LoadTestingPage").then((m) => ({ default: m.LoadTestingPage }))),
+);
+const PenetrationPage = withPageView(
+  "penetration",
+  lazy(() => import("@/pages/PenetrationPage").then((m) => ({ default: m.PenetrationPage }))),
 );
 const PreproductionPage = withPageView(
   "preproduction",
@@ -206,6 +211,7 @@ function AppRoutes({ basename }: AppProps) {
           <Route path={`${prefix}/preview`} element={<PreviewPage />} />
           <Route path={`${prefix}/preproduction`} element={<PreproductionPage />} />
           <Route path={`${prefix}/loadtesting`} element={<LoadTestingPage />} />
+          <Route path={`${prefix}/penetration`} element={<PenetrationPage />} />
           <Route path={`${prefix}/deployments`} element={<DeploymentsPage />} />
           <Route path={`${prefix}/installables`} element={<InstallablesPage />} />
           <Route path={`${prefix}/inbox`} element={<InboxPage />} />
@@ -270,6 +276,7 @@ function AppRoutes({ basename }: AppProps) {
 export default function App(props: AppProps = {}) {
   return (
     <ChunkLoadErrorBoundary>
+      <IconHelp />
       <AppRoutes {...props} />
     </ChunkLoadErrorBoundary>
   );

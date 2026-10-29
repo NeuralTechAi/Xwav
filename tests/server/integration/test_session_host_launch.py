@@ -4493,3 +4493,52 @@ async def test_side_chat_message_rebinds_to_already_relaunched_source_runner(
     side_chat_after = store.get_conversation(side_chat_id)
     assert side_chat_after is not None and side_chat_after.runner_id == replacement
     assert f"/v1/sessions/{side_chat_id}/events" in [path for path, _ in runners.posts]
+
+
+async def test_message_waits_for_active_managed_launch_after_host_binding(
+    client, app, db_uri, monkeypatch
+):
+    from omnigent.server.managed_hosts import ManagedLaunchTracker
+    from omnigent.server.routes import sessions as sessions_module
+    from omnigent.server.routes.sessions import routes_events
+
+    comm = await _connect_host(app)
+    agent = await create_test_agent(client)
+    responder = asyncio.create_task(_serve_one_launch(comm, launch_status="launched"))
+    response = await client.post(
+        "/v1/sessions",
+        json={"agent_id": agent["id"], "host_id": _HOST_ID, "workspace": _WORKSPACE},
+    )
+    await responder
+    assert response.status_code == 201
+    session_id = response.json()["id"]
+    original_runner = response.json()["runner_id"]
+    runners = _StagedRunners(SqlAlchemyConversationStore(db_uri))
+    monkeypatch.setattr(sessions_module, "_get_runner_client", runners.get_runner_client)
+    monkeypatch.setattr(
+        sessions_module, "_ensure_runner_relay_ready", AsyncMock(return_value=None)
+    )
+    tracker = ManagedLaunchTracker()
+    tracker.begin(session_id)
+    app.state.managed_launches = tracker
+
+    async def finish_launch(launch):
+        assert launch is tracker.get(session_id)
+        runners.live.add(original_runner)
+        tracker.finish(session_id)
+
+    wait = AsyncMock(side_effect=finish_launch)
+    monkeypatch.setattr(routes_events, "_await_settled_managed_launch", wait)
+    response = await client.post(
+        f"/v1/sessions/{session_id}/events",
+        json={
+            "type": "message",
+            "data": {"role": "user", "content": [{"type": "input_text", "text": "hello"}]},
+        },
+    )
+    assert response.status_code in (200, 202), response.text
+    wait.assert_awaited_once()
+    assert runners._store.get_conversation(session_id).runner_id == original_runner
+    await runners.client.aclose()
+    await comm.send_input({"type": "websocket.disconnect", "code": 1000})
+    await comm.wait()

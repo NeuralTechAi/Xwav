@@ -987,7 +987,7 @@ class SessionResourceRegistry:
         with self._lock:
             requested_spec = os_env_spec or getattr(agent_spec, "os_env", None)
             if requested_spec is not None:
-                requested_spec = self._effective_primary_spec(session_id, requested_spec)
+                requested_spec = self.effective_primary_spec(session_id, requested_spec)
             cached = self._primary_envs.get(session_id)
             if cached is not None:
                 previous_spec = self._primary_env_specs.get(session_id)
@@ -1024,8 +1024,13 @@ class SessionResourceRegistry:
             self._primary_env_specs[session_id] = deepcopy(requested_spec)
             return os_env
 
-    def _effective_primary_spec(self, session_id: str, spec: OSEnvSpec) -> OSEnvSpec:
-        """Use the same workspace identity for tools and inherited terminals."""
+    def effective_primary_spec(self, session_id: str, spec: OSEnvSpec) -> OSEnvSpec:
+        """Resolve the shared workspace identity without changing sandbox rules.
+
+        :param session_id: Session whose isolated workspace should be used.
+        :param spec: Caller-owned environment specification; never mutated.
+        :returns: A copy with the authoritative workspace as its cwd.
+        """
         if self._runner_workspace is not None:
             cwd = (
                 _contained_session_dir(self._runner_workspace, session_id)
@@ -1095,7 +1100,7 @@ class SessionResourceRegistry:
                 raise ValueError(
                     "Agent spec has no os_env; cannot create a primary filesystem environment."
                 )
-            effective_spec = self._effective_primary_spec(session_id, spec_os_env)
+            effective_spec = self.effective_primary_spec(session_id, spec_os_env)
             env = create_os_environment(
                 effective_spec,
                 additional_read_roots=[self._codex_skills_dir_locked(session_id)],

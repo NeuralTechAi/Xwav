@@ -154,6 +154,19 @@ def test_transport_persists_reports_and_does_not_share_preproduction(tmp_path, m
         assert action("ensure")["id"] == started["id"]
         assert list((tmp_path / "reports").glob("xwav-loadtesting-*"))
         assert not list((tmp_path / "reports").glob("xwav-preproduction-*"))
+        from omnigent.diagnostics_runtime import collect
+        from omnigent.penetration_runtime import inspect_reports
+        from omnigent.preproduction_runtime import fingerprint, report_directory
+
+        evidence = collect(
+            "job", str(root), ["loadtesting"], report_directory, inspect_reports, fingerprint
+        )["reports"][0]
+        subprocess.run(evidence["rerun_command"], capture_output=True, text=True, check=True)
+        verification = action("status")
+        assert verification["checks"][0]["config"]["max_requests"] == 1000
+        assert verification["checks"][0]["config"]["request_mode"] == "count"
+        action("cancel")
+        poll_until(lambda: action("status")["state"] != "running", timeout_s=10, interval_s=0.2)
         config(root, durations=dict.fromkeys(runtime.PROFILES, 10))
         new = action("start", max_requests=100_000_000)
         assert new["checks"][0]["config"]["max_requests"] == 100_000_000

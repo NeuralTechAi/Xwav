@@ -1,4 +1,10 @@
-import { GaugeIcon, ShieldCheckIcon, RocketIcon, PackageCheckIcon } from "lucide-react";
+import {
+  GaugeIcon,
+  ShieldCheckIcon,
+  RocketIcon,
+  PackageCheckIcon,
+  ScanLineIcon,
+} from "lucide-react";
 import { Link } from "@/lib/routing";
 import { PeriscopeIcon } from "@/components/icons/PeriscopeIcon";
 
@@ -19,7 +25,7 @@ export function ComposerPreviewLink({
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Preview this job’s app"
-        title="Open a separate live preview tab for this job. Web, Android and iOS previews keep updating while you work."
+        title="Open a separate live preview tab for this job’s Web, Android and iOS app."
         className="inline-flex size-8 items-center justify-center rounded-md text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
         data-testid="composer-preview-link"
       >
@@ -30,7 +36,7 @@ export function ComposerPreviewLink({
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Pre-Production Tests"
-        title="Open Pre-Production Tests in a new page: run available test suites, security, static analysis and accessibility checks, and download the results."
+        title="Run test suites, security and accessibility checks in a new page; download the results."
         className="inline-flex size-8 items-center justify-center rounded-md text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
         data-testid="composer-preproduction-link"
       >
@@ -41,7 +47,7 @@ export function ComposerPreviewLink({
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Load Testing"
-        title="Open Load Testing in a new page: measure load, stress, spike and endurance against this job’s app with controlled traffic, live metrics and downloadable results."
+        title="Measure load, stress, spikes and endurance in a new page; view and download results."
         className="inline-flex size-8 items-center justify-center rounded-md text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
         data-testid="composer-loadtesting-link"
       >
@@ -50,16 +56,22 @@ export function ComposerPreviewLink({
       {(
         [
           [
+            "penetration",
+            "Penetration Test",
+            ScanLineIcon,
+            "Scan this project with Strix; review findings and download the report.",
+          ],
+          [
             "deployments",
             "Deployments",
             RocketIcon,
-            "Build and deploy web, Android or iOS apps. Choose a web provider or use your configured store workflow.",
+            "Build and deploy this app to your chosen web or mobile platform.",
           ],
           [
             "installables",
             "Installable downloads",
             PackageCheckIcon,
-            "Build and download Windows, Android or signed iOS app packages. Platform tools and signing may be required.",
+            "Build and download a Windows, Android or signed iOS app package.",
           ],
         ] as const
       ).map(([path, label, Icon, title]) => (

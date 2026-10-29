@@ -18,7 +18,7 @@ interface Size {
 
 // Below-right of the pointer by default; flips above / left when that would
 // cross the bottom / right edge, and never starts past the top / left edge.
-function placeTooltip(pointer: Point, size: Size) {
+export function placeTooltip(pointer: Point, size: Size) {
   // The root's client box is the viewport minus any classic scrollbar.
   const { clientWidth, clientHeight } = document.documentElement;
   let left = pointer.x;

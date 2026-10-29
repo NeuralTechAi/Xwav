@@ -247,21 +247,97 @@ describe("Preview change requests", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("policy"));
     expect(screen.getByRole("textbox")).toHaveValue("Change this heading");
   });
-  it("clears stale highlights after app updates but keeps an unsent draft", () => {
+  it.each(["Web", "Android", "iOS"])(
+    "keeps the %s selection and editor stable during live source updates",
+    (device) => {
+      const view = renderPreview();
+      const frame = screen.getByTitle(`${device} app preview`);
+      const previousUrl = frame.getAttribute("src");
+      select(device);
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: "Keep this draft" } });
+      mocks.status = { ...mocks.status, version: "new-source" };
+      view.rerender(
+        <MemoryRouter>
+          <PreviewPage />
+        </MemoryRouter>,
+      );
+      expect(screen.getByTestId(`preview-selection-${device.toLowerCase()}`)).toBeVisible();
+      expect(screen.getByTitle(`${device} app preview`)).toBe(frame);
+      expect(frame).toHaveAttribute("src", previousUrl);
+      expect(screen.getByRole("textbox")).toHaveValue("Keep this draft");
+      expect(mocks.postEvent).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: `Clear ${device} selection` }));
+      expect(
+        new URL(screen.getByTitle(`${device} app preview`).getAttribute("src")!).searchParams.get(
+          "__xwav_preview_revision",
+        ),
+      ).toContain("new-source");
+    },
+  );
+  it("keeps a pending request locked and acknowledges it when source updates arrive before the response", async () => {
+    let finish!: (value: { queued: boolean }) => void;
+    mocks.postEvent.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
     const view = renderPreview();
     select("Web");
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Keep this draft" } });
-    mocks.status = { ...mocks.status, version: "new-source" };
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Update the heading" } });
+    fireEvent.click(screen.getByRole("button", { name: "Request change" }));
+    mocks.status = { ...mocks.status, version: "updated-while-sending" };
     view.rerender(
       <MemoryRouter>
         <PreviewPage />
       </MemoryRouter>,
     );
-    expect(screen.queryByTestId("preview-selection-web")).toBeNull();
-    expect(screen.getByText(/Your draft is saved/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Sending…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Select area in Web" })).toBeDisabled();
+    finish({ queued: true });
+    await waitFor(() => expect(screen.getByText(/Request sent to the job/)).toBeVisible());
+    expect(mocks.postEvent).toHaveBeenCalledOnce();
+    expect(
+      new URL(screen.getByTitle("Web app preview").getAttribute("src")!).searchParams.get(
+        "__xwav_preview_revision",
+      ),
+    ).toContain("updated-while-sending");
+  });
+  it("does not discard a selection when the iframe finishes loading late", () => {
+    renderPreview();
     select("Web");
-    expect(screen.getByRole("textbox")).toHaveValue("Keep this draft");
-    expect(mocks.postEvent).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Keep this selection" } });
+    fireEvent.load(screen.getByTitle("Web app preview"));
+    expect(screen.getByTestId("preview-selection-web")).toBeVisible();
+    expect(screen.getByRole("textbox")).toHaveValue("Keep this selection");
+  });
+  it("keeps the pending send and its acknowledgement through a temporary app restart", async () => {
+    let finish!: (value: { queued: boolean }) => void;
+    mocks.postEvent.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const view = renderPreview();
+    select("Android");
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Change during restart" } });
+    fireEvent.click(screen.getByRole("button", { name: "Request change" }));
+    mocks.status = { state: "starting", port: 41881 };
+    view.rerender(
+      <MemoryRouter>
+        <PreviewPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Sending your change request to the job…")).toBeVisible();
+    finish({ queued: true });
+    await waitFor(() => expect(screen.getByText(/Request sent to the job/)).toBeVisible());
+    mocks.status = { state: "ready", port: 41881, version: "restarted" };
+    view.rerender(
+      <MemoryRouter>
+        <PreviewPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/Request sent to the job/)).toBeVisible();
+    expect(mocks.postEvent).toHaveBeenCalledOnce();
   });
   it("preserves a selected draft across minimize/restore and locks picking during a send", async () => {
     let finish!: (value: { queued: boolean }) => void;

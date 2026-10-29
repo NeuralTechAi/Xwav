@@ -1,0 +1,186 @@
+/* Shared visual rhythm. User font choices continue to drive the type tokens. */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2");
+}
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+}
+.app-shell :where(h1, h2, h3) {
+  text-wrap: balance;
+}
+.app-shell :where(button, input, select, textarea) {
+  font-family: inherit;
+}
+.app-shell :where(button, a, input, textarea, select):focus-visible {
+  outline-color: var(--ring);
+  outline-offset: 3px;
+}
+.app-shell button:disabled:has(svg):is([aria-label], [title]) {
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+.app-shell .sidebar-brand {
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+.app-shell .sidebar-row {
+  line-height: 1.5;
+}
+.xwav-launch-heading h1 {
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+.xwav-launch-description,
+.xwav-starter-description {
+  font-size: var(--text-ui);
+  line-height: 1.65;
+}
+.xwav-starter strong {
+  font-size: var(--text-ui);
+  font-weight: 600;
+}
+.xwav-section-label {
+  font-size: var(--text-sm);
+}
+.xwav-icon-help {
+  z-index: 10000;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-menu);
+  font-family: var(--ui-font-family, var(--font-sans));
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.5;
+  text-align: left;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.preproduction-page .preproduction-heading {
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+.preproduction-page .preproduction-heading h1,
+.preview-page .preview-page-heading h1 {
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+.preproduction-page .preproduction-eyebrow,
+.preview-page .preview-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+.preproduction-page .preproduction-heading p:not(.preproduction-eyebrow),
+.preproduction-page .preproduction-notice,
+.preproduction-page .preproduction-setup,
+.preview-page .preview-page-heading p:not(.preview-eyebrow),
+.preview-page .preview-help {
+  font-size: var(--text-ui);
+  line-height: 1.65;
+  max-width: 78ch;
+}
+.preproduction-page :is(button, select),
+.preproduction-page .preproduction-actions a {
+  min-height: 40px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+.preproduction-page :is(button, select):not(:disabled):hover {
+  background: var(--accent);
+  border-color: var(--border-strong);
+}
+.preproduction-page .preproduction-run {
+  padding: 24px;
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-xs);
+}
+.preproduction-page .preproduction-run strong {
+  font-size: 22px;
+  font-weight: 600;
+}
+.preproduction-page
+  :is(
+    .preproduction-run p,
+    .preproduction-metrics span,
+    .preproduction-categories span,
+    .preproduction-toolbar label,
+    .preproduction-check p,
+    .preproduction-check header > span,
+    .preproduction-check details,
+    .release-field,
+    .release-readiness,
+    .loadtesting-profiles p,
+    .loadtesting-metrics dt,
+    .loadtesting-summary span
+  ) {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.preproduction-page .preproduction-check h2 {
+  font-size: var(--text-ui);
+  font-weight: 600;
+}
+.preproduction-page :is(.preproduction-badge, .load-status) {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+.preproduction-page
+  :is(
+    .preproduction-check code,
+    .preproduction-check pre,
+    .preproduction-setup pre,
+    .release-log,
+    .loadtesting-profiles pre
+  ) {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.preproduction-page
+  :is(.preproduction-metrics strong, .loadtesting-summary strong, .loadtesting-metrics dd, table) {
+  font-variant-numeric: tabular-nums;
+}
+.preproduction-page .preproduction-check,
+.preproduction-page .release-card {
+  box-shadow: var(--shadow-xs);
+}
+.preview-page .preview-device-name h2 {
+  font-size: var(--text-ui);
+  font-weight: 600;
+}
+.preview-page .preview-panel-header {
+  min-height: 52px;
+}
+@media (pointer: coarse) {
+  .app-shell :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
+    font-size: max(16px, var(--text-ui));
+  }
+  .preproduction-page :is(button, select),
+  .preproduction-page .preproduction-actions a {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .preproduction-page :is(button, select) {
+    transition: none;
+  }
+}

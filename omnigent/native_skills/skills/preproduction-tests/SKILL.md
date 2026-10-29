@@ -5,6 +5,14 @@ user-invocable: true
 ---
 # Xwav pre-production tests
 
+When asked to fix dashboard issues, use the attached Xwav dashboard evidence first.
+The reports are produced by Xwav outside the project's tests directory; a missing
+`npm test` script does not mean that the dashboard has no results. Read failed
+checks, their commands/output, metrics and source freshness. The evidence includes
+the runtime report path for more detail. Fix root causes, rerun relevant checks,
+and distinguish code problems from unavailable tooling or credentials. Never
+invent passes, weaken thresholds, or publish a release merely to verify a fix.
+
 Use this workflow when building an application that will be verified through the
 composer's Pre-Production Tests icon, or when the user asks to close coverage gaps.
 

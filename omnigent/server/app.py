@@ -3408,6 +3408,26 @@ def create_app(
         prefix="/v1",
         tags=["imports"],
     )
+    from omnigent.billing.config import BillingConfig
+    from omnigent.billing.service import BillingService
+    from omnigent.billing.store import BillingStore
+    from omnigent.server.routes.billing import create_billing_router
+
+    billing_config = BillingConfig.from_env()
+    billing_service = None
+    if billing_config is not None:
+        billing_key = os.environ.get("XWAV_BILLING_ENCRYPTION_KEY", "")
+        if not billing_key:
+            raise ValueError(
+                "XWAV_BILLING_ENCRYPTION_KEY is required for subscription credentials"
+            )
+        billing_service = BillingService(
+            billing_config, BillingStore(billing_config.database, billing_key)
+        )
+    app.state.billing_service = billing_service
+    app.include_router(
+        create_billing_router(billing_service, auth_provider), prefix="/v1", tags=["billing"]
+    )
     # Per-user LLM cost report (omni usage). User-scoped, not session-scoped,
     # so it gets its own router rather than living under /sessions.
     app.include_router(

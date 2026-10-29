@@ -22,7 +22,9 @@ def test_older_pi_keeps_existing_resources(version):
     assert pi_native_skill_launch("all", version) == ([], {})
 
 
-@pytest.mark.parametrize("skills_filter", ["all", "none", ["unslop"], ["karpathy-guidelines"]])
+@pytest.mark.parametrize(
+    "skills_filter", ["all", "none", ["unslop"], ["karpathy-guidelines"], ["google-skills"]]
+)
 def test_pi_rpc_executor_passes_selected_native_resources(skills_filter):
     from omnigent.inner.pi_executor import PiExecutor
 
@@ -69,7 +71,9 @@ process.stdout.write(JSON.stringify(mod.selectedPaths(catalog, commands)));
     assert selected == {skill["name"] for skill in catalog} - {name, "context7-mcp"}
 
 
-@pytest.mark.parametrize("skills_filter", ["all", "none", ["unslop"], ["karpathy-guidelines"]])
+@pytest.mark.parametrize(
+    "skills_filter", ["all", "none", ["unslop"], ["karpathy-guidelines"], ["google-skills"]]
+)
 def test_real_pi_rpc_reports_only_loaded_native_commands(tmp_path: Path, skills_filter):
     # The optional local runtime is installed by the acceptance setup. No network
     # resolution, credentials, prompts, or model calls are permitted in this test.

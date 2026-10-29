@@ -38,6 +38,7 @@ from rich.table import Table
 
 from omnigent._platform import IS_WINDOWS, resolve_repo_symlink
 from omnigent._startup_events import capture_cli_entry, record_startup_event
+from omnigent.cli_billing import billing as _billing_group
 from omnigent.cli_common import (
     RESUME_PICKER_SENTINEL as _RESUME_PICKER_SENTINEL,
 )
@@ -60,6 +61,7 @@ from omnigent.cli_native import register_native_commands as _register_native_com
 from omnigent.cli_sandbox import lakebox as _lakebox_alias_group
 from omnigent.cli_sandbox import sandbox as _sandbox_group
 from omnigent.cli_skills import skills as _skills_group
+from omnigent.cli_sol_pi import sol_pi as _sol_pi_group
 from omnigent.config import (
     _ignored_project_harness_keys,
     _merge_effective_config,
@@ -14447,6 +14449,8 @@ _register_native_commands(cli)
 
 cli.add_command(_skills_group)
 cli.add_command(_harness2_group)
+cli.add_command(_sol_pi_group)
+cli.add_command(_billing_group)
 
 
 if __name__ == "__main__":

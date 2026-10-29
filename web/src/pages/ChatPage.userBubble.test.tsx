@@ -551,11 +551,16 @@ describe("UserBubble @-mention attachment chips", () => {
 
 describe("Chat revert action placement", () => {
   it.each([userBubble("edit this"), assistantBubble("completed")])(
-    "places Revert before Copy link",
+    "places Revert, Stage, Commit and Copy link in order",
     (bubble) => {
       renderBubble(bubble);
       const revert = screen.getByRole("button", { name: "Revert changes" });
       const link = screen.getByRole("button", { name: "Copy link" });
+      const stage = screen.getByRole("button", { name: "Stage changes" });
+      const commit = screen.getByRole("button", { name: "Commit changes" });
+      expect(revert.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(stage.compareDocumentPosition(commit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(commit.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       expect(revert.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     },
   );

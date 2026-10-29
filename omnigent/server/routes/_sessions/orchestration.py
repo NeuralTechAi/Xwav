@@ -4594,6 +4594,7 @@ async def _bind_and_launch_managed_runner(
             runner_id,
             tunnel_registry,
             tracker,
+            conversation_store=conversation_store,
         )
         if not connected:
             # The runner never connected its tunnel; _wait_for_managed_runner_tunnel
@@ -4882,6 +4883,16 @@ async def ensure_runner_connected(
     )
     if runner_client is not None:
         return runner_client, conv
+
+    tracker = getattr(app_state, "managed_launches", None)
+    launch = tracker.get(session_id) if tracker is not None else None
+    if launch is not None and not launch.settled.is_set():
+        # Binding the host does not mean its runner has finished starting.
+        await _await_settled_managed_launch(launch)
+        conv = await _reread()
+        runner_client = await _get_runner_client(session_id, runner_router, conversation=conv)
+        if runner_client is not None:
+            return runner_client, conv
 
     tunnel_registry = cast(TunnelRegistry | None, getattr(app_state, "tunnel_registry", None))
     host_registry = cast(HostRegistry | None, getattr(app_state, "host_registry", None))
@@ -5637,6 +5648,7 @@ async def _run_managed_wake(
                 runner_id,
                 tunnel_registry,
                 tracker,
+                conversation_store=conversation_store,
             )
             if not connected:
                 return

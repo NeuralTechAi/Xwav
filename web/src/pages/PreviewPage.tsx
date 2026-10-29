@@ -1,5 +1,5 @@
 /* oxlint-disable react/iframe-missing-sandbox -- Preview endpoints are discovered from the job runtime on a separate port; scripts and storage are required to test the app. */
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ExternalLinkIcon,
   ArrowLeftIcon,
@@ -65,14 +65,21 @@ function PreviewPanel({
   const stage = useRef<HTMLDivElement>(null);
   const width = rotated ? device.height : device.width;
   const height = rotated ? device.width : device.height;
+  const selectionContext = `${sessionId}:${reload}:${url}:${width}:${height}`;
+  const selection = usePreviewSelection(selectionContext);
+  const [displayedRevision, setDisplayedRevision] = useState(revision);
+  const editing = selection.selecting || selection.region !== null || selection.sending;
+  // Keep the selected canvas stable until its request is sent or cleared.
+  // Other panels continue refreshing, and this panel catches up immediately.
+  useEffect(() => {
+    if (!editing) setDisplayedRevision(revision);
+  }, [editing, revision]);
   const frameUrl = url ? new URL(url) : null;
   // Static servers may round Last-Modified to a second; distinct revisions
   // must bypass conditional caches even when edits happen within that second.
   if (revisionQuery) {
-    frameUrl?.searchParams.set("__xwav_preview_revision", `${revision}:${reload}`);
+    frameUrl?.searchParams.set("__xwav_preview_revision", `${displayedRevision}:${reload}`);
   }
-  const selectionContext = `${revision}:${reload}:${url}:${width}:${height}`;
-  const selection = usePreviewSelection(selectionContext);
   const phone = device.id !== "web";
   const bezel = phone ? 12 : 0;
   const topBar = phone ? 44 : 96;
@@ -222,16 +229,12 @@ function PreviewPanel({
             <div className="preview-device-screen" style={{ width, height }}>
               {url ? (
                 <iframe
-                  key={`${revision}:${reload}`}
+                  key={`${displayedRevision}:${reload}`}
                   title={`${device.name} app preview`}
                   src={frameUrl!.href}
                   width={width}
                   height={height}
                   sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads"
-                  onLoad={() => {
-                    selection.setRegion(null);
-                    selection.setSelecting(false);
-                  }}
                   referrerPolicy="no-referrer"
                 />
               ) : (
@@ -320,13 +323,19 @@ function PreviewPanel({
         </div>
       </div>
       <div hidden={minimized}>
+        {editing && displayedRevision !== revision && (
+          <p className="preview-selection-help" role="status">
+            This view is held steady for your selection. Live updates resume after sending or
+            clearing it; other previews remain live.
+          </p>
+        )}
         <PreviewChangeRequest
           sessionId={sessionId}
           device={device.name}
           url={url}
           width={width}
           height={height}
-          context={selectionContext}
+          context={sessionId ?? ""}
           selection={selection}
         />
       </div>

@@ -4,7 +4,7 @@
 // `--desktop-ui-font-size`. index.css maps that value directly into Tailwind's
 // typography tokens while keeping the root rem grid fixed at 16px, so text
 // changes without resizing icons, controls, or spacing. With no saved choice,
-// CSS supplies a 13px desktop default and a 14px mobile default.
+// CSS supplies a 15px desktop default and a 16px mobile default.
 //
 // Font family works the analogous way with `--ui-font-family`. Note it can't
 // reuse `--font-sans`: Tailwind v4's `@theme inline` block inlines the literal
@@ -23,8 +23,8 @@ import { getStyleRoot } from "./host";
 
 const STORAGE_KEY = "omnigent:ui-font-size";
 
-export const UI_FONT_SIZE_DEFAULT = 13;
-export const UI_FONT_SIZE_MOBILE_DEFAULT = 14;
+export const UI_FONT_SIZE_DEFAULT = 15;
+export const UI_FONT_SIZE_MOBILE_DEFAULT = 16;
 export const UI_FONT_SIZE_MIN = 11;
 export const UI_FONT_SIZE_MAX = 18;
 export const UI_FONT_SIZE_STEP = 1;
@@ -66,8 +66,8 @@ function readStoredUiFontSizePx(): number | null {
 /**
  * Read the persisted UI font size in px.
  *
- * Returns the viewport default when nothing valid is stored: 13px on desktop
- * and 14px on mobile. A stored value applies directly on either viewport.
+ * Returns the viewport default when nothing valid is stored: 15px on desktop
+ * and 16px on mobile. A stored value applies directly on either viewport.
  */
 export function readUiFontSizePx(): number {
   return readStoredUiFontSizePx() ?? defaultUiFontSizePx();
@@ -112,7 +112,7 @@ export function applyStoredUiFontSize(): void {
 
 const FONT_FAMILY_STORAGE_KEY = "omnigent:ui-font-family";
 
-/** Empty string = "System default": no override, falls back to `--font-sans`. */
+/** Empty string = "Xwav default": no override, falls back to `--font-sans`. */
 export const UI_FONT_FAMILY_DEFAULT = "";
 
 /** Longest family name we'll accept — a guard against a corrupt/oversized entry. */
@@ -123,7 +123,7 @@ const UI_FONT_FAMILY_MAX_LENGTH = 100;
  * custom property: trimmed, with characters that could terminate the
  * declaration or open a new one (`;{}` and control chars) stripped. Over-long
  * input collapses to the default. Returns "" for anything that isn't a usable
- * family, so callers treat empty as "System default".
+ * family, so callers treat empty as "Xwav default".
  */
 function normalizeUiFontFamily(value: unknown): string {
   if (typeof value !== "string") return UI_FONT_FAMILY_DEFAULT;
@@ -138,7 +138,7 @@ function normalizeUiFontFamily(value: unknown): string {
 /**
  * Read the persisted UI font family.
  *
- * Returns "" (System default) when nothing is stored, on a server render (no
+ * Returns "" (Xwav default) when nothing is stored, on a server render (no
  * `window`), or when the stored value is missing/malformed — never throws, so a
  * corrupt entry can't break app boot.
  */
@@ -156,7 +156,7 @@ export function readUiFontFamily(): string {
 
 /**
  * Persist the UI font family. An empty (or all-stripped) name clears the
- * preference — reverting to System default — rather than storing a blank. Swallows
+ * preference — reverting to Xwav default — rather than storing a blank. Swallows
  * quota/access errors so a failed write can't break the app.
  */
 export function writeUiFontFamily(name: string): void {

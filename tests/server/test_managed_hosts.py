@@ -5895,3 +5895,66 @@ def test_docker_configuration_is_launchable_without_cloud_credentials():
     assert launcher.config.cpus == 3
     assert launcher.config.memory_mib == 1024
     assert offered.managed_launch_supported
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("replacement_connected", [True, False])
+async def test_stale_launch_timeout_checks_current_binding(monkeypatch, replacement_connected):
+    from unittest.mock import AsyncMock, Mock
+
+    from omnigent.server.managed_hosts import ManagedLaunchTracker
+    from omnigent.server.routes._sessions import helpers
+
+    registry = Mock()
+    registry.wait_for_runner = AsyncMock(return_value=None)
+    registry.get.return_value = object() if replacement_connected else None
+    store = Mock()
+    store.get_conversation.return_value = SimpleNamespace(runner_id="replacement")
+    publish = Mock()
+    monkeypatch.setattr(helpers, "_publish_sandbox_status", publish)
+    tracker = ManagedLaunchTracker()
+    tracker.begin("launch-race")
+    connected = await helpers._wait_for_managed_runner_tunnel(
+        "launch-race",
+        "superseded",
+        registry,
+        tracker,
+        conversation_store=store,
+    )
+    assert connected == replacement_connected
+    registry.get.assert_called_once_with("replacement")
+    if replacement_connected:
+        assert tracker.get("launch-race").error is None
+        publish.assert_not_called()
+    else:
+        assert tracker.get("launch-race").error == "managed runner did not connect after launch"
+        publish.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_resource_recovery_shares_pending_managed_launch(monkeypatch):
+    from unittest.mock import AsyncMock, Mock
+
+    from omnigent.server.managed_hosts import ManagedLaunchTracker
+    from omnigent.server.routes._sessions import orchestration
+
+    tracker = ManagedLaunchTracker()
+    tracker.begin("starting-session")
+    conv = SimpleNamespace(id="starting-session", host_id="host", runner_id="starting-runner")
+    store = Mock()
+    store.get_conversation.return_value = conv
+    client = object()
+    resolve = AsyncMock(side_effect=[None, client])
+    monkeypatch.setattr(orchestration, "_get_runner_client", resolve)
+    wait = AsyncMock(side_effect=lambda launch: tracker.finish("starting-session"))
+    monkeypatch.setattr(orchestration, "_await_settled_managed_launch", wait)
+    result, current = await orchestration.ensure_runner_connected(
+        session_id=conv.id,
+        conv=conv,
+        app_state=SimpleNamespace(managed_launches=tracker),
+        conversation_store=store,
+        runner_router=None,
+    )
+    assert result is client and current is conv
+    wait.assert_awaited_once()
+    assert resolve.await_count == 2

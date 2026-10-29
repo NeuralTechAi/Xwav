@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page, expect
 
+from tests._helpers.polling import poll_until
 from tests.e2e_ui.messages.test_native_codex_workspace_cwd import (
     codex_workspace_session as codex_workspace_session,
 )
@@ -238,7 +239,7 @@ def test_preview_viewports_and_window_controls(
         <p id="width"></p><button onclick="this.textContent='Clicked'">Test interaction</button>
         <script>document.getElementById('width').textContent=innerWidth</script></body></html>"""
 
-    index = resource + "/filesystem/preview-app/dist/index.html"
+    index = resource + "/filesystem/preview-app/src/index.html"
     manifest = resource + "/filesystem/preview-app/package.json"
     previous = httpx.get(index, timeout=20)
     assert previous.status_code == 404, "The test requires an empty fixture workspace"
@@ -247,7 +248,7 @@ def test_preview_viewports_and_window_controls(
     ).raise_for_status()
     httpx.put(
         manifest,
-        json={"content": '{"scripts":{"test":"node --test"}}', "encoding": "utf-8"},
+        json={"content": '{"scripts":{"start":"electron ."}}', "encoding": "utf-8"},
         timeout=20,
     ).raise_for_status()
     try:
@@ -281,6 +282,7 @@ def test_preview_viewports_and_window_controls(
             expect(frame.get_by_role("button", name="Clicked")).to_be_visible()
         # Select through a cross-origin iframe at its rendered scale, then send
         # the request through the real job event route and observe the chat reply.
+        import json
         import uuid
 
         from tests.e2e_ui.conftest import configure_mock_llm
@@ -299,11 +301,29 @@ def test_preview_viewports_and_window_controls(
                 f"Preview request {request_nonce} {name} {width}: make the selected button green"
             )
             reply = f"Received {name} region {width}"
+            applied_heading = f"Applied {name} change"
             configure_mock_llm(
                 mock_llm_server_url,
-                [{"text": reply}] * 3,
+                [
+                    {
+                        "tool_calls": [
+                            {
+                                "call_id": f"preview_edit_{name}_{width}",
+                                "name": "sys_os_write",
+                                "arguments": json.dumps(
+                                    {
+                                        "path": "preview-app/src/index.html",
+                                        "content": app_html(applied_heading),
+                                    }
+                                ),
+                            }
+                        ]
+                    },
+                    {"text": reply, "block": True},
+                ],
                 match=request_text,
                 key=f"preview-selection-{session_id}",
+                required_tools=["sys_os_write"],
             )
             select_button = page.get_by_role("button", name=f"Select area in {name}", exact=True)
             select_button.scroll_into_view_if_needed()
@@ -415,6 +435,25 @@ def test_preview_viewports_and_window_controls(
             expect(region).to_be_visible()
             form = page.get_by_role("form", name=f"{name} change request")
             form.get_by_role("textbox").fill(request_text)
+            # Source polling must not discard an in-progress selection/editor.
+            held_url = page.get_by_title(f"{name} app preview", exact=True).get_attribute("src")
+            background_heading = f"Background update during {name} selection"
+            httpx.put(
+                index,
+                json={"content": app_html(background_heading), "encoding": "utf-8"},
+                timeout=20,
+            ).raise_for_status()
+            for other in ("Android", "iOS", "Web"):
+                if other != name:
+                    expect(
+                        page.frame_locator(f'iframe[title="{other} app preview"]').get_by_role(
+                            "heading"
+                        )
+                    ).to_have_text(background_heading, timeout=15_000)
+            expect(form.get_by_role("textbox")).to_have_value(request_text)
+            expect(page.get_by_title(f"{name} app preview", exact=True)).to_have_attribute(
+                "src", held_url
+            )
             with page.expect_request(
                 lambda request: (
                     request.method == "POST"
@@ -449,15 +488,43 @@ def test_preview_viewports_and_window_controls(
                 for actual, target in zip(selected.groups(), expected, strict=True)
             )
             expect(
-                form.get_by_text("Request sent to the job for Web, Android, and iOS.", exact=False)
+                page.get_by_role("region", name=f"{name} preview panel").get_by_text(
+                    "Request sent to the job for Web, Android, and iOS.", exact=False
+                )
             ).to_be_visible(timeout=30_000)
-            source_page.goto(f"{base_url}/c/{session_id}")
-            expect(source_page.get_by_text(reply, exact=True)).to_be_visible(timeout=60_000)
+            # Keep the original chat mounted: external preview requests and
+            # agent activity must arrive through its live stream, without reload.
+            source_page.bring_to_front()
+            expect(source_page).to_have_url(f"{base_url}/c/{session_id}")
+            user_request = source_page.locator('[data-role="user"]').filter(has_text=request_text)
+            expect(user_request).to_be_visible(timeout=30_000)
+            expect(user_request).to_have_count(1)
+            expect(source_page.get_by_test_id("working-indicator")).to_be_visible(timeout=30_000)
             expect(
-                source_page.locator('[data-role="user"]').filter(has_text=request_text)
-            ).to_be_visible()
+                source_page.locator('[data-role="assistant"]').filter(has_text="index.html").last
+            ).to_be_visible(timeout=30_000)
+            progress_image = (
+                Path(output_path) / f"preview-chat-progress-{name.lower()}-{width}.png"
+            )
+            progress_image.parent.mkdir(parents=True, exist_ok=True)
+            source_page.screenshot(path=str(progress_image), full_page=True)
+            poll_until(
+                lambda: httpx.get(f"{mock_llm_server_url}/gate/pending", timeout=5).json()[
+                    "pending"
+                ]
+            )
+            assert httpx.post(f"{mock_llm_server_url}/gate/release", timeout=5).json()["released"]
+            expect(source_page.get_by_text(reply, exact=True)).to_be_visible(timeout=60_000)
+            expect(user_request).to_have_count(1)
+            expect(source_page.get_by_test_id("working-indicator")).to_have_count(0)
             page.bring_to_front()
-            form.get_by_role("button", name=f"Clear {name} selection", exact=True).click()
+            for other in ("Android", "iOS", "Web"):
+                expect(
+                    page.frame_locator(f'iframe[title="{other} app preview"]').get_by_role(
+                        "heading"
+                    )
+                ).to_have_text(applied_heading, timeout=15_000)
+            expect(region).to_have_count(0)
             if name == "Android":
                 page.get_by_role("button", name="Rotate Android", exact=True).click()
 
@@ -480,6 +547,9 @@ def test_preview_viewports_and_window_controls(
                 "button", name="Test interaction"
             )
         ).to_be_visible()
+        page.frame_locator('iframe[title="Android app preview"]').get_by_role(
+            "button", name="Test interaction"
+        ).click()
         page.get_by_role("button", name="Minimize Android", exact=True).click()
         expect(page.get_by_title("Android app preview", exact=True)).to_be_hidden()
         page.get_by_role("button", name="Restore Android", exact=True).click()
@@ -518,6 +588,7 @@ def test_preview_viewports_and_window_controls(
         page.screenshot(path=str(image), full_page=True)
         page.close()
     finally:
+        httpx.post(f"{mock_llm_server_url}/gate/release", timeout=5)
         cleanup = """python3 - <<'PY_CLEANUP'
 import hashlib, json, os, tempfile
 from pathlib import Path
@@ -648,6 +719,18 @@ def _exercise_chat_file_revert(
         dialog.get_by_role("button", name="Cancel", exact=True).click()
         assert httpx.get(files + "/revert-app.txt", timeout=15).json()["content"] == "after"
         assistant = page.locator('[data-role="assistant"]').filter(has_text=reply)
+        changes = assistant.get_by_test_id("chat-change-summary")
+        expect(changes).to_be_visible()
+        changes.get_by_role("button", name="Refresh changes", exact=True).click()
+        expect(changes.get_by_text("2 files changed", exact=True)).to_be_visible(timeout=30_000)
+        changes.get_by_title("View changes to revert-app.txt").click()
+        expect(dialog.get_by_label("Code changes")).to_contain_text("-before", timeout=30_000)
+        expect(dialog.get_by_label("Code changes")).to_contain_text("+after")
+        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+        image = Path(output_path) / f"chat-change-diff-{width}.png"
+        image.parent.mkdir(parents=True, exist_ok=True)
+        page.screenshot(path=str(image), full_page=True)
+        dialog.get_by_role("button", name="Close", exact=True).click()
         assistant.hover()
         assistant.get_by_role("button", name="Revert changes", exact=True).click()
         expect(dialog.get_by_text("Restore · revert-app.txt", exact=True)).to_be_visible(
@@ -681,7 +764,11 @@ def _exercise_chat_file_revert(
 
 @pytest.mark.parametrize("width", [1440, 390])
 def test_preproduction_dashboard(
-    page: Page, seeded_session: tuple[str, str], output_path: str, width: int
+    page: Page,
+    seeded_session: tuple[str, str],
+    output_path: str,
+    width: int,
+    mock_llm_server_url: str,
 ) -> None:
     import json
 
@@ -721,9 +808,10 @@ def test_preproduction_dashboard(
     )
     write(
         "test_quality_fail.py",
-        "import unittest\nclass Quality(unittest.TestCase):\n"
-        " def test_app(self): self.assertEqual(2 + 2, 5)\n",
+        "import unittest\nfrom quality_app import result\nclass Quality(unittest.TestCase):\n"
+        " def test_app(self): self.assertEqual(result(), 4)\n",
     )
+    write("quality_app.py", "def result(): return 5\n")
     write(".xwav/preproduction.json", json.dumps(config))
     page.set_viewport_size({"width": width, "height": 1000})
     page.goto(f"{base_url}/c/{session_id}")
@@ -761,6 +849,64 @@ def test_preproduction_dashboard(
     image = Path(output_path) / f"preproduction-{width}.png"
     image.parent.mkdir(parents=True, exist_ok=True)
     dashboard.screenshot(path=str(image), full_page=True)
+    from tests.e2e_ui.conftest import configure_mock_llm
+
+    reply = "Repaired the app from the dashboard evidence."
+    configure_mock_llm(
+        mock_llm_server_url,
+        [
+            {
+                "tool_calls": [
+                    {
+                        "call_id": f"repair_quality_{width}",
+                        "name": "sys_os_write",
+                        "arguments": json.dumps(
+                            {
+                                "path": "quality_app.py",
+                                "content": "def result(): return 4\n",
+                            }
+                        ),
+                    }
+                ]
+            },
+            {"text": reply},
+        ],
+        match="Check the Pre-Production Tests dashboard",
+        required_tools=["sys_os_write"],
+    )
+    dashboard.get_by_role("button", name="Fix issues", exact=True).click()
+    expect(dashboard.get_by_role("link", name="View repair in job")).to_be_visible(timeout=30000)
+    page.bring_to_front()
+    expect(page.get_by_text(reply, exact=True)).to_be_visible(timeout=60000)
+    requests = httpx.get(f"{mock_llm_server_url}/mock/requests", timeout=10).json()["requests"]
+    assert any(
+        "Xwav-dashboard-evidence" in json.dumps(request)
+        and "Failing integration suite" in json.dumps(request)
+        and "AssertionError" in json.dumps(request)
+        for request in requests
+    )
+    assert (
+        httpx.get(files + "/quality_app.py", timeout=10).json()["content"]
+        == "def result(): return 4\n"
+    )
+    evidence = httpx.get(
+        f"{base_url}/v1/sessions/{session_id}/diagnostics?kind=preproduction", timeout=20
+    ).json()["reports"][0]
+    assert evidence["source_changed"] is True
+    # Verify through the exact dashboard coordinator, not a substitute npm test.
+    import shlex
+
+    shell = f"{base_url}/v1/sessions/{session_id}/resources/environments/default/shell"
+    rerun = httpx.post(
+        shell, json={"command": shlex.join(evidence["rerun_command"]), "timeout": 10}, timeout=20
+    )
+    rerun.raise_for_status()
+    dashboard.bring_to_front()
+    dashboard.reload()
+    expect(dashboard.get_by_text("Coverage incomplete", exact=True)).to_be_visible(timeout=40000)
+    refreshed = httpx.get(f"{base_url}/v1/sessions/{session_id}/preproduction", timeout=20).json()
+    assert refreshed["id"] != report["id"]
+    assert refreshed["checks"][2]["status"] == "passed"
     config["checks"] = [
         {
             "name": "Long smoke suite",
@@ -1188,3 +1334,91 @@ def test_release_pages_build_and_download_in_job_runtime(
         expect(installs.get_by_role("alert")).to_contain_text("Package changed")
     finally:
         installs.close()
+
+
+@pytest.mark.parametrize("width", [1440, 390])
+def test_penetration_report_dashboard(
+    page: Page, seeded_session: tuple[str, str], output_path: str, width: int
+):
+    import json
+
+    import httpx
+
+    base_url, session_id = seeded_session
+    files = f"{base_url}/v1/sessions/{session_id}/resources/environments/default/filesystem"
+    run = "strix_runs/xwav-dashboard-verification"
+
+    def write(name, data):
+        httpx.put(
+            files + "/" + run + "/" + name,
+            json={"content": json.dumps(data), "encoding": "utf-8"},
+            timeout=20,
+        ).raise_for_status()
+
+    write("run.json", {"status": "running", "scan_mode": "quick"})
+    write(
+        "vulnerabilities.json",
+        [
+            {
+                "id": "fixture-1",
+                "title": "Fixture ownership finding",
+                "severity": "high",
+                "evidence": "Fixture evidence only",
+                "remediation_steps": "Apply fixture ownership check",
+            }
+        ],
+    )
+    # This fixture journey verifies browser actions and real report reading.
+    # The worker lifecycle itself is exercised in test_strix_jobs.py.
+    actions = []
+
+    def acknowledge_fixture_scan(route):
+        if route.request.method == "POST":
+            actions.append(route.request.post_data_json["action"])
+            response = route.fetch(method="GET", post_data=None)
+            route.fulfill(response=response)
+        else:
+            route.continue_()
+
+    page.context.route(f"**/v1/sessions/{session_id}/penetration", acknowledge_fixture_scan)
+    page.set_viewport_size({"width": width, "height": 1000})
+    page.goto(f"{base_url}/c/{session_id}")
+    icon = page.get_by_test_id("composer-penetration-link")
+    expect(icon).to_be_visible(timeout=30000)
+    expect(icon).to_have_attribute("title", re.compile("Strix"))
+    assert icon.evaluate(
+        "node => node.previousElementSibling.dataset.testid === 'composer-loadtesting-link'"
+    )
+    with page.expect_popup() as popup:
+        icon.click()
+    dashboard = popup.value
+    try:
+        dashboard.set_viewport_size({"width": width, "height": 1000})
+        expect(dashboard).to_have_url(f"{base_url}/penetration?session={session_id}")
+        assert dashboard.evaluate("window.opener === null")
+        expect(dashboard.get_by_text("Scan in progress", exact=True)).to_be_visible(timeout=30000)
+        dashboard.locator("summary").filter(has_text="Fixture ownership finding").click()
+        expect(dashboard.get_by_text("Fixture evidence only", exact=True)).to_be_visible()
+        assert dashboard.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+        write(
+            "run.json",
+            {
+                "status": "completed",
+                "scan_results": {"executive_summary": "Fixture scan finished"},
+            },
+        )
+        expect(dashboard.get_by_text("Scan completed", exact=True)).to_be_visible(timeout=20000)
+        assert actions == ["start"]
+        dashboard.get_by_role("button", name="Run again", exact=True).click()
+        expect(dashboard.get_by_role("button", name="Run again", exact=True)).to_be_enabled()
+        assert actions == ["start", "start"]
+        with dashboard.expect_download() as download:
+            dashboard.get_by_role("button", name="Download JSON", exact=True).click()
+        exported = json.loads(Path(download.value.path()).read_text())
+        assert exported["findings"][0]["evidence"] == "Fixture evidence only"
+        image = Path(output_path) / f"strix-dashboard-{width}.png"
+        image.parent.mkdir(parents=True, exist_ok=True)
+        dashboard.screenshot(path=str(image), full_page=True)
+    finally:
+        dashboard.close()
+        httpx.delete(files + "/" + run, timeout=20)

@@ -81,6 +81,8 @@ import { useForkDialog } from "@/shell/ForkDialogContext";
 import { DisabledActionTooltip } from "@/components/DisabledActionTooltip";
 import { InlineImage, SessionImage } from "@/components/SessionImage";
 import { RevertMessageAction } from "@/components/chat/RevertMessageAction";
+import { GitMessageActions } from "@/components/chat/GitMessageActions";
+import { ChatChangeSummary } from "@/components/chat/ChatChangeSummary";
 import { buildMessageDeepLink } from "@/lib/messageDeepLink";
 import { copyText } from "@/lib/clipboard";
 import { copyMarkdown } from "@/lib/copyMarkdown";
@@ -947,6 +949,7 @@ function UserBubble({ bubble }: { bubble: Extract<Bubble, { kind: "user" }> }) {
               itemId={bubble.itemId}
               disabled={bubble.pending}
             />
+            <GitMessageActions sessionId={sessionId} disabled={bubble.pending} />
             <MessageAction
               tooltip={isLinkCopied ? "Copied!" : "Copy link"}
               size="icon-xxs"
@@ -1125,6 +1128,21 @@ function AssistantBubble({
             <span>Interrupted</span>
           </p>
         )}
+        {!foldOnly &&
+          !errorOnly &&
+          !scopedConversationId &&
+          !bubble.continued &&
+          bubble.lifecycle !== "streaming" &&
+          conversationId &&
+          bubble.items.some((item) => item.itemId) && (
+            <ChatChangeSummary
+              sessionId={conversationId}
+              itemId={bubble.items.find((item) => item.itemId)!.itemId!}
+              running={
+                hasPendingElicitation || ["running", "waiting", "launching"].includes(sessionStatus)
+              }
+            />
+          )}
         {/* Skip fold-only and error-only bubbles. Order: actions, then timestamp. */}
         {!foldOnly && !errorOnly && (
           <div
@@ -1172,6 +1190,10 @@ function AssistantBubble({
               <RevertMessageAction
                 sessionId={conversationId}
                 itemId={bubble.items.find((item) => item.itemId)?.itemId ?? null}
+                disabled={bubble.lifecycle === "streaming"}
+              />
+              <GitMessageActions
+                sessionId={conversationId}
                 disabled={bubble.lifecycle === "streaming"}
               />
               <MessageAction

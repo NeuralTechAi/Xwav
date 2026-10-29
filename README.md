@@ -32,6 +32,13 @@ benchmark setup and model configuration. Harness² is a benchmark orchestrator;
 interactive chat keeps a separate supported chat harness. Use `just --list` for
 all development tasks.
 
+## Optional SoL-Pi worker
+
+Any Xwav harness with shell or shared sub-agent tools can use the same scoped
+[SoL-Pi worker](docs/SOL_PI.md). Inspect it with `xwav sol-pi status --json`.
+Its pinned source adds no runtime dependencies or background services to normal
+chat. The observation-only profile loads when a worker is explicitly started.
+
 ## Run this fork locally
 
 Xwav is a rebranded fork of [Omnigent](https://github.com/omnigent-ai/omnigent). The Python package, imports, configuration paths, and SDK contracts keep their upstream names for compatibility. Settings accept the public `XWAV_*` prefix, and new session links use `xwav://` while older links remain accepted. The additional `xwav` command runs the same local CLI. Upstream installers and PyPI packages install **Omnigent**, not this fork; use this source checkout for Xwav.
@@ -742,3 +749,9 @@ Thanks to all of our amazing contributors!
 <a href="https://github.com/omnigent-ai/omnigent/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=omnigent-ai/omnigent" />
 </a>
+
+### Subscription plans and BYOK
+
+Xwav includes an optional lightweight model gateway for Free, Pro, per-seat Teams,
+Max/Scale credits and BYOK, with Stripe Checkout/portal and usage limits. See
+[setup and operating limits](docs/SUBSCRIPTIONS.md).

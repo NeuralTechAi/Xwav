@@ -1,0 +1,18 @@
+[Unit]
+Description=Xwav FreeLLMAPI local free-model gateway
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/absolute/path/to/freellmapi
+EnvironmentFile=/absolute/path/to/freellmapi/server/data/service.env
+ExecStart=/absolute/path/to/node server/dist/index.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+NoNewPrivileges=true
+UMask=0077
+MemoryMax=384M
+
+[Install]
+WantedBy=default.target
